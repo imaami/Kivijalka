@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <title>le WebCocquettes</title>
+</head>
+
+<body>
+
+<style>
+#thumb { border: 10px dashed #ccc; width: 300px; min-height: 300px; margin: 20px auto; }
+#thumb.hover { border: 10px dashed #0c0; }
+#thumb img { display: block; margin: 10px auto; }
+#thumb p { margin: 10px; font-size: 14px; }
+</style>
+
+  <div style="width:100%;position:relative">
+    <div id="thumb" style="margin:0px auto;width:auto;height:auto;display:table">
+      <canvas id="thumbCanvas" width="640" height="512" style="border:0px solid #000000;">
+      </canvas>
+    </div>
+  </div>
+
+<script>
+var thumb = document.getElementById('thumb');
+
+var clearCanvas = function(ctx, w, h) {
+	ctx.clearRect(0, 0, w, h);
+};
+
+var resizeCanvas = function(c, w, h) {
+	c.width = w;
+	c.height = h;
+};
+
+var socket_recv_thumb = function(data) {
+	var blob = new Blob([data],{type: "image/png"});
+	var img = new Image();
+
+	img.onload = function (e) {
+		console.log('width:' + img.width);
+		console.log('height:' + img.height);
+		var cnv = document.getElementById("thumbCanvas");
+		var ctx = cnv.getContext("2d");
+		resizeCanvas(cnv, img.width, img.height);
+		ctx.drawImage(img, 0, 0);
+		window.URL.revokeObjectURL(img.src);
+		img = null;
+	};
+
+	img.onerror = img.onabort = function () {
+		img = null;
+	};
+
+	img.src = window.URL.createObjectURL(blob);
+};
+
+var socket_addr = 'ws://127.0.0.1:8001/';
+var socket;
+
+var socket_init_handshake = function() {
+	socket.send("ayy");
+};
+
+var socket_opened = function() {
+	console.log('Connected');
+	socket_init_handshake();
+};
+
+var socket_reconnect = function() {
+	if (socket.readyState == 3) {
+		// CLOSED
+		new_socket();
+	} else if (socket.readyState == 0
+	           || socket.readyState == 2) {
+		// CONNECTING or CLOSING
+		setTimeout(socket_reconnect(), 4000);
+	} else {
+		// OPEN
+	}
+};
+
+var socket_closed = function() {
+	console.log('Disconnected; will try to reconnect soon...');
+	socket_reconnect();
+};
+
+var socket_error = function() {
+	console.log('WebFuckit');
+};
+
+var socket_message = function(ev) {
+	if (typeof ev.data === "string") {
+		socket_recv_meta(ev.data);
+	} else if (ev.data instanceof ArrayBuffer
+	           || ev.data instanceof Blob) {
+		socket_recv_thumb(ev.data);
+	}
+};
+
+// receive handshake response from server
+var socket_recv_handshake = function(e) {
+	if (typeof e.data === "string") {
+		var msg = JSON.parse(e.data);
+		if (msg.type === "lmao") {
+			socket.onmessage = socket_message;
+			console.log('Handshake response at ' + msg.ts);
+			return;
+		}
+	}
+	console.log('Wrong handshake');
+	socket.close();
+	socket = null;
+};
+
+var new_socket = function() {
+	socket = new WebSocket(socket_addr);
+	socket.binaryType = "arraybuffer";
+	socket.onopen = socket_opened;
+	socket.onclose = socket_closed;
+	socket.onerror = socket_error;
+	socket.onmessage = socket_recv_handshake;
+};
+
+var upload_file = function(file) {
+	console.log('upload_file');
+
+	if (file.type === 'image/png') {
+		var reader = new FileReader();
+		var bytearray;
+
+		reader.onload = function (e) {
+			console.log('reader.onload');
+			bytearray = new Uint8Array(e.target.result);
+			socket.send(bytearray.buffer);
+		};
+
+		reader.readAsArrayBuffer(file);
+	}
+}
+
+/*
+var upload_files = function(files) {
+  console.log('upload_files()');
+  for (var i = 0; i < files.length; i++) {
+    upload_file(files[i]);
+  }
+}
+*/
+
+thumb.ondragover = function () {
+	console.log('thumb.ondragover');
+	this.className = 'hover';
+	return false;
+};
+
+thumb.ondragend = function () {
+	console.log('thumb.ondragend');
+	this.className = '';
+	return false;
+};
+
+thumb.ondrop = function (e) {
+	console.log('thumb.ondrop');
+	this.className = '';
+	e.preventDefault();
+	if (socket.readyState == 1) {
+		upload_file(e.dataTransfer.files[0]);
+	} else {
+		console.log('Socket not open');
+	}
+};
+
+new_socket();
+
+</script>
+</body>
+</html>
