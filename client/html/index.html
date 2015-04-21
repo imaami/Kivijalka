@@ -20,13 +20,14 @@
       <canvas id="thumbCanvas" width="640" height="512" style="border:0px solid #000000;">
       </canvas>
     </div>
-    <div id="banners" style="margin:0px auto;width:auto;height:auto;display:table:float:left">
+    <div id="bannerQueue" style="margin:0px auto;width:auto;height:auto;display:table:float:left">
       <img src="/usr/share/kivijalka/banners/banner.png" alt="banner" />
     </div>
   </div>
 
 <script>
 var thumb = document.getElementById('thumb');
+var bq = document.getElementById('bannerQueue');
 
 var clearCanvas = function(ctx, w, h) {
 	ctx.clearRect(0, 0, w, h);
@@ -126,6 +127,22 @@ var new_socket = function() {
 	socket.onmessage = socket_recv_handshake;
 };
 
+var enqueue_file = function(file) {
+	console.log('enqueue_file');
+
+	if (file.type.match('image.*')) {
+		var reader = new FileReader();
+
+		reader.onload = function(e) {
+			var img = new Image();
+			img.src = reader.result;
+			bq.appendChild(img);
+		};
+
+		reader.readAsDataURL(file);
+	}
+}
+
 var upload_file = function(file) {
 	console.log('upload_file');
 
@@ -143,16 +160,49 @@ var upload_file = function(file) {
 	}
 }
 
-/*
-var upload_files = function(files) {
-  console.log('upload_files()');
-  for (var i = 0; i < files.length; i++) {
-    upload_file(files[i]);
-  }
-}
-*/
+bq.ondrop = function (e) {
+	console.log('bq.ondrop');
+	e.preventDefault();
+	var dt = e.dataTransfer;
 
-thumb.ondragover = function () {
+	var types = dt.types;
+	for (var i = 0; i < types.length; ++i) {
+		if (types[i] === 'text/uri-list') {
+			console.log(types[i] + "=" + e.dataTransfer.getData('text/uri-list').split("\n"));
+		} else {
+			console.log(types[i]);
+		}
+	}
+
+	var files = dt.files;
+	for (var i = 0; i < files.length; ++i) {
+		enqueue_file (files[i]);
+	}
+};
+
+bq.ondragover = function (e) {
+	console.log('bq.ondragover');
+	e.preventDefault();
+	return false;
+};
+
+bq.ondragleave = function () {
+	console.log('bq.ondragleave');
+};
+
+bq.ondragend = function () {
+	console.log('bq.ondragend');
+};
+
+bq.ondragenter = function (e) {
+	console.log('bq.ondragenter');
+};
+
+bq.ondragstart = function (e) {
+	console.log('bq.ondragstart');
+};
+
+thumb.ondragover = function (e) {
 	console.log('thumb.ondragover');
 	this.className = 'hover';
 	return false;
@@ -168,6 +218,16 @@ thumb.ondrop = function (e) {
 	console.log('thumb.ondrop');
 	this.className = '';
 	e.preventDefault();
+
+	var types = e.dataTransfer.types;
+	for (var i = 0; i < types.length; ++i) {
+		if (types[i] === 'text/uri-list') {
+			console.log(types[i] + "=" + e.dataTransfer.getData('text/uri-list').split("\n"));
+		} else {
+			console.log(types[i]);
+		}
+	}
+
 	if (socket.readyState == 1) {
 		upload_file(e.dataTransfer.files[0]);
 	} else {
