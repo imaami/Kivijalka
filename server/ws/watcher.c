@@ -98,6 +98,7 @@ watcher_create (const char *path)
 			if (0 != sigfillset (&w->ss)) {
 				fprintf (stderr, "%s: sigfillset: %s\n",
 				         __func__, strerror (errno));
+				(void) inotify_rm_watch (fd, wd);
 				goto fail_err;
 			}
 
@@ -182,6 +183,10 @@ watcher_run_once (watcher_t *w)
 void
 watcher_destroy (watcher_t *w)
 {
+	if (0 != inotify_rm_watch (w->pf.fd, w->wd)) {
+		fprintf (stderr, "%s: inotify_rm_watch: %s\n",
+		         __func__, strerror (errno));
+	}
 	close (w->pf.fd);
 	free (w);
 }
