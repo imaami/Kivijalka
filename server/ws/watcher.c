@@ -183,10 +183,12 @@ watcher_run_once (watcher_t *w)
 void
 watcher_destroy (watcher_t *w)
 {
-	if (0 != inotify_rm_watch (w->pf.fd, w->wd)) {
-		fprintf (stderr, "%s: inotify_rm_watch: %s\n",
-		         __func__, strerror (errno));
+	if (w) {
+		if (0 != inotify_rm_watch (w->pf.fd, w->wd)) {
+			fprintf (stderr, "%s: inotify_rm_watch: %s\n",
+			         __func__, strerror (errno));
+		}
+		close (w->pf.fd);
+		free (w);
 	}
-	close (w->pf.fd);
-	free (w);
 }
