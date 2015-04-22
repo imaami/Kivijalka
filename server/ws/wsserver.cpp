@@ -8,8 +8,12 @@
 
 QT_USE_NAMESPACE
 
-WSServer::WSServer(quint16 port, const QString &thumbFile,
-                   const QString &bannerFile, QObject *parent) :
+WSServer::WSServer(quint16 port,
+                   quint16 displayWidth, quint16 displayHeight,
+                   quint16 thumbWidth, quint16 thumbHeight,
+                   const QString &thumbFile,
+                   const QString &bannerFile,
+                   QObject *parent) :
 	QObject(parent),
 	m_pWebSocketServer(new QWebSocketServer(QStringLiteral("Websocket Server"),
 	                                        QWebSocketServer::NonSecureMode, this)),
@@ -17,6 +21,11 @@ WSServer::WSServer(quint16 port, const QString &thumbFile,
 	thumbnail(thumbFile),
 	banner(bannerFile)
 {
+	this->displayWidth = displayWidth;
+	this->displayHeight = displayHeight;
+	this->thumbWidth = thumbWidth;
+	this->thumbHeight = thumbHeight;
+
 	if (m_pWebSocketServer->listen(QHostAddress::LocalHost, port)) {
 		qDebug() << "Websocket server listening on port" << port;
 		connect(m_pWebSocketServer, &QWebSocketServer::newConnection,
@@ -47,17 +56,30 @@ void WSServer::onNewConnection()
 	qDebug() << "New client:" << pSocket->peerAddress().toString();
 }
 
+void WSServer::respondToHS(QWebSocket *dest)
+{
+	dest->sendTextMessage(
+		"{\n\t\"type\": \"lmao\",\n\t\"ts\": \""
+		+ QString::number(QDateTime::currentDateTimeUtc().toMSecsSinceEpoch())
+		+ "\",\n\t\"w\": \""
+		+ QString::number(displayWidth)
+		+ "\",\n\t\"h\": \""
+		+ QString::number(displayHeight)
+		+ "\",\n\t\"tw\": \""
+		+ QString::number(thumbWidth)
+		+ "\",\n\t\"th\": \""
+		+ QString::number(thumbHeight)
+		+ "\"\n}"
+	);
+}
+
 void WSServer::processTextMessage(QString message)
 {
 	qDebug() << "Received string:" << message;
 	QWebSocket *pClient = qobject_cast<QWebSocket *>(sender());
 	if (pClient) {
 		if (message == "ayy") {
-			pClient->sendTextMessage(
-				"{\n\t\"type\": \"lmao\",\n\t\"ts\": \""
-				+ QString::number(QDateTime::currentDateTimeUtc().toMSecsSinceEpoch())
-				+ "\"\n}"
-			);
+			respondToHS(pClient);
 		} else {
 			pushThumbnail(pClient);
 		}

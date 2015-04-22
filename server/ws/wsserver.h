@@ -15,8 +15,12 @@ class WSServer : public QObject
 {
 	Q_OBJECT
 public:
-	explicit WSServer(quint16 port, const QString &thumbFile,
-	                  const QString &bannerFile, QObject *parent = Q_NULLPTR);
+	explicit WSServer(quint16 port,
+	                  quint16 displayWidth, quint16 displayHeight,
+	                  quint16 thumbWidth, quint16 thumbHeight,
+	                  const QString &thumbFile,
+	                  const QString &bannerFile,
+	                  QObject *parent = Q_NULLPTR);
 	~WSServer();
 
 Q_SIGNALS:
@@ -25,6 +29,7 @@ Q_SIGNALS:
 private Q_SLOTS:
 	void onNewConnection();
 	void processTextMessage(QString message);
+	void respondToHS(QWebSocket *dest);
 	void recvBanner(QByteArray message);
 	void socketDisconnected();
 	void thumbnailUpdated();
@@ -34,6 +39,8 @@ private Q_SLOTS:
 private:
 	QWebSocketServer *m_pWebSocketServer;
 	QList<QWebSocket *> clients;
+	quint16 displayWidth, displayHeight;
+	quint16 thumbWidth, thumbHeight;
 	QFile thumbnail;
 	QString banner;
 	QByteArray imageData;
