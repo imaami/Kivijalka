@@ -1,0 +1,22 @@
+digraph G {
+	compound = true;
+
+	subgraph cluster_s {
+		label = "Infoscreen server";
+		s_start -> misbehave -> crash -> s_start;
+		s_start [label = "run server"];
+	}
+
+	subgraph cluster_c {
+		label = "Web control client";
+		c_start -> complain -> freeze -> c_start;
+		c_start [label = "run client"];
+	}
+
+	start -> s_start [lhead = cluster_s];
+	start -> c_start [lhead = cluster_c];
+	crash -> end [ltail = cluster_s];
+	freeze -> end [ltail = cluster_c];
+
+	end [label = "angrily shout at computer"];
+}
