@@ -43,8 +43,6 @@ var socket_recv_thumb = function(data) {
 	var img = new Image();
 
 	img.onload = function (e) {
-		console.log('width:' + img.width);
-		console.log('height:' + img.height);
 		var cnv = document.getElementById("thumbCanvas");
 		var ctx = cnv.getContext("2d");
 		resizeCanvas(cnv, img.width, img.height);
