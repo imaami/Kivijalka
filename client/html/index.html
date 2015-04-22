@@ -106,6 +106,7 @@ var socket_message = function(ev) {
 // receive handshake response from server
 var socket_recv_handshake = function(e) {
 	if (typeof e.data === "string") {
+		console.log(e.data);
 		var msg = JSON.parse(e.data);
 		if (msg.type === "lmao") {
 			socket.onmessage = socket_message;
