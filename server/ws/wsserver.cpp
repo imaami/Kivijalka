@@ -13,13 +13,15 @@ WSServer::WSServer(quint16 port,
                    quint16 thumbWidth, quint16 thumbHeight,
                    const QString &thumbFile,
                    const QString &bannerFile,
+                   const QString &bannerDir,
                    QObject *parent) :
 	QObject(parent),
 	m_pWebSocketServer(new QWebSocketServer(QStringLiteral("Websocket Server"),
 	                                        QWebSocketServer::NonSecureMode, this)),
 	clients(),
 	thumbnail(thumbFile),
-	banner(bannerFile)
+	banner(bannerFile),
+	bannerCache(bannerDir, this)
 {
 	this->displayWidth = displayWidth;
 	this->displayHeight = displayHeight;

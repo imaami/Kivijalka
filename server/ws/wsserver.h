@@ -6,6 +6,7 @@
 #include <QtCore/QFile>
 #include <QtCore/QString>
 #include <QtCore/QByteArray>
+#include "bannercache.h"
 
 QT_FORWARD_DECLARE_CLASS(QWebSocketServer)
 QT_FORWARD_DECLARE_CLASS(QWebSocket)
@@ -20,6 +21,7 @@ public:
 	                  quint16 thumbWidth, quint16 thumbHeight,
 	                  const QString &thumbFile,
 	                  const QString &bannerFile,
+	                  const QString &bannerDir,
 	                  QObject *parent = Q_NULLPTR);
 	~WSServer();
 
@@ -45,6 +47,7 @@ private:
 	QString banner;
 	QByteArray imageData;
 	WatcherThread *watcherThread;
+	BannerCache bannerCache;
 };
 
 #endif //WSSERVER_H
