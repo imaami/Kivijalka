@@ -1,10 +1,13 @@
 QT       += core websockets gui
 
 TARGET = wsserver
-CONFIG   += console
+CONFIG   += console c++11
 CONFIG   -= app_bundle
 
 TEMPLATE = app
+
+QMAKE_CFLAGS += -march=native -O3 -std=gnu11
+QMAKE_CXXFLAGS += -march=native -O3 -std=gnu++11
 
 SOURCES += \
     main.cpp \

@@ -9,8 +9,9 @@ if [[ -f Makefile ]]; then
 fi
 
 if qmake; then
-  sed -ri 's|(CFLAGS.*)-pipe -O2|\1-march=native -pipe -O3 -g -std=gnu11|' Makefile
-  sed -ri 's|(CXXFLAGS.*)-pipe -O2|\1-march=native -pipe -O3 -g|' Makefile
-  sed -ri 's|QT_NO_DEBUG|QT_DEBUG|g' Makefile
+  sed -ri \
+      -e 's|(C(XX)?FLAGS.*)-O2|\1|' \
+      -e 's|(C(XX)?FLAGS.*)-std=c\+\+0x|\1|' \
+      Makefile
   make
 fi
