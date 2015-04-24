@@ -10,11 +10,12 @@ class Banner : public QObject
 	Q_OBJECT
 public:
 	explicit Banner(const QString &imageFile,
-	                quint16 x, quint16 y,
 	                QObject *parent = Q_NULLPTR);
 	~Banner();
 
 	QString metadata();
+	QString file;
+	QImage img;
 
 Q_SIGNALS:
 	void placementChanged();
@@ -23,8 +24,7 @@ private:
 	void constructMetadata();
 	void setPlacement(quint16 x, quint16 y);
 	struct { quint16 x, y; } placement;
-	QString file, json;
-	QImage img;
+	QString json;
 };
 
 #endif // BANNER_H

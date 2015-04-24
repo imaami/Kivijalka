@@ -4,20 +4,19 @@
 #include <QtCore/QObject>
 #include <QtCore/QString>
 #include <QtCore/QList>
-#include <QtCore/QDir>
 #include "banner.h"
 
 class BannerCache : public QObject
 {
 	Q_OBJECT
 public:
-	explicit BannerCache(const QString &path,
+	explicit BannerCache(const QString &dirPath,
 	                     QObject *parent = Q_NULLPTR);
 	~BannerCache();
 
 	bool add(Banner &b);
 	bool del(Banner &b);
-	Banner *get (const QString &path);
+	Banner *get (const QString &filePath);
 
 Q_SIGNALS:
 	void bannerAdded(Banner *);
@@ -25,8 +24,8 @@ Q_SIGNALS:
 	void bannerModified(Banner *);
 
 private:
-	QDir dir;
-	QList<Banner> list;
+	QString path;
+	QList<Banner *> list;
 };
 
 #endif // BANNERCACHE_H
