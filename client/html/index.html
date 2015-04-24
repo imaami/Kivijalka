@@ -62,7 +62,7 @@ var socket_addr = 'ws://127.0.0.1:8001/';
 var socket;
 
 var socket_init_handshake = function() {
-	socket.send("ayy");
+	socket.send("71bf2d31e9e4e15c");
 };
 
 var socket_opened = function() {
@@ -106,7 +106,7 @@ var socket_recv_handshake = function(e) {
 	if (typeof e.data === "string") {
 		console.log(e.data);
 		var msg = JSON.parse(e.data);
-		if (msg.type === "lmao") {
+		if (msg.type === "c9f82f30e6a00db0") {
 			socket.onmessage = socket_message;
 			console.log('Handshake response at ' + msg.ts);
 			return;

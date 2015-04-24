@@ -61,7 +61,7 @@ void WSServer::onNewConnection()
 void WSServer::respondToHS(QWebSocket *dest)
 {
 	dest->sendTextMessage(
-		"{\n\t\"type\": \"lmao\",\n\t\"ts\": \""
+		"{\n\t\"type\": \"c9f82f30e6a00db0\",\n\t\"ts\": \""
 		+ QString::number(QDateTime::currentDateTimeUtc().toMSecsSinceEpoch())
 		+ "\",\n\t\"w\": \""
 		+ QString::number(displayWidth)
@@ -80,7 +80,7 @@ void WSServer::processTextMessage(QString message)
 	qDebug() << "Received string:" << message;
 	QWebSocket *pClient = qobject_cast<QWebSocket *>(sender());
 	if (pClient) {
-		if (message == "ayy") {
+		if (message == "71bf2d31e9e4e15c") {
 			respondToHS(pClient);
 		} else {
 			pushThumbnail(pClient);
