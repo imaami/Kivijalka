@@ -16,18 +16,16 @@ BannerCache::BannerCache(const QString &dirPath,
 		                {"*.png", "*.jpg", "*.jpeg", "*.gif"},
 		                QDir::Files|QDir::Readable);
 		while (di.hasNext()) {
-			Banner *b = new Banner(di.next());
+			Banner *b = new Banner(di.next(), this);
 			this->list.append(b);
 		}
 	}
 
 	for (int i = 0; i < this->list.size(); ++i) {
 		const Banner *b = this->list.at(i);
-/*
 		std::printf("%s: %d x %d\n",
 		            b->file.toUtf8().data(),
 		            b->img.width(), b->img.height());
-*/
 	}
 }
 

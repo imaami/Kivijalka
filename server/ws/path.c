@@ -14,6 +14,7 @@
 #include <sys/stat.h>
 #include <sys/inotify.h>
 #include <sys/time.h>
+#include "list.h"
 
 /*
 	char *str1, *str2, *token, *subtoken;
@@ -44,69 +45,60 @@
        }
 */
 
-typedef struct list_node list_node_t;
 typedef struct path_head path_head_t;
 typedef struct path_node path_node_t;
 
 __attribute__((gcc_struct,packed))
-struct list_node {
-	union {
-		list_node_t *next;
-		list_node_t *head;
-	};
-	union {
-		list_node_t *prev;
-		list_node_t *tail;
-	};
-};
-
-__attribute__((always_inline))
-static inline void
-list_init (list_node_t *list)
-{
-	list->next = list;
-	list->prev = list;
-}
-
-__attribute__((gcc_struct,packed))
 struct path_head {
-	list_node_t list;
+	list_head_t list;
 	size_t      size;
 };
 
 __attribute__((gcc_struct,packed))
 struct path_node {
-	list_node_t list;
+	list_head_t list;
 	size_t      size;
 	char        name[];
 };
 
 __attribute__((always_inline))
+static inline size_t
+path_node_size (const size_t len)
+{
+	return sizeof (list_head_t) + sizeof (size_t) + len + 1;
+}
+
+__attribute__((always_inline))
 static inline path_node_t *
-path_node_new (const size_t  size,
-               const char   *name)
+path_node_new (const size_t  len,
+               const char   *str)
 {
 	path_node_t *n;
-	if ((n = malloc ((2 * sizeof (path_node_t *))
-	                 + sizeof (size_t) + size + 1))) {
-		list_init (&n->list);
-		n->size = size;
-		memcpy ((void *) n->name, (const void *) name, size);
-		((char *) n->name)[size] = '\0';
+	if ((n = malloc (path_node_size (len)))) {
+		memcpy ((void *) n->name, (const void *) str, len);
+		((char *) n->name)[len] = '\0';
+		n->size = len;
 	}
 	return n;
 }
 
 __attribute__((always_inline))
-static inline size_t
-print_substr (char *start, char *end)
+static inline void
+path_append (path_head_t  *path,
+             const size_t  len,
+             const char   *str)
 {
-	size_t b = (size_t)((ptrdiff_t)end - (ptrdiff_t)start);
-	for (char *p = start; p < end; ++p) {
-		putchar (*p);
+	path_node_t *node;
+	if ((node = path_node_new (len, str))) {
+		list_add_tail (&(node->list), &(path->list));
 	}
-	if (b > 0) printf (" (%lu)\n", b);
-	return b;
+}
+
+__attribute__((always_inline))
+static inline size_t
+path_substr_len (char *start, char *end)
+{
+	return (size_t)((ptrdiff_t)end - (ptrdiff_t)start);
 }
 
 __attribute__((always_inline))
@@ -116,7 +108,6 @@ inspect_path (path_head_t *head,
 {
 	char *p = (char *) path, *s;
 	size_t b;
-	path_node_t *n;
 
 	printf ("path=%s\n", path);
 
@@ -139,13 +130,11 @@ inspect_path (path_head_t *head,
 	for (;;) {
 		switch (*p) {
 		case '\0':
-			b = print_substr (s, p);
-//			b = (size_t)((ptrdiff_t)p - (ptrdiff_t)s);
+			path_append (head, path_substr_len (s, p), s);
 			goto end;
 
 		case '/':
-			b = print_substr (s, p);
-//			b = (size_t)((ptrdiff_t)p - (ptrdiff_t)s);
+			path_append (head, path_substr_len (s, p), s);
 			for (; '/' == *++p;) {}
 			s = p;
 			continue;
@@ -163,8 +152,7 @@ int main (int argc, char **argv)
 {
 	if (argv[1]) {
 		path_head_t path;
-		path.list.head = &path.list;
-		path.list.tail = &path.list;
+		list_init (&(path.list));
 		path.size = 0;
 		inspect_path (&path, argv[1]);
 	}
