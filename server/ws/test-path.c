@@ -20,7 +20,7 @@ main (int    argc,
 				printf ("%s", s);
 				++i;
 			}
-			puts ("");
+			printf (" (%u)\n", path.length);
 		}
 
 		path_destroy (&path);

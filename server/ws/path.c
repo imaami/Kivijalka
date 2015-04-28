@@ -8,7 +8,7 @@ __attribute__((always_inline,pure))
 static inline size_t
 path_node_size (const size_t len)
 {
-	return sizeof (struct path_head) + len + 1;
+	return sizeof (list_head_t) + sizeof (size_t) + len + 1;
 }
 
 __attribute__((always_inline,malloc))
@@ -53,10 +53,12 @@ path_add_node (path_head_t  *head,
                const size_t  len,
                const char   *str)
 {
-	path_node_t *node;
-	if (len && (node = path_node_new (len, str))) {
-		list_add_tail (&(node->list), &(head->list));
-		head->size++;
+	path_node_t *n;
+	if (len && (n = path_node_new (len, str))) {
+		size_t x = path_empty (head) ? 0 : 1;
+		list_add_tail (&(n->list), &(head->list));
+		head->depth++;
+		head->length += (x + len);
 	}
 }
 
@@ -73,7 +75,7 @@ path_del_node (path_head_t *head,
                path_node_t *node)
 {
 	list_del (&(node->list));
-	head->size--;
+	head->depth--;
 	memset ((void *) node->name, 0, (int) node->size);
 	node->size = 0;
 	free (node);
@@ -84,7 +86,7 @@ static inline void
 path_init (path_head_t *head)
 {
 	list_init (&(head->list));
-	head->size = 0;
+	head->depth = 0;
 }
 
 void

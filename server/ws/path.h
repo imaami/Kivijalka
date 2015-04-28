@@ -26,7 +26,8 @@ typedef struct path_node path_node_t;
 __attribute__((gcc_struct,packed))
 struct path_head {
 	list_head_t list;
-	size_t      size;
+	size_t      depth;
+	size_t      length;
 };
 
 __attribute__((gcc_struct,packed))
@@ -84,7 +85,7 @@ __attribute__((always_inline))
 static inline size_t
 path_depth (path_head_t *head)
 {
-	return head->size;
+	return head->depth;
 }
 
 __attribute__((always_inline))
