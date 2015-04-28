@@ -1,5 +1,4 @@
 #include "path.h"
-#include "list.h"
 
 #include <stdio.h>
 
@@ -9,11 +8,10 @@ main (int    argc,
 {
 	if (argv[1]) {
 		path_head_t path;
-		path_init (&path);
 		path_create (&path, argv[1]);
 
-		if (!list_empty (&(path.list))) {
-			printf ("path contains %u nodes\n", path.size);
+		if (!path_empty (&path)) {
+			printf ("path contains %u nodes\n", path_depth (&path));
 			size_t i = 0;
 			path_node_t *n;
 			path_for_each (n, &path) {
@@ -26,7 +24,7 @@ main (int    argc,
 		}
 
 		path_destroy (&path);
-		if (list_empty (&(path.list))) {
+		if (path_empty (&path)) {
 			printf ("path list emptied\n");
 		}
 	}
