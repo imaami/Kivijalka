@@ -16,35 +16,6 @@
 #include <sys/time.h>
 #include "list.h"
 
-/*
-	char *str1, *str2, *token, *subtoken;
-	char *saveptr1, *saveptr2;
-	int j;
-
-           if (argc != 4) {
-               fprintf(stderr, "Usage: %s string delim subdelim\n",
-                       argv[0]);
-               exit(EXIT_FAILURE);
-           }
-
-           for (j = 1, str1 = argv[1]; ; j++, str1 = NULL) {
-               token = strtok_r(str1, argv[2], &saveptr1);
-               if (token == NULL)
-                   break;
-               printf("%d: %s\n", j, token);
-
-               for (str2 = token; ; str2 = NULL) {
-                   subtoken = strtok_r(str2, argv[3], &saveptr2);
-                   if (subtoken == NULL)
-                       break;
-                   printf(" --> %s\n", subtoken);
-               }
-           }
-
-           exit(EXIT_SUCCESS);
-       }
-*/
-
 typedef struct path_head path_head_t;
 typedef struct path_node path_node_t;
 
@@ -62,10 +33,47 @@ struct path_node {
 };
 
 __attribute__((always_inline))
+static inline void
+path_init (path_head_t *head)
+{
+	list_init (&(head->list));
+	head->size = 0;
+}
+
+__attribute__((always_inline,pure))
 static inline size_t
 path_node_size (const size_t len)
 {
-	return sizeof (list_head_t) + sizeof (size_t) + len + 1;
+	return sizeof (struct path_head) + len + 1;
+}
+
+__attribute__((always_inline,malloc))
+static inline path_node_t *
+path_node_alloc (const size_t len)
+{
+	path_node_t *n;
+	if (!(n = malloc (path_node_size (len)))) {
+		fprintf (stderr, "%s: malloc failed: %s\n", __func__, strerror (errno));
+	}
+	return n;
+}
+
+__attribute__((always_inline))
+static inline void
+path_node_fill_name (path_node_t  *node,
+                     const size_t  len,
+                     const char   *str)
+{
+	memcpy ((void *) node->name, (const void *) str, len);
+	((char *) node->name)[len] = '\0';
+	node->size = len;
+}
+
+__attribute__((always_inline))
+static inline const char *
+path_node_name (path_node_t *node)
+{
+	return (const char *) node->name;
 }
 
 __attribute__((always_inline))
@@ -74,23 +82,22 @@ path_node_new (const size_t  len,
                const char   *str)
 {
 	path_node_t *n;
-	if ((n = malloc (path_node_size (len)))) {
-		memcpy ((void *) n->name, (const void *) str, len);
-		((char *) n->name)[len] = '\0';
-		n->size = len;
+	if ((n = path_node_alloc (len))) {
+		path_node_fill_name (n, len, str);
 	}
 	return n;
 }
 
 __attribute__((always_inline))
 static inline void
-path_append (path_head_t  *path,
+path_append (path_head_t  *head,
              const size_t  len,
              const char   *str)
 {
 	path_node_t *node;
-	if ((node = path_node_new (len, str))) {
-		list_add_tail (&(node->list), &(path->list));
+	if (len && (node = path_node_new (len, str))) {
+		list_add_tail (&(node->list), &(head->list));
+		head->size++;
 	}
 }
 
@@ -103,13 +110,10 @@ path_substr_len (char *start, char *end)
 
 __attribute__((always_inline))
 static inline void
-inspect_path (path_head_t *head,
-              const char  *path)
+path_create (path_head_t *head,
+             const char  *path)
 {
 	char *p = (char *) path, *s;
-	size_t b;
-
-	printf ("path=%s\n", path);
 
 	switch (*p) {
 	case '\0':
@@ -125,13 +129,11 @@ inspect_path (path_head_t *head,
 		s = p++;
 	}
 
-	printf ("s=%s\n", s);
-
 	for (;;) {
 		switch (*p) {
 		case '\0':
 			path_append (head, path_substr_len (s, p), s);
-			goto end;
+			return;
 
 		case '/':
 			path_append (head, path_substr_len (s, p), s);
@@ -143,18 +145,54 @@ inspect_path (path_head_t *head,
 			++p;
 		}
 	}
+}
 
-end:
-	return;
+__attribute__((always_inline))
+static inline void
+path_del_node (path_head_t *head,
+               path_node_t *node)
+{
+	list_del (&(node->list));
+	head->size--;
+	memset ((void *) node->name, 0, (int) node->size);
+	node->size = 0;
+	free (node);
+}
+
+__attribute__((always_inline))
+static inline void
+path_destroy (path_head_t *head)
+{
+	path_node_t *n, *n2;
+	list_for_each_entry_safe_reverse (n, n2, &(head->list), list) {
+		path_del_node (head, n);
+	}
 }
 
 int main (int argc, char **argv)
 {
 	if (argv[1]) {
 		path_head_t path;
-		list_init (&(path.list));
-		path.size = 0;
-		inspect_path (&path, argv[1]);
+		path_init (&path);
+		path_create (&path, argv[1]);
+
+		if (!list_empty (&(path.list))) {
+			printf ("path contains %u nodes\n", path.size);
+			size_t i = 0;
+			path_node_t *n;
+			list_for_each_entry (n, &(path.list), list) {
+				const char *s = path_node_name (n);
+				if (i) putchar ('/');
+				printf ("%s", s);
+				++i;
+			}
+			puts ("");
+		}
+
+		path_destroy (&path);
+		if (list_empty (&(path.list))) {
+			printf ("path list emptied\n");
+		}
 	}
 	return 0;
 }
