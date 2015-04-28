@@ -16,7 +16,7 @@ main (int    argc,
 			printf ("path contains %u nodes\n", path.size);
 			size_t i = 0;
 			path_node_t *n;
-			list_for_each_entry (n, &(path.list), list) {
+			path_for_each (n, &path) {
 				const char *s = path_node_name (n);
 				if (i) putchar ('/');
 				printf ("%s", s);

@@ -35,6 +35,9 @@ struct path_node {
 	char        name[];
 };
 
+#define path_for_each(node, head) \
+  list_for_each_entry (node, &((head)->list), list)
+
 extern void
 path_create (path_head_t *head,
              const char  *path);
