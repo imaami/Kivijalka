@@ -46,6 +46,33 @@ extern void
 path_destroy (path_head_t *head);
 
 __attribute__((always_inline))
+static inline path_node_t *
+path_root (path_head_t *head)
+{
+	return (!list_empty (&(head->list)))
+	       ? list_entry (head->list.next, path_node_t, list)
+	       : NULL;
+}
+
+__attribute__((always_inline))
+static inline path_node_t *
+path_ascend (path_head_t *head,
+             path_node_t *node)
+{
+	path_node_t *n = list_entry (node->list.next, path_node_t, list);
+	return ((void *) n != (void *) head) ? n : NULL;
+}
+
+__attribute__((always_inline))
+static inline path_node_t *
+path_descend (path_head_t *head,
+              path_node_t *node)
+{
+	path_node_t *n = list_entry (node->list.prev, path_node_t, list);
+	return ((void *) n != (void *) head) ? n : NULL;
+}
+
+__attribute__((always_inline))
 static inline void
 path_init (path_head_t *head)
 {
