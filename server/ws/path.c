@@ -1,8 +1,13 @@
 #include "path.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
+#include <stdio.h>
+#include <errno.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
+#include <stdbool.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 __attribute__((always_inline,pure))
 static inline size_t
@@ -31,7 +36,7 @@ path_node_fill_name (path_node_t  *node,
                      const char   *str)
 {
 	size_t l = (len > node->size) ? node->size : len;
-	memcpy ((void *) node->name, (const void *) str, l);
+	(void) memcpy ((void *) node->name, (const void *) str, l);
 	node->name[l] = '\0';
 }
 
@@ -48,21 +53,6 @@ path_node_new (const size_t  len,
 }
 
 __attribute__((always_inline))
-static inline void
-path_add_node (path_head_t  *head,
-               const size_t  len,
-               const char   *str)
-{
-	path_node_t *n;
-	if (len && (n = path_node_new (len, str))) {
-		size_t x = path_empty (head) ? 0 : 1;
-		list_add_tail (&(n->list), &(head->list));
-		head->depth++;
-		head->length += (x + len);
-	}
-}
-
-__attribute__((always_inline))
 static inline size_t
 path_substr_len (char *start, char *end)
 {
@@ -71,22 +61,65 @@ path_substr_len (char *start, char *end)
 
 __attribute__((always_inline))
 static inline void
-path_del_node (path_head_t *head,
-               path_node_t *node)
+path_init (path_head_t *head)
 {
-	list_del (&(node->list));
-	head->depth--;
-	memset ((void *) node->name, 0, (int) node->size);
-	node->size = 0;
-	free (node);
+	list_init (&(head->list));
+	head->size = 0;
+	head->depth = 0;
+}
+
+__attribute__((always_inline))
+static inline bool
+path_empty (path_head_t *head)
+{
+	return list_empty (&(head->list));
 }
 
 __attribute__((always_inline))
 static inline void
-path_init (path_head_t *head)
+path_push (path_head_t  *head,
+           const size_t  len,
+           const char   *str)
 {
-	list_init (&(head->list));
-	head->depth = 0;
+	path_node_t *n;
+	if (len && (n = path_node_new (len, str))) {
+		size_t x = path_empty (head) ? 0 : 1;
+		list_add_tail (&(n->list), &(head->list));
+		head->size += (x + len);
+		head->depth++;
+	}
+}
+
+__attribute__((always_inline))
+static inline path_node_t *
+path_tail (path_head_t *head)
+{
+	return (!list_empty (&(head->list)))
+	       ? list_last_entry (&(head->list), path_node_t, list)
+	       : NULL;
+}
+
+__attribute__((always_inline))
+static inline path_node_t *
+path_pop (path_head_t *head)
+{
+	path_node_t *n;
+	if ((n = path_tail (head))) {
+		size_t x = (n->list.prev == &(head->list)) ? 0 : 1;
+		list_del (&(n->list));
+		head->size -= (x + n->size);
+		head->depth--;
+	}
+	return n;
+}
+
+__attribute__((always_inline))
+static inline void
+path_node_del (path_node_t *node)
+{
+	(void) memset ((void *) node->name, 0, node->size);
+	node->size = 0;
+	free (node);
 }
 
 void
@@ -94,6 +127,10 @@ path_create (path_head_t *head,
              const char  *path)
 {
 	char *p = (char *) path, *s;
+
+	if (!head) {
+		return;
+	}
 
 	path_init (head);
 
@@ -111,14 +148,10 @@ path_create (path_head_t *head,
 		s = p++;
 	}
 
-	for (;;) {
+	for (; *p;) {
 		switch (*p) {
-		case '\0':
-			path_add_node (head, path_substr_len (s, p), s);
-			return;
-
 		case '/':
-			path_add_node (head, path_substr_len (s, p), s);
+			path_push (head, path_substr_len (s, p), s);
 			for (; '/' == *++p;) {}
 			s = p;
 			continue;
@@ -127,13 +160,49 @@ path_create (path_head_t *head,
 			++p;
 		}
 	}
+
+	path_push (head, path_substr_len (s, p), s);
+}
+
+__attribute__((always_inline))
+static inline void
+path_write_to (path_head_t *head,
+               char        *dest)
+{
+	char *p = dest;
+	if (!path_empty (head)) {
+		path_node_t *n = list_entry (head->list.next, path_node_t, list);
+		(void) memcpy ((void *) p, (const void *) n->name, n->size);
+		p += (ptrdiff_t) n->size;
+		while (n->list.next != &(head->list)) {
+			n = list_next_entry (n, list);
+			*p = '/';
+			++p;
+			(void) memcpy ((void *) p, (const void *) n->name, n->size);
+			p += (ptrdiff_t) n->size;
+		}
+	}
+	*p = '\0';
+}
+
+char *
+path_strcpy (path_head_t *head)
+{
+	char *dest;
+	if (!head) {
+		dest = NULL;
+	} else if ((dest = malloc (path_strlen (head) + 1))) {
+		path_write_to (head, dest);
+	}
+	return dest;
 }
 
 void
 path_destroy (path_head_t *head)
 {
-	path_node_t *n, *n2;
-	list_for_each_entry_safe_reverse (n, n2, &(head->list), list) {
-		path_del_node (head, n);
+	if (head) {
+		for (path_node_t *n;
+		     (n = path_pop (head));
+		     path_node_del (n));
 	}
 }
