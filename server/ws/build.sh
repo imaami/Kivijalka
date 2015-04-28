@@ -10,7 +10,7 @@ if [[ -f "${MAKEFILE}" ]]; then
   mv "${MAKEFILE}" "${MAKEFILE}.old"
 fi
 
-if qmake -makefile -o"${MAKEFILE}" wsserver.pro; then
+if qmake -makefile -o "${MAKEFILE}" wsserver.pro; then
   sed -ri \
       -e 's|(C(XX)?FLAGS.*)-O2|\1|' \
       -e 's|(C(XX)?FLAGS.*)-std=c\+\+0x|\1|' \
