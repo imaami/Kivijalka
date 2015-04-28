@@ -30,8 +30,9 @@ path_node_fill_name (path_node_t  *node,
                      const size_t  len,
                      const char   *str)
 {
-	memcpy ((void *) node->name, (const void *) str, len);
-	((char *) node->name)[len] = '\0';
+	size_t l = (len > node->size) ? node->size : len;
+	memcpy ((void *) node->name, (const void *) str, l);
+	node->name[l] = '\0';
 }
 
 __attribute__((always_inline))
