@@ -18,6 +18,8 @@ path_node_alloc (const size_t len)
 	path_node_t *n;
 	if (!(n = malloc (path_node_size (len)))) {
 		fprintf (stderr, "%s: malloc failed: %s\n", __func__, strerror (errno));
+	} else {
+		n->size = len;
 	}
 	return n;
 }
@@ -30,7 +32,6 @@ path_node_fill_name (path_node_t  *node,
 {
 	memcpy ((void *) node->name, (const void *) str, len);
 	((char *) node->name)[len] = '\0';
-	node->size = len;
 }
 
 __attribute__((always_inline))
