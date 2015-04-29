@@ -14,7 +14,7 @@ main (int    argc,
 		path_create (&path, argv[1]);
 
 		if ((str = path_strcpy (&path))) {
-			printf ("%s (%u)\n", str, path_strlen (&path));
+			printf ("%s (%zu)\n", str, path_strlen (&path));
 			free (str);
 		}
 
