@@ -33,17 +33,20 @@ BannerCache::~BannerCache()
 {
 }
 
-bool BannerCache::add(Banner &b)
+__attribute__((unused))
+bool BannerCache::add(__attribute__((unused)) Banner &b)
 {
 	return true;
 }
 
-bool BannerCache::del(Banner &b)
+__attribute__((unused))
+bool BannerCache::del(__attribute__((unused)) Banner &b)
 {
 	return true;
 }
 
-Banner *BannerCache::get(const QString &filePath)
+__attribute__((unused))
+Banner *BannerCache::get(__attribute__((unused)) const QString &filePath)
 {
 	return NULL; // TODO
 }
