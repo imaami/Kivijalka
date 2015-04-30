@@ -186,7 +186,7 @@ path_write_to (path_head_t *head,
 }
 
 char *
-path_strcpy (path_head_t *head)
+path_strdup (path_head_t *head)
 {
 	char *dest;
 	if (!head) {

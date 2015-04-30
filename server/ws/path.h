@@ -36,7 +36,7 @@ path_create (path_head_t *head,
              const char  *path);
 
 extern char *
-path_strcpy (path_head_t *head);
+path_strdup (path_head_t *head);
 
 extern void
 path_destroy (path_head_t *head);
