@@ -92,6 +92,8 @@ watcher_create (const char *path)
 
 	switch (fd) {
 	case -1:
+		fprintf (stderr, "%s: inotify_init: %s\n",
+		                 __func__, strerror (errno));
 		goto fail_err;
 
 	default:
@@ -99,8 +101,9 @@ watcher_create (const char *path)
 
 		switch (wd) {
 		case -1:
+			fprintf (stderr, "%s: inotify_add_watch: %s\n",
+			                 __func__, strerror (errno));
 		fail_err:
-			fprintf (stderr, "%s: %s\n", __func__, strerror (errno));
 			free (w);
 			w = NULL;
 			goto end;
