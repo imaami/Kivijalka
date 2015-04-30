@@ -15,11 +15,13 @@ SOURCES += \
     bannercache.cpp \
     wsserver.cpp \
     watcherthread.cpp \
-    watcher.c
+    watcher.c \
+    path.c
 
 HEADERS += \
     banner.h \
     bannercache.h \
     wsserver.h \
     watcherthread.h \
-    watcher.h
+    watcher.h \
+    path.h

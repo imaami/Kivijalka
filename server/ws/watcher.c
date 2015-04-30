@@ -19,12 +19,14 @@
 #include <sys/time.h>
 
 #include "watcher.h"
+#include "path.h"
 
 struct watcher {
 	int             wd;
 	sigset_t        ss;
 	struct pollfd   pf;
 	struct timespec to;
+	path_head_t     path;
 	char            file[];
 } __attribute__((gcc_struct,packed));
 
@@ -36,6 +38,7 @@ watcher_size (const size_t len)
 	       + sizeof (sigset_t)
 	       + sizeof (struct pollfd)
 	       + sizeof (struct timespec)
+	       + sizeof (path_head_t)
 	       + len + 1;
 }
 
@@ -50,6 +53,20 @@ watcher_create (const char *path)
 
 	if (!path || !path[0]) {
 		fprintf (stderr, "%s: invalid arguments\n", __func__);
+		return NULL;
+	}
+
+	path_head_t head;
+	path_create (&head, path);
+
+	if (path_empty (&head)) {
+		fprintf (stderr, "%s: path_create failed\n", __func__);
+		return NULL;
+	}
+
+	path_node_t *fnode;
+	if (!(fnode = path_tail (&head))) {
+		fprintf (stderr, "%s: path_tail failed\n", __func__);
 		return NULL;
 	}
 
@@ -83,8 +100,10 @@ watcher_create (const char *path)
 		goto end;
 	}
 
-	strncpy (w->file, file, file_len);
-	w->file[file_len] = '\0';
+	strncpy (w->file, fnode->name, fnode->size);
+	w->file[fnode->size] = '\0';
+//	strncpy (w->file, file, file_len);
+//	w->file[file_len] = '\0';
 
 //	printf ("path: %s\nfile: %s\n", p, w->file);
 
@@ -104,6 +123,7 @@ watcher_create (const char *path)
 			fprintf (stderr, "%s: inotify_add_watch: %s\n",
 			                 __func__, strerror (errno));
 		fail_err:
+			path_destroy (&head);
 			free (w);
 			w = NULL;
 			goto end;
@@ -121,6 +141,7 @@ watcher_create (const char *path)
 			w->pf.events = POLLIN;
 			w->to.tv_sec = 0;
 			w->to.tv_nsec = 500000000;
+			path_copy (&(w->path), &head);
 		}
 	}
 
@@ -198,6 +219,7 @@ void
 watcher_destroy (watcher_t *w)
 {
 	if (w) {
+		path_destroy (&(w->path));
 		if (0 != inotify_rm_watch (w->pf.fd, w->wd)) {
 			fprintf (stderr, "%s: inotify_rm_watch: %s\n",
 			         __func__, strerror (errno));
