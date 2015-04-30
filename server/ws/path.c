@@ -69,13 +69,6 @@ path_init (path_head_t *head)
 }
 
 __attribute__((always_inline))
-static inline bool
-path_empty (path_head_t *head)
-{
-	return list_empty (&(head->list));
-}
-
-__attribute__((always_inline))
 static inline void
 path_push (path_head_t  *head,
            const size_t  len,
@@ -88,15 +81,6 @@ path_push (path_head_t  *head,
 		head->size += (x + len);
 		head->depth++;
 	}
-}
-
-__attribute__((always_inline))
-static inline path_node_t *
-path_tail (path_head_t *head)
-{
-	return (!list_empty (&(head->list)))
-	       ? list_last_entry (&(head->list), path_node_t, list)
-	       : NULL;
 }
 
 __attribute__((always_inline))
