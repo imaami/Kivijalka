@@ -48,6 +48,17 @@ path_strlen (path_head_t *head)
 	return head->size;
 }
 
+__attribute__((always_inline))
+static inline void
+path_copy (path_head_t       *dst,
+           const path_head_t *src)
+{
+	dst->list.next = src->list.next;
+	dst->list.prev = src->list.prev;
+	dst->size = src->size;
+	dst->depth = src->depth;
+}
+
 #ifdef __cplusplus
 }
 #endif
