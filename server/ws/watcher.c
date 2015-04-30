@@ -28,6 +28,17 @@ struct watcher {
 	char            file[];
 } __attribute__((gcc_struct,packed));
 
+__attribute__((always_inline,pure))
+static inline size_t
+watcher_size (const size_t len)
+{
+	return sizeof (int)
+	       + sizeof (sigset_t)
+	       + sizeof (struct pollfd)
+	       + sizeof (struct timespec)
+	       + len + 1;
+}
+
 watcher_t *
 watcher_create (const char *path)
 {
@@ -68,7 +79,7 @@ watcher_create (const char *path)
 		p[2] = '\0';
 	}
 
-	if (!(w = malloc (2 * sizeof (int) + file_len + 1))) {
+	if (!(w = malloc (watcher_size (file_len)))) {
 		goto end;
 	}
 
