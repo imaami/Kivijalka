@@ -49,9 +49,7 @@ watcher_create (const char *path)
 {
 	watcher_t *w;
 	int fd, wd;
-	size_t dir_len;
-	char *p;
-	const char *file;
+	size_t plen, flen;
 
 	if (!path) {
 		fprintf (stderr, "%s: null path\n", __func__);
@@ -71,42 +69,29 @@ watcher_create (const char *path)
 		return NULL;
 	}
 
-	p = (char *) path;
-	file = (const char *) p - 1;
-	for (; *p; ++p) {
-		if ('/' == *p) {
-			file = (const char *) p;
-		}
-	}
+	plen = path_strlen (&head);
+	flen = path_filename_strlen (&head);
 
-	++file;
-	dir_len = (size_t) ((ptrdiff_t) file - (ptrdiff_t) path);
-
-	if (dir_len) {
-		if (!(p = malloc (dir_len + 1))) {
-			return NULL;
-		}
-		strncpy (p, path, dir_len);
-		p[dir_len] = '\0';
-	} else {
-		if (!(p = malloc (3))) {
-			return NULL;
-		}
-		strncpy (p, "./", 2);
-		p[2] = '\0';
+	if (plen <= flen) {
+		fprintf (stderr, "%s: i don't know what the fuck is going on\n", __func__);
+		goto fail_del_path;
 	}
 
 	if (!(w = malloc (watcher_size (path_strlen (&head))))) {
-		goto end;
+		fprintf (stderr, "%s: malloc failed: %s\n",
+		                 __func__, strerror (errno));
+	fail_del_path:
+		path_destroy (&head);
+		return NULL;
 	}
-
-	// temp
-	w->data[0] = '\0';
 
 	if (!(w->file = path_filename (&head))) {
 		fprintf (stderr, "%s: path_filename failed\n", __func__);
 		goto fail_err;
 	}
+
+	path_strcpy (w->data, &head);
+	w->data[plen - (flen + 1)] = '\0';
 
 	fd = inotify_init1 (IN_NONBLOCK);
 
@@ -117,7 +102,9 @@ watcher_create (const char *path)
 		goto fail_err;
 
 	default:
-		wd = inotify_add_watch (fd, p, IN_CLOSE_WRITE|IN_MOVED_TO|IN_MASK_ADD);
+		printf ("Trying to watch %s\n", w->data);
+		wd = inotify_add_watch (fd, w->data,
+		                        IN_CLOSE_WRITE|IN_MOVED_TO|IN_MASK_ADD);
 
 		switch (wd) {
 		case -1:
@@ -147,7 +134,6 @@ watcher_create (const char *path)
 	}
 
 end:
-	free (p);
 	return w;
 }
 

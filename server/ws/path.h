@@ -35,6 +35,10 @@ extern void
 path_create (path_head_t *head,
              const char  *path);
 
+extern void
+path_strcpy (char        *dest,
+             path_head_t *head);
+
 extern char *
 path_strdup (path_head_t *head);
 
@@ -83,12 +87,28 @@ path_node_name (path_node_t *node)
 }
 
 __attribute__((always_inline))
+static inline size_t
+path_node_strlen (path_node_t *node)
+{
+	return (node) ? node->size : 0;
+}
+
+__attribute__((always_inline))
 static inline const char *
 path_filename (path_head_t *head)
 {
 	return (head && head->list.prev != &(head->list))
 	       ? path_node_name (path_node (head->list.prev))
 	       : NULL;
+}
+
+__attribute__((always_inline))
+static inline size_t
+path_filename_strlen (path_head_t *head)
+{
+	return (head && head->list.prev != &(head->list))
+	       ? path_node_strlen (path_node (head->list.prev))
+	       : 0;
 }
 
 #ifdef __cplusplus
