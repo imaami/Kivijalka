@@ -22,14 +22,15 @@
 #include "path.h"
 
 struct watcher {
-	int             wd;
-	sigset_t        ss;
-	struct pollfd   pf;
-	struct timespec to;
-	path_head_t     path;
-	char            file[];
+	int              wd;
+	sigset_t         ss;
+	struct pollfd    pf;
+	struct timespec  to;
+	path_head_t      path;
+	const char      *file;
 } __attribute__((gcc_struct,packed));
 
+/*
 __attribute__((always_inline,pure))
 static inline size_t
 watcher_size (const size_t len)
@@ -41,13 +42,14 @@ watcher_size (const size_t len)
 	       + sizeof (path_head_t)
 	       + len + 1;
 }
+*/
 
 watcher_t *
 watcher_create (const char *path)
 {
 	watcher_t *w;
 	int fd, wd;
-	size_t dir_len, file_len;
+	size_t dir_len;
 	char *p;
 	const char *file;
 
@@ -64,12 +66,6 @@ watcher_create (const char *path)
 		return NULL;
 	}
 
-	path_node_t *fnode;
-	if (!(fnode = path_tail (&head))) {
-		fprintf (stderr, "%s: path_tail failed\n", __func__);
-		return NULL;
-	}
-
 	p = (char *) path;
 	file = (const char *) p - 1;
 	for (; *p; ++p) {
@@ -79,7 +75,6 @@ watcher_create (const char *path)
 	}
 
 	++file;
-	file_len = (size_t) ((ptrdiff_t) p - (ptrdiff_t) file);
 	dir_len = (size_t) ((ptrdiff_t) file - (ptrdiff_t) path);
 
 	if (dir_len) {
@@ -96,16 +91,14 @@ watcher_create (const char *path)
 		p[2] = '\0';
 	}
 
-	if (!(w = malloc (watcher_size (file_len)))) {
+	if (!(w = malloc (sizeof (struct watcher)))) {
 		goto end;
 	}
 
-	strncpy (w->file, fnode->name, fnode->size);
-	w->file[fnode->size] = '\0';
-//	strncpy (w->file, file, file_len);
-//	w->file[file_len] = '\0';
-
-//	printf ("path: %s\nfile: %s\n", p, w->file);
+	if (!(w->file = path_filename (&head))) {
+		fprintf (stderr, "%s: path_filename failed\n", __func__);
+		goto fail_err;
+	}
 
 	fd = inotify_init1 (IN_NONBLOCK);
 
@@ -219,6 +212,7 @@ void
 watcher_destroy (watcher_t *w)
 {
 	if (w) {
+		w->file = NULL;
 		path_destroy (&(w->path));
 		if (0 != inotify_rm_watch (w->pf.fd, w->wd)) {
 			fprintf (stderr, "%s: inotify_rm_watch: %s\n",

@@ -85,6 +85,15 @@ path_push (path_head_t  *head,
 
 __attribute__((always_inline))
 static inline path_node_t *
+path_tail (path_head_t *head)
+{
+	return (!path_empty (head))
+	       ? list_last_entry (&(head->list), path_node_t, list)
+	       : NULL;
+}
+
+__attribute__((always_inline))
+static inline path_node_t *
 path_pop (path_head_t *head)
 {
 	path_node_t *n;

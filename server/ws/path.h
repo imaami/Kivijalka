@@ -68,10 +68,26 @@ path_empty (path_head_t *head)
 
 __attribute__((always_inline))
 static inline path_node_t *
-path_tail (path_head_t *head)
+path_node (list_head_t *list_hook)
 {
-	return (!path_empty (head))
-	       ? list_last_entry (&(head->list), path_node_t, list)
+	return (list_hook)
+	       ? list_entry (list_hook, path_node_t, list)
+	       : NULL;
+}
+
+__attribute__((always_inline))
+static inline const char *
+path_node_name (path_node_t *node)
+{
+	return (node) ? (const char *) node->name : NULL;
+}
+
+__attribute__((always_inline))
+static inline const char *
+path_filename (path_head_t *head)
+{
+	return (head && head->list.prev != &(head->list))
+	       ? path_node_name (path_node (head->list.prev))
 	       : NULL;
 }
 
