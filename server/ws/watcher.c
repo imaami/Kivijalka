@@ -28,9 +28,9 @@ struct watcher {
 	struct timespec  to;
 	path_head_t      path;
 	const char      *file;
+	char             data[];
 } __attribute__((gcc_struct,packed));
 
-/*
 __attribute__((always_inline,pure))
 static inline size_t
 watcher_size (const size_t len)
@@ -40,9 +40,9 @@ watcher_size (const size_t len)
 	       + sizeof (struct pollfd)
 	       + sizeof (struct timespec)
 	       + sizeof (path_head_t)
+	       + sizeof (const char *)
 	       + len + 1;
 }
-*/
 
 watcher_t *
 watcher_create (const char *path)
@@ -96,9 +96,12 @@ watcher_create (const char *path)
 		p[2] = '\0';
 	}
 
-	if (!(w = malloc (sizeof (struct watcher)))) {
+	if (!(w = malloc (watcher_size (path_strlen (&head))))) {
 		goto end;
 	}
+
+	// temp
+	w->data[0] = '\0';
 
 	if (!(w->file = path_filename (&head))) {
 		fprintf (stderr, "%s: path_filename failed\n", __func__);
@@ -218,6 +221,8 @@ watcher_destroy (watcher_t *w)
 {
 	if (w) {
 		w->file = NULL;
+		(void) memset ((void *) w->data, 0,
+		               path_strlen (&(w->path)));
 		path_destroy (&(w->path));
 		if (0 != inotify_rm_watch (w->pf.fd, w->wd)) {
 			fprintf (stderr, "%s: inotify_rm_watch: %s\n",
