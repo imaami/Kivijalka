@@ -53,8 +53,13 @@ watcher_create (const char *path)
 	char *p;
 	const char *file;
 
-	if (!path || !path[0]) {
-		fprintf (stderr, "%s: invalid arguments\n", __func__);
+	if (!path) {
+		fprintf (stderr, "%s: null path\n", __func__);
+		return NULL;
+	}
+
+	if (path[0] != '/') {
+		fprintf (stderr, "%s: path must be absolute\n", __func__);
 		return NULL;
 	}
 
