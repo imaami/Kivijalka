@@ -178,6 +178,15 @@ path_write_to (path_head_t *head,
 	*p = '\0';
 }
 
+void
+path_strcpy (char        *dest,
+             path_head_t *head)
+{
+	if (dest && head) {
+		path_write_to (head, dest);
+	}
+}
+
 char *
 path_strdup (path_head_t *head)
 {
