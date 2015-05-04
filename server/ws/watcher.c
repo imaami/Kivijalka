@@ -27,6 +27,7 @@ struct watcher {
 	struct pollfd    pf;
 	struct timespec  to;
 	path_head_t      path;
+	path_node_t     *trig;
 	const char      *file;
 	char             data[];
 } __attribute__((gcc_struct,packed));
@@ -40,6 +41,7 @@ watcher_size (const size_t len)
 	       + sizeof (struct pollfd)
 	       + sizeof (struct timespec)
 	       + sizeof (path_head_t)
+	       + sizeof (path_node_t *)
 	       + sizeof (const char *)
 	       + len + 1;
 }
@@ -50,6 +52,8 @@ watcher_create (const char *path)
 	watcher_t *w;
 	int fd, wd;
 	size_t plen, flen;
+	path_head_t head;
+	path_node_t *trig;
 
 	if (!path) {
 		fprintf (stderr, "%s: null path\n", __func__);
@@ -61,7 +65,6 @@ watcher_create (const char *path)
 		return NULL;
 	}
 
-	path_head_t head;
 	path_create (&head, path);
 
 	if (path_empty (&head)) {
@@ -85,13 +88,15 @@ watcher_create (const char *path)
 		return NULL;
 	}
 
+/*
 	if (!(w->file = path_filename (&head))) {
 		fprintf (stderr, "%s: path_filename failed\n", __func__);
 		goto fail_err;
 	}
+*/
 
+	trig = path_node (head.list.prev);
 	path_strcpy (w->data, &head);
-	w->data[plen - (flen + 1)] = '\0';
 
 	fd = inotify_init1 (IN_NONBLOCK);
 
@@ -102,12 +107,23 @@ watcher_create (const char *path)
 		goto fail_err;
 
 	default:
+	try_add_watch:
+		w->file = path_node_name (trig);
+		w->data[plen - (flen + 1)] = '\0';
 		printf ("Trying to watch %s\n", w->data);
 		wd = inotify_add_watch (fd, w->data,
 		                        IN_CLOSE_WRITE|IN_MOVED_TO|IN_MASK_ADD);
 
 		switch (wd) {
 		case -1:
+			if (ENOENT == errno) {
+				if (trig->list.prev != &(head.list)) {
+					trig = path_node (trig->list.prev);
+					flen += (path_node_strlen (trig) + 1);
+					goto try_add_watch;
+				}
+			}
+
 			fprintf (stderr, "%s: inotify_add_watch: %s\n",
 			                 __func__, strerror (errno));
 		fail_err:
@@ -130,6 +146,8 @@ watcher_create (const char *path)
 			w->to.tv_sec = 0;
 			w->to.tv_nsec = 500000000;
 			path_copy (&(w->path), &head);
+			w->trig = trig;
+			trig = NULL;
 		}
 	}
 
