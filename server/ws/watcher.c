@@ -51,9 +51,10 @@ watcher_create (const char *path)
 {
 	watcher_t *w;
 	int fd, wd;
-	size_t plen, flen;
+	size_t len;
 	path_head_t head;
 	path_node_t *trig;
+	const char *file;
 
 	if (!path) {
 		fprintf (stderr, "%s: null path\n", __func__);
@@ -65,6 +66,9 @@ watcher_create (const char *path)
 		return NULL;
 	}
 
+	//temp
+	printf ("%s: path=%s\n", __func__, path);
+
 	path_create (&head, path);
 
 	if (path_empty (&head)) {
@@ -72,18 +76,11 @@ watcher_create (const char *path)
 		return NULL;
 	}
 
-	plen = path_strlen (&head);
-	flen = path_filename_strlen (&head);
+	len = path_strlen (&head);
 
-	if (plen <= flen) {
-		fprintf (stderr, "%s: i don't know what the fuck is going on\n", __func__);
-		goto fail_del_path;
-	}
-
-	if (!(w = malloc (watcher_size (path_strlen (&head))))) {
+	if (!(w = malloc (watcher_size (len)))) {
 		fprintf (stderr, "%s: malloc failed: %s\n",
 		                 __func__, strerror (errno));
-	fail_del_path:
 		path_destroy (&head);
 		return NULL;
 	}
@@ -108,9 +105,10 @@ watcher_create (const char *path)
 
 	default:
 	try_add_watch:
-		w->file = path_node_name (trig);
-		w->data[plen - (flen + 1)] = '\0';
-		printf ("Trying to watch %s\n", w->data);
+		file = path_node_name (trig);
+		len -= path_node_strlen (trig) + 1;
+		w->data[len] = '\0';
+		printf ("Trying to watch %s in %s\n", file, w->data);
 		wd = inotify_add_watch (fd, w->data,
 		                        IN_CLOSE_WRITE|IN_MOVED_TO|IN_MASK_ADD);
 
@@ -119,7 +117,6 @@ watcher_create (const char *path)
 			if (ENOENT == errno) {
 				if (trig->list.prev != &(head.list)) {
 					trig = path_node (trig->list.prev);
-					flen += (path_node_strlen (trig) + 1);
 					goto try_add_watch;
 				}
 			}
@@ -148,6 +145,8 @@ watcher_create (const char *path)
 			path_copy (&(w->path), &head);
 			w->trig = trig;
 			trig = NULL;
+			w->file = file;
+			file = NULL;
 		}
 	}
 
