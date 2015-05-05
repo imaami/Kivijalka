@@ -105,24 +105,28 @@ watcher_create (const char *path)
 
 	default:
 	try_add_watch:
+		printf ("trig='%s'\n", path_node_name (trig));
 		file = path_node_name (trig);
 		len -= path_node_strlen (trig) + 1;
 		w->data[len] = '\0';
-		printf ("Trying to watch %s in %s\n", file, w->data);
+		printf ("Wrote NUL to w->data[%zu]\nTrying to watch %s in %s\n", len, file, w->data);
 		wd = inotify_add_watch (fd, w->data,
 		                        IN_CLOSE_WRITE|IN_MOVED_TO|IN_MASK_ADD);
 
 		switch (wd) {
 		case -1:
+			fprintf (stderr, "%s: inotify_add_watch: %s\n",
+			                 __func__, strerror (errno));
+
 			if (ENOENT == errno) {
-				if (trig->list.prev != &(head.list)) {
+				if (!path_node_is_first (&head, trig)) {
 					trig = path_node (trig->list.prev);
 					goto try_add_watch;
+				} else {
+					printf ("'%s' is first path node\n", path_node_name (trig));
 				}
 			}
 
-			fprintf (stderr, "%s: inotify_add_watch: %s\n",
-			                 __func__, strerror (errno));
 		fail_err:
 			path_destroy (&head);
 			free (w);

@@ -94,6 +94,14 @@ path_node_strlen (path_node_t *node)
 }
 
 __attribute__((always_inline))
+static inline bool
+path_node_is_first (path_head_t *head,
+                    path_node_t *node)
+{
+	return (head && node && node->list.prev == &(head->list));
+}
+
+__attribute__((always_inline))
 static inline const char *
 path_filename (path_head_t *head)
 {
