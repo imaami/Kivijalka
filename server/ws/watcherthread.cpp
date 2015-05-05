@@ -22,7 +22,7 @@ WatcherThread::~WatcherThread()
 void WatcherThread::run()
 {
     while (!abort) {
-		if (watcher_run_once (watcher)) {
+		if (watcher_run_once (watcher) > 0) {
 			emit fileUpdated();
 		}
 	}

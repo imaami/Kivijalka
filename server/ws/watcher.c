@@ -216,7 +216,7 @@ watcher_handle_parent_dir (watcher_t *w,
 }
 
 __attribute__((always_inline))
-static inline uint32_t
+static inline int64_t
 watcher_handle_events (watcher_t *w)
 {
 	char buf[1024]
@@ -224,7 +224,7 @@ watcher_handle_events (watcher_t *w)
 	const struct inotify_event *event;
 	ssize_t len;
 	char *ptr;
-	uint32_t em;
+	int64_t em;
 
 	/* Loop while events can be read from inotify file descriptor. */
 
@@ -237,7 +237,7 @@ watcher_handle_events (watcher_t *w)
 			} else {
 				fprintf (stderr, "%s: read: %s\n",
 				         __func__, strerror (errno));
-				break;
+				return -1;
 			}
 		}
 
@@ -314,7 +314,7 @@ watcher_handle_events (watcher_t *w)
 	return 0;
 }
 
-uint32_t
+int64_t
 watcher_run_once (watcher_t *w)
 {
 	int r = ppoll (&w->pf, (nfds_t)1, &w->to, &w->ss);
@@ -323,6 +323,7 @@ watcher_run_once (watcher_t *w)
 		if (errno != EINTR) {
 			fprintf (stderr, "%s: ppoll: %s\n",
 			         __func__, strerror (errno));
+			return -1;
 		}
 	case 0:
 		return 0;

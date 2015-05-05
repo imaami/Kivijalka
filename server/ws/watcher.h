@@ -17,7 +17,7 @@ typedef struct watcher watcher_t;
 extern watcher_t *
 watcher_create (const char *path);
 
-extern uint32_t
+extern int64_t
 watcher_run_once (watcher_t *w);
 
 extern void
