@@ -80,6 +80,15 @@ path_node (list_head_t *list_hook)
 }
 
 __attribute__((always_inline))
+static inline path_node_t *
+path_node_next (path_node_t *node)
+{
+	return (node)
+	       ? list_next_entry (node, list)
+	       : NULL;
+}
+
+__attribute__((always_inline))
 static inline const char *
 path_node_name (path_node_t *node)
 {
@@ -99,6 +108,14 @@ path_node_is_first (path_head_t *head,
                     path_node_t *node)
 {
 	return (head && node && node->list.prev == &(head->list));
+}
+
+__attribute__((always_inline))
+static inline bool
+path_node_is_last (path_head_t *head,
+                   path_node_t *node)
+{
+	return (head && node && node->list.next == &(head->list));
 }
 
 __attribute__((always_inline))

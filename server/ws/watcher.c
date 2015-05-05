@@ -29,6 +29,7 @@ struct watcher {
 	path_head_t      path;
 	path_node_t     *trig;
 	const char      *file;
+	size_t           end;
 	char             data[];
 } __attribute__((gcc_struct,packed));
 
@@ -43,6 +44,7 @@ watcher_size (const size_t len)
 	       + sizeof (path_head_t)
 	       + sizeof (path_node_t *)
 	       + sizeof (const char *)
+	       + sizeof (size_t)
 	       + len + 1;
 }
 
@@ -66,9 +68,6 @@ watcher_create (const char *path)
 		return NULL;
 	}
 
-	//temp
-	printf ("%s: path=%s\n", __func__, path);
-
 	path_create (&head, path);
 
 	if (path_empty (&head)) {
@@ -85,16 +84,6 @@ watcher_create (const char *path)
 		return NULL;
 	}
 
-/*
-	if (!(w->file = path_filename (&head))) {
-		fprintf (stderr, "%s: path_filename failed\n", __func__);
-		goto fail_err;
-	}
-*/
-
-	trig = path_node (head.list.prev);
-	path_strcpy (w->data, &head);
-
 	fd = inotify_init1 (IN_NONBLOCK);
 
 	switch (fd) {
@@ -104,27 +93,44 @@ watcher_create (const char *path)
 		goto fail_err;
 
 	default:
-	try_add_watch:
-		printf ("trig='%s'\n", path_node_name (trig));
-		file = path_node_name (trig);
-		len -= path_node_strlen (trig) + 1;
-		w->data[len] = '\0';
-		printf ("Wrote NUL to w->data[%zu]\nTrying to watch %s in %s\n", len, file, w->data);
-		wd = inotify_add_watch (fd, w->data,
-		                        IN_CLOSE_WRITE|IN_MOVED_TO|IN_MASK_ADD);
+		trig = path_node (head.list.prev);
+		path_strcpy (w->data, &head);
 
+	try_add_watch:
+		file = path_node_name (trig);
+
+		if (path_node_is_first (&head, trig)) {
+			++file;
+			len = 1;
+		} else {
+			len -= path_node_strlen (trig) + 1;
+		}
+
+		w->data[len] = '\0';
+
+		printf ("Trying to watch %s for %s\n", w->data, file);
+
+		wd = inotify_add_watch (fd, w->data, IN_ALL_EVENTS);
+/*
+		if (path_node_is_last (&head, trig)) {
+			printf ("IN_CLOSE_WRITE|IN_MOVED_TO)\n");
+			wd = inotify_add_watch (fd, w->data,
+			                        IN_CLOSE_WRITE|IN_MOVED_TO);
+		} else {
+			printf ("IN_CREATE|IN_MOVED_TO)\n");
+			wd = inotify_add_watch (fd, w->data,
+			                        IN_CREATE|IN_MOVED_TO);
+		}
+*/
 		switch (wd) {
 		case -1:
 			fprintf (stderr, "%s: inotify_add_watch: %s\n",
 			                 __func__, strerror (errno));
 
-			if (ENOENT == errno) {
-				if (!path_node_is_first (&head, trig)) {
-					trig = path_node (trig->list.prev);
-					goto try_add_watch;
-				} else {
-					printf ("'%s' is first path node\n", path_node_name (trig));
-				}
+			if (ENOENT == errno
+			    && !path_node_is_first (&head, trig)) {
+				trig = path_node (trig->list.prev);
+				goto try_add_watch;
 			}
 
 		fail_err:
@@ -151,11 +157,62 @@ watcher_create (const char *path)
 			trig = NULL;
 			w->file = file;
 			file = NULL;
+			w->end = len;
 		}
 	}
 
 end:
 	return w;
+}
+
+__attribute__((always_inline))
+static inline void
+watcher_handle_parent_dir (watcher_t *w,
+                           char      *b,
+                           ssize_t    l)
+{
+	printf ("%s\n", __func__);
+
+	const struct inotify_event *e;
+	uint32_t m = 0;
+
+	for (char *p = b; p < b + l;
+	     p += sizeof(struct inotify_event) + e->len) {
+		e = (const struct inotify_event *) p;
+		if ((e->mask & IN_ISDIR)) {
+			if ((e->mask & (IN_CREATE|IN_MOVED_TO))
+			    && e->len && !strcmp (e->name, w->file)) {
+				m |= (e->mask & (IN_CREATE|IN_MOVED_TO));
+			}
+/*
+		} else {
+			// TODO: handle symlink creations, too
+*/
+		}
+	}
+
+	if (m) {
+		size_t n = path_node_strlen (w->trig);
+
+		printf ("OLD: w->data=%s | w->end=%zu | w->file=%s\n",
+		        w->data, w->end, w->file);
+
+		if (path_node_is_first (&(w->path), w->trig)) {
+			w->data[1] = path_node_name (w->trig) [1];
+			w->end = n;
+		} else {
+			w->data[w->end] = '/';
+			w->end += (n + 1);
+		}
+
+		w->trig = path_node_next (w->trig);
+		w->file = path_node_name (w->trig);
+
+		printf ("NEW: w->data=%s | w->end=%zu | w->file=%s\n",
+		        w->data, w->end, w->file);
+
+		// TODO: remove old watch, add new
+	}
 }
 
 __attribute__((always_inline))
@@ -188,14 +245,66 @@ watcher_handle_events (watcher_t *w)
 			break;
 		}
 
+		if (!path_node_is_last (&(w->path), w->trig)) {
+			watcher_handle_parent_dir (w, buf, len);
+			break;
+		}
+
 		/* Loop over all events in the buffer */
 
 		for (em = 0, ptr = buf; ptr < buf + len;
 		     ptr += sizeof(struct inotify_event) + event->len) {
 			event = (const struct inotify_event *) ptr;
-			if (event->mask && !(event->mask & IN_ISDIR)
-			    && event->len && !strcmp (event->name, w->file)) {
-				em |= event->mask;
+			if (event->mask) {
+				if ((event->mask & IN_ACCESS))
+					printf ("IN_ACCESS ");
+				if ((event->mask & IN_MODIFY))
+					printf ("IN_MODIFY ");
+				if ((event->mask & IN_ATTRIB))
+					printf ("IN_ATTRIB ");
+				if ((event->mask & IN_CLOSE_WRITE))
+					printf ("IN_CLOSE_WRITE ");
+				if ((event->mask & IN_CLOSE_NOWRITE))
+					printf ("IN_CLOSE_NOWRITE ");
+				if ((event->mask & IN_OPEN))
+					printf ("IN_OPEN ");
+				if ((event->mask & IN_MOVED_FROM))
+					printf ("IN_MOVED_FROM ");
+				if ((event->mask & IN_MOVED_TO))
+					printf ("IN_MOVED_TO ");
+				if ((event->mask & IN_CREATE))
+					printf ("IN_CREATE ");
+				if ((event->mask & IN_DELETE))
+					printf ("IN_DELETE ");
+				if ((event->mask & IN_DELETE_SELF))
+					printf ("IN_DELETE_SELF ");
+				if ((event->mask & IN_MOVE_SELF))
+					printf ("IN_MOVE_SELF ");
+				if ((event->mask & IN_UNMOUNT))
+					printf ("IN_UNMOUNT ");
+				if ((event->mask & IN_Q_OVERFLOW))
+					printf ("IN_Q_OVERFLOW ");
+				if ((event->mask & IN_IGNORED))
+					printf ("IN_IGNORED ");
+
+				if ((event->mask & IN_ISDIR)) {
+					printf ("(dir) ");
+				} else if ((event->mask & (IN_CLOSE_WRITE|IN_MOVED_TO))
+				           && event->len
+				           && !strcmp (event->name, w->file)) {
+						em |= event->mask;
+				}
+
+				if (event->len && event->name) {
+					printf ("%s", event->name);
+					if (!strcmp (event->name, w->file)) {
+						printf (" *\n");
+					} else {
+						puts("");
+					}
+				} else {
+					puts("");
+				}
 			}
 		}
 
