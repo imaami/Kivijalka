@@ -194,8 +194,8 @@ watcher_handle_parent_dir (watcher_t *w,
 	if (m) {
 		size_t n = path_node_strlen (w->trig);
 
-		printf ("OLD: w->data=%s | w->end=%zu | w->file=%s\n",
-		        w->data, w->end, w->file);
+		printf ("%s: OLD: w->data=%s | w->end=%zu | w->file=%s | w->trig=%s\n",
+		        __func__, w->data, w->end, w->file, path_node_name (w->trig));
 
 		if (path_node_is_first (&(w->path), w->trig)) {
 			w->data[1] = path_node_name (w->trig) [1];
@@ -208,8 +208,8 @@ watcher_handle_parent_dir (watcher_t *w,
 		w->trig = path_node_next (w->trig);
 		w->file = path_node_name (w->trig);
 
-		printf ("NEW: w->data=%s | w->end=%zu | w->file=%s\n",
-		        w->data, w->end, w->file);
+		printf ("%s: NEW: w->data=%s | w->end=%zu | w->file=%s | w->trig=%s\n",
+		        __func__, w->data, w->end, w->file, path_node_name (w->trig));
 
 		// TODO: remove old watch, add new
 	}
@@ -244,6 +244,8 @@ watcher_handle_events (watcher_t *w)
 		if (len <= 0) {
 			break;
 		}
+
+		printf ("%s: w->trig=%s\n", __func__, path_node_name (w->trig));
 
 		if (!path_node_is_last (&(w->path), w->trig)) {
 			watcher_handle_parent_dir (w, buf, len);
