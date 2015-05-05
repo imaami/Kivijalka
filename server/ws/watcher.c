@@ -152,7 +152,7 @@ watcher_create (const char *path)
 			w->pf.events = POLLIN;
 			w->to.tv_sec = 0;
 			w->to.tv_nsec = 500000000;
-			path_copy (&(w->path), &head);
+			path_move (&(w->path), &head);
 			w->trig = trig;
 			trig = NULL;
 			w->file = file;

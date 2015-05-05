@@ -54,13 +54,19 @@ path_strlen (path_head_t *head)
 
 __attribute__((always_inline))
 static inline void
-path_copy (path_head_t       *dst,
-           const path_head_t *src)
+path_move (path_head_t *dst,
+           path_head_t *src)
 {
-	dst->list.next = src->list.next;
-	dst->list.prev = src->list.prev;
 	dst->size = src->size;
 	dst->depth = src->depth;
+	dst->list.next = src->list.next;
+	dst->list.prev = src->list.prev;
+	dst->list.next->prev = &(dst->list);
+	dst->list.prev->next = &(dst->list);
+	src->list.next = &(src->list);
+	src->list.prev = &(src->list);
+	src->size = 0;
+	src->depth = 0;
 }
 
 __attribute__((always_inline))
