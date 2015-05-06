@@ -99,7 +99,7 @@ path_pop (path_head_t *head)
 	path_node_t *n;
 	if ((n = path_tail (head))) {
 		size_t x = (n->list.prev == &(head->list)) ? 0 : 1;
-		list_del (&(n->list));
+		__list_del_entry (&(n->list));
 		head->size -= (x + n->size);
 		head->depth--;
 	}
@@ -110,8 +110,7 @@ __attribute__((always_inline))
 static inline void
 path_node_del (path_node_t *node)
 {
-	(void) memset ((void *) node->name, 0, node->size);
-	node->size = 0;
+	(void) memset ((void *) node, 0, path_node_size (node->size));
 	free (node);
 }
 

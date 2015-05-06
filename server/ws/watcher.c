@@ -48,31 +48,100 @@ watcher_size (const size_t len)
 	       + len + 1;
 }
 
+/*
+bool
+watcher_watch (watcher_t *w)
+{
+try_watch:
+	if (path_node_is_first (&(w->path), w->trig)) {
+		w->file = path_node_name (w->trig) + 1;
+		w->end = 1;
+	} else {
+		w->file = path_node_name (w->trig);
+		w->end -= path_node_strlen (w->trig) + 1;
+	}
+
+	w->data[w->end] = '\0';
+
+	printf ("Trying to watch %s for %s\n", w->data, w->file);
+
+	w->wd = inotify_add_watch (w->pf.fd, w->data, IN_ALL_EVENTS);
+
+	if (-1 == w->wd) {
+		if (ENOENT == errno
+		    && !path_node_is_first (&(w->path), w->trig)) {
+			w->trig = path_node (w->trig->list.prev);
+			goto try_watch;
+		}
+
+		fprintf (stderr, "%s: inotify_add_watch: %s\n",
+		                 __func__, strerror (errno));
+
+		return false;
+	}
+
+	return true;
+}
+*/
+
+bool
+watcher_watch (watcher_t *w)
+{
+	printf ("Trying to watch %s for %s\n", w->data, w->file);
+
+	w->wd = inotify_add_watch (w->pf.fd, w->data, IN_ALL_EVENTS);
+
+	if (-1 == w->wd) {
+		if (ENOENT == errno
+		    && !path_node_is_first (&(w->path), w->trig)) {
+			w->trig = path_node (w->trig->list.prev);
+
+			if (path_node_is_first (&(w->path), w->trig)) {
+				w->file = path_node_name (w->trig) + 1;
+				w->end = 1;
+			} else {
+				w->file = path_node_name (w->trig);
+				w->end -= path_node_strlen (w->trig) + 1;
+			}
+
+			w->data[w->end] = '\0';
+
+			return watcher_watch (w);
+		}
+
+		fprintf (stderr, "%s: inotify_add_watch: %s\n",
+		                 __func__, strerror (errno));
+
+		return false;
+	}
+
+	return true;
+}
+
 watcher_t *
 watcher_create (const char *path)
 {
 	watcher_t *w;
-	int fd, wd;
 	size_t len;
 	path_head_t head;
-	path_node_t *trig;
-	const char *file;
 
 	if (!path) {
 		fprintf (stderr, "%s: null path\n", __func__);
-		return NULL;
+	fail:
+		w = NULL;
+		goto cleanup_and_return;
 	}
 
 	if (path[0] != '/') {
 		fprintf (stderr, "%s: path must be absolute\n", __func__);
-		return NULL;
+		goto fail;
 	}
 
 	path_create (&head, path);
 
 	if (path_empty (&head)) {
 		fprintf (stderr, "%s: path_create failed\n", __func__);
-		return NULL;
+		goto fail;
 	}
 
 	len = path_strlen (&head);
@@ -80,110 +149,76 @@ watcher_create (const char *path)
 	if (!(w = malloc (watcher_size (len)))) {
 		fprintf (stderr, "%s: malloc failed: %s\n",
 		                 __func__, strerror (errno));
+	fail_destroy_path:
 		path_destroy (&head);
-		return NULL;
+		goto fail;
 	}
 
-	fd = inotify_init1 (IN_NONBLOCK);
+	if (0 != sigfillset (&w->ss)) {
+		fprintf (stderr, "%s: sigfillset: %s\n",
+		         __func__, strerror (errno));
+	fail_free_watcher:
+		(void) memset ((void *) w, 0, watcher_size (len));
+		free (w);
+		goto fail_destroy_path;
+	}
 
-	switch (fd) {
-	case -1:
+	w->pf.fd = inotify_init1 (IN_NONBLOCK);
+
+	if (-1 == w->pf.fd) {
 		fprintf (stderr, "%s: inotify_init: %s\n",
 		                 __func__, strerror (errno));
-		goto fail_err;
-
-	default:
-		trig = path_node (head.list.prev);
-		path_strcpy (w->data, &head);
-
-	try_add_watch:
-		file = path_node_name (trig);
-
-		if (path_node_is_first (&head, trig)) {
-			++file;
-			len = 1;
-		} else {
-			len -= path_node_strlen (trig) + 1;
-		}
-
-		w->data[len] = '\0';
-
-		printf ("Trying to watch %s for %s\n", w->data, file);
-
-		wd = inotify_add_watch (fd, w->data, IN_ALL_EVENTS);
-/*
-		if (path_node_is_last (&head, trig)) {
-			printf ("IN_CLOSE_WRITE|IN_MOVED_TO)\n");
-			wd = inotify_add_watch (fd, w->data,
-			                        IN_CLOSE_WRITE|IN_MOVED_TO);
-		} else {
-			printf ("IN_CREATE|IN_MOVED_TO)\n");
-			wd = inotify_add_watch (fd, w->data,
-			                        IN_CREATE|IN_MOVED_TO);
-		}
-*/
-		switch (wd) {
-		case -1:
-			fprintf (stderr, "%s: inotify_add_watch: %s\n",
-			                 __func__, strerror (errno));
-
-			if (ENOENT == errno
-			    && !path_node_is_first (&head, trig)) {
-				trig = path_node (trig->list.prev);
-				goto try_add_watch;
-			}
-
-		fail_err:
-			path_destroy (&head);
-			free (w);
-			w = NULL;
-			goto end;
-
-		default:
-			if (0 != sigfillset (&w->ss)) {
-				fprintf (stderr, "%s: sigfillset: %s\n",
-				         __func__, strerror (errno));
-				(void) inotify_rm_watch (fd, wd);
-				goto fail_err;
-			}
-
-			w->wd = wd;
-			w->pf.fd = fd;
-			w->pf.events = POLLIN;
-			w->to.tv_sec = 0;
-			w->to.tv_nsec = 500000000;
-			path_move (&(w->path), &head);
-			w->trig = trig;
-			trig = NULL;
-			w->file = file;
-			file = NULL;
-			w->end = len;
-		}
+		goto fail_free_watcher;
 	}
 
-end:
+	path_strcpy (w->data, &head);
+	path_move (&(w->path), &head);
+	w->trig = path_node (w->path.list.prev);
+
+	if (path_node_is_first (&(w->path), w->trig)) {
+		w->file = path_node_name (w->trig) + 1;
+		w->end = 1;
+	} else {
+		w->file = path_node_name (w->trig);
+		w->end = len - (path_node_strlen (w->trig) + 1);
+	}
+
+	w->data[w->end] = '\0';
+
+	if (!watcher_watch (w)) {
+		fprintf (stderr, "%s: watcher_watch failed\n", __func__);
+		path_destroy (&(w->path));
+		goto fail_free_watcher;
+	}
+
+	w->pf.events = POLLIN;
+	w->to.tv_sec = 0;
+	w->to.tv_nsec = 500000000;
+
+cleanup_and_return:
+
+	len = 0;
+	head.list.next = NULL;
+	head.list.prev = NULL;
+
 	return w;
 }
 
 __attribute__((always_inline))
-static inline void
+static inline int64_t
 watcher_handle_parent_dir (watcher_t *w,
                            char      *b,
                            ssize_t    l)
 {
-	printf ("%s\n", __func__);
-
 	const struct inotify_event *e;
 	uint32_t m = 0;
 
 	for (char *p = b; p < b + l;
 	     p += sizeof(struct inotify_event) + e->len) {
 		e = (const struct inotify_event *) p;
-		if ((e->mask & IN_ISDIR)) {
-			if ((e->mask & (IN_CREATE|IN_MOVED_TO))
-			    && e->len && !strcmp (e->name, w->file)) {
-				m |= (e->mask & (IN_CREATE|IN_MOVED_TO));
-			}
+		if ((e->mask & IN_ISDIR) && e->len
+		    && !strcmp (e->name, w->file)) {
+			m |= (e->mask & (IN_CREATE|IN_MOVED_TO));
 /*
 		} else {
 			// TODO: handle symlink creations, too
@@ -211,8 +246,18 @@ watcher_handle_parent_dir (watcher_t *w,
 		printf ("%s: NEW: w->data=%s | w->end=%zu | w->file=%s | w->trig=%s\n",
 		        __func__, w->data, w->end, w->file, path_node_name (w->trig));
 
-		// TODO: remove old watch, add new
+		if (-1 == inotify_rm_watch (w->pf.fd, w->wd)) {
+			fprintf (stderr, "%s: inotify_rm_watch: %s\n",
+			         __func__, strerror (errno));
+		}
+
+		if (!watcher_watch (w)) {
+			fprintf (stderr, "%s: watcher_watch failed\n", __func__);
+			return -1;
+		}
 	}
+
+	return 0;
 }
 
 __attribute__((always_inline))
@@ -291,10 +336,8 @@ watcher_handle_events (watcher_t *w)
 
 				if ((event->mask & IN_ISDIR)) {
 					printf ("(dir) ");
-				} else if ((event->mask & (IN_CLOSE_WRITE|IN_MOVED_TO))
-				           && event->len
-				           && !strcmp (event->name, w->file)) {
-						em |= event->mask;
+				} else if (event->len && !strcmp (event->name, w->file)) {
+						em |= (event->mask & (IN_CLOSE_WRITE|IN_MOVED_TO));
 				}
 
 				if (event->len && event->name) {

@@ -15,7 +15,13 @@ main (int    argc,
 	watcher_t *w;
 
 	if ((w = watcher_create ((const char *) argv[1]))) {
-		while (watcher_run_once (w) >= 0);
+		int64_t r;
+		do {
+			if ((r = watcher_run_once (w)) > 0) {
+				printf ("%s: got watcher event\n", __func__);
+				r = 0;
+			}
+		} while (!r);
 		watcher_destroy (w);
 	}
 
