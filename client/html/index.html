@@ -26,8 +26,18 @@
   </div>
 
 <script>
+var urlCreator = window.URL || window.webkitURL;
 var thumb = document.getElementById('thumb');
 var bq = document.getElementById('bannerQueue');
+
+var dragging = false;
+var dragArray;
+var dragImg = new Image();
+dragImg.onload = function(e) {
+	console.log('dragImg.onload');
+	document.body.appendChild(this);
+	console.log(this.width + "x" + this.height);
+};
 
 var clearCanvas = function(ctx, w, h) {
 	ctx.clearRect(0, 0, w, h);
@@ -142,6 +152,27 @@ var enqueue_file = function(file) {
 	}
 }
 
+var drag_file = function(file) {
+	if (!dragging) {
+		dragging = true;
+
+		console.log('drag_file');
+
+		if (file.type === 'image/png') {
+			var reader = new FileReader();
+
+			reader.onload = function (e) {
+				console.log('drag_file.reader.onload');
+				dragArray = new Uint8Array(e.target.result);
+				var blob = new Blob([dragArray], {type: "image/png"});
+				dragImg.src = urlCreator.createObjectURL(blob);
+			};
+
+			reader.readAsArrayBuffer(file);
+		}
+	}
+}
+
 var upload_file = function(file) {
 	console.log('upload_file');
 
@@ -150,7 +181,7 @@ var upload_file = function(file) {
 		var bytearray;
 
 		reader.onload = function (e) {
-			console.log('reader.onload');
+			console.log('upload_file.reader.onload');
 			bytearray = new Uint8Array(e.target.result);
 			socket.send(bytearray.buffer);
 		};
@@ -160,7 +191,7 @@ var upload_file = function(file) {
 }
 
 bq.ondrop = function (e) {
-	console.log('bq.ondrop');
+//	console.log('bq.ondrop');
 	e.preventDefault();
 	var dt = e.dataTransfer;
 
@@ -180,36 +211,57 @@ bq.ondrop = function (e) {
 };
 
 bq.ondragover = function (e) {
-	console.log('bq.ondragover');
+//	console.log('bq.ondragover');
 	e.preventDefault();
 	return false;
 };
 
 bq.ondragleave = function () {
-	console.log('bq.ondragleave');
+//	console.log('bq.ondragleave');
 };
 
 bq.ondragend = function () {
-	console.log('bq.ondragend');
+//	console.log('bq.ondragend');
 };
 
 bq.ondragenter = function (e) {
-	console.log('bq.ondragenter');
+//	console.log('bq.ondragenter');
 };
 
 bq.ondragstart = function (e) {
-	console.log('bq.ondragstart');
+//	console.log('bq.ondragstart');
+};
+
+thumb.ondragstart = function (e) {
+	console.log('thumb.ondragstart');
+};
+
+thumb.ondragenter = function (e) {
+	console.log('thumb.ondragenter');
+	e.preventDefault();
+	drag_file(e.dataTransfer.files[0]);
+	return false;
 };
 
 thumb.ondragover = function (e) {
 	console.log('thumb.ondragover');
 	this.className = 'hover';
+	e.preventDefault();
+	drag_file(e.dataTransfer.files[0]);
+	return false;
+};
+
+thumb.ondragleave = function () {
+	console.log('thumb.ondragleave');
+	this.className = '';
+	dragging = false;
 	return false;
 };
 
 thumb.ondragend = function () {
 	console.log('thumb.ondragend');
 	this.className = '';
+	dragging = false;
 	return false;
 };
 
@@ -227,11 +279,13 @@ thumb.ondrop = function (e) {
 		}
 	}
 
-	if (socket.readyState == 1) {
-		upload_file(e.dataTransfer.files[0]);
-	} else {
-		console.log('Socket not open');
-	}
+//	if (socket.readyState == 1) {
+//		upload_file(e.dataTransfer.files[0]);
+//	} else {
+//		console.log('Socket not open');
+//	}
+
+	dragging = false;
 };
 
 new_socket();
