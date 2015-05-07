@@ -48,42 +48,6 @@ watcher_size (const size_t len)
 	       + len + 1;
 }
 
-/*
-bool
-watcher_watch (watcher_t *w)
-{
-try_watch:
-	if (path_node_is_first (&(w->path), w->trig)) {
-		w->file = path_node_name (w->trig) + 1;
-		w->end = 1;
-	} else {
-		w->file = path_node_name (w->trig);
-		w->end -= path_node_strlen (w->trig) + 1;
-	}
-
-	w->data[w->end] = '\0';
-
-	printf ("Trying to watch %s for %s\n", w->data, w->file);
-
-	w->wd = inotify_add_watch (w->pf.fd, w->data, IN_ALL_EVENTS);
-
-	if (-1 == w->wd) {
-		if (ENOENT == errno
-		    && !path_node_is_first (&(w->path), w->trig)) {
-			w->trig = path_node (w->trig->list.prev);
-			goto try_watch;
-		}
-
-		fprintf (stderr, "%s: inotify_add_watch: %s\n",
-		                 __func__, strerror (errno));
-
-		return false;
-	}
-
-	return true;
-}
-*/
-
 bool
 watcher_watch (watcher_t *w)
 {
@@ -229,9 +193,6 @@ watcher_handle_parent_dir (watcher_t *w,
 	if (m) {
 		size_t n = path_node_strlen (w->trig);
 
-		printf ("%s: OLD: w->data=%s | w->end=%zu | w->file=%s | w->trig=%s\n",
-		        __func__, w->data, w->end, w->file, path_node_name (w->trig));
-
 		if (path_node_is_first (&(w->path), w->trig)) {
 			w->data[1] = path_node_name (w->trig) [1];
 			w->end = n;
@@ -242,9 +203,6 @@ watcher_handle_parent_dir (watcher_t *w,
 
 		w->trig = path_node_next (w->trig);
 		w->file = path_node_name (w->trig);
-
-		printf ("%s: NEW: w->data=%s | w->end=%zu | w->file=%s | w->trig=%s\n",
-		        __func__, w->data, w->end, w->file, path_node_name (w->trig));
 
 		if (-1 == inotify_rm_watch (w->pf.fd, w->wd)) {
 			fprintf (stderr, "%s: inotify_rm_watch: %s\n",
@@ -275,9 +233,9 @@ watcher_handle_events (watcher_t *w)
 
 	for (;;) {
 		if ((len = read (w->pf.fd, buf, sizeof buf)) == -1) {
-			printf ("read %ld bytes\n", len);
+//			printf ("read %ld bytes\n", len);
 			if (errno == EAGAIN) {
-				printf ("errno == EAGAIN\n");
+//				printf ("errno == EAGAIN\n");
 				continue;
 			} else {
 				fprintf (stderr, "%s: read: %s\n",
@@ -290,7 +248,7 @@ watcher_handle_events (watcher_t *w)
 			break;
 		}
 
-		printf ("%s: w->trig=%s\n", __func__, path_node_name (w->trig));
+//		printf ("%s: w->trig=%s\n", __func__, path_node_name (w->trig));
 
 		if (!path_node_is_last (&(w->path), w->trig)) {
 			watcher_handle_parent_dir (w, buf, len);
@@ -303,6 +261,7 @@ watcher_handle_events (watcher_t *w)
 		     ptr += sizeof(struct inotify_event) + event->len) {
 			event = (const struct inotify_event *) ptr;
 			if (event->mask) {
+/*
 				if ((event->mask & IN_ACCESS))
 					printf ("IN_ACCESS ");
 				if ((event->mask & IN_MODIFY))
@@ -333,13 +292,13 @@ watcher_handle_events (watcher_t *w)
 					printf ("IN_Q_OVERFLOW ");
 				if ((event->mask & IN_IGNORED))
 					printf ("IN_IGNORED ");
-
+*/
 				if ((event->mask & IN_ISDIR)) {
-					printf ("(dir) ");
+//					printf ("(dir) ");
 				} else if (event->len && !strcmp (event->name, w->file)) {
 						em |= (event->mask & (IN_CLOSE_WRITE|IN_MOVED_TO));
 				}
-
+/*
 				if (event->len && event->name) {
 					printf ("%s", event->name);
 					if (!strcmp (event->name, w->file)) {
@@ -350,6 +309,7 @@ watcher_handle_events (watcher_t *w)
 				} else {
 					puts("");
 				}
+*/
 			}
 		}
 
