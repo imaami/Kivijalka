@@ -4,6 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <title>le WebCocquettes</title>
+  <script type="text/javascript" src="rusha.js"></script>
 </head>
 
 <body>
@@ -34,9 +35,8 @@ var dragging = false;
 var dragArray;
 var dragImg = new Image();
 dragImg.onload = function(e) {
-	console.log('dragImg.onload');
+	console.log('dragImg.onload: ' + this.width + 'x' + this.height);
 	document.body.appendChild(this);
-	console.log(this.width + "x" + this.height);
 };
 
 var clearCanvas = function(ctx, w, h) {
@@ -57,7 +57,7 @@ var socket_recv_thumb = function(data) {
 		var ctx = cnv.getContext("2d");
 		resizeCanvas(cnv, img.width, img.height);
 		ctx.drawImage(img, 0, 0);
-		window.URL.revokeObjectURL(img.src);
+		urlCreator.revokeObjectURL(img.src);
 		img = null;
 	};
 
@@ -65,7 +65,7 @@ var socket_recv_thumb = function(data) {
 		img = null;
 	};
 
-	img.src = window.URL.createObjectURL(blob);
+	img.src = urlCreator.createObjectURL(blob);
 };
 
 var socket_addr = 'ws://127.0.0.1:8001/';
@@ -162,8 +162,9 @@ var drag_file = function(file) {
 			var reader = new FileReader();
 
 			reader.onload = function (e) {
-				console.log('drag_file.reader.onload');
 				dragArray = new Uint8Array(e.target.result);
+				console.log('drag_file.reader.onload: '
+				            + (new Rusha()).digestFromBuffer(dragArray));
 				var blob = new Blob([dragArray], {type: "image/png"});
 				dragImg.src = urlCreator.createObjectURL(blob);
 			};
@@ -279,11 +280,11 @@ thumb.ondrop = function (e) {
 		}
 	}
 
-//	if (socket.readyState == 1) {
-//		upload_file(e.dataTransfer.files[0]);
-//	} else {
-//		console.log('Socket not open');
-//	}
+	if (socket.readyState == 1) {
+		upload_file(e.dataTransfer.files[0]);
+	} else {
+		console.log('Socket not open');
+	}
 
 	dragging = false;
 };
