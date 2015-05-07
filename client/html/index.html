@@ -163,8 +163,28 @@ var drag_file = function(file) {
 
 			reader.onload = function (e) {
 				dragArray = new Uint8Array(e.target.result);
-				console.log('drag_file.reader.onload: '
-				            + (new Rusha()).digestFromBuffer(dragArray));
+				var arrayLength = dragArray.length;
+				var arrayLenStr = arrayLength.toString();
+				var n = arrayLenStr.length;
+				var x = 5 + n + 1 + arrayLength;
+				console.log('git blob length: ' + x);
+				var gitHeader = new Uint8Array(5 + n + 1);
+
+				gitHeader[0] = 98; gitHeader[1] = 108;
+				gitHeader[2] = 111; gitHeader[3] = 98;
+				gitHeader[4] = 32; gitHeader[5+n] = 0;
+
+				for (var i = 0; i < n; ++i) {
+					gitHeader[5+i] = arrayLenStr.charCodeAt[i];
+				}
+
+				var gitBlob = new Uint8Array(x);
+				gitBlob.set(new Uint8Array(gitHeader), 0);
+				gitBlob.set(new Uint8Array(dragArray), 5 + n + 1);
+
+				console.log('drag_file.reader.onload: git-hash: '
+				            + (new Rusha()).digestFromBuffer(gitBlob));
+
 				var blob = new Blob([dragArray], {type: "image/png"});
 				dragImg.src = urlCreator.createObjectURL(blob);
 			};
