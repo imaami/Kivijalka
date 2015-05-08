@@ -9,12 +9,12 @@
 
 <body>
 
-<style>
+<!--<style>
 #thumb { border: 10px dashed #ccc; width: 300px; min-height: 300px; margin: 20px auto; }
 #thumb.hover { border: 10px dashed #0c0; }
 #thumb img { display: block; margin: 10px auto; }
 #thumb p { margin: 10px; font-size: 14px; }
-</style>
+</style>-->
 
   <div style="width:100%;position:relative">
     <div id="thumb" style="margin:0px auto;width:auto;height:auto;display:table;float:left">
@@ -22,7 +22,8 @@
       </canvas>
     </div>
     <div id="bannerQueue" style="margin:0px auto;width:auto;height:auto;display:table:float:left">
-      <img src="/usr/share/kivijalka/banners/banner.png" alt="banner" />
+<!--  <img src="/usr/share/kivijalka/banners/banner.png" alt="banner" />-->
+      <p id="debug"></p>
     </div>
   </div>
 
@@ -30,6 +31,7 @@
 var urlCreator = window.URL || window.webkitURL;
 var thumb = document.getElementById('thumb');
 var bq = document.getElementById('bannerQueue');
+var dbg = document.getElementById('debug');
 
 var dragging = false;
 var dragArray;
@@ -37,6 +39,13 @@ var dragImg = new Image();
 dragImg.onload = function(e) {
 	console.log('dragImg.onload: ' + this.width + 'x' + this.height);
 	document.body.appendChild(this);
+};
+
+var scale2D = function(w, h, f) {
+	return {
+		width: w * f,
+		height: h * f
+	};
 };
 
 var clearCanvas = function(ctx, w, h) {
@@ -102,12 +111,16 @@ var socket_error = function() {
 	console.log('WebFuckit');
 };
 
-var socket_message = function(ev) {
-	if (typeof ev.data === "string") {
-		socket_recv_meta(ev.data);
-	} else if (ev.data instanceof ArrayBuffer
-	           || ev.data instanceof Blob) {
-		socket_recv_thumb(ev.data);
+var socket_recv_meta = function(msg) {
+	console.log('socket_recv_meta');
+};
+
+var socket_recv_msg = function(e) {
+	if (typeof e.data === "string") {
+		socket_recv_meta(JSON.parse(e.data));
+	} else if (e.data instanceof ArrayBuffer
+	           || e.data instanceof Blob) {
+		socket_recv_thumb(e.data);
 	}
 };
 
@@ -117,7 +130,7 @@ var socket_recv_handshake = function(e) {
 		console.log(e.data);
 		var msg = JSON.parse(e.data);
 		if (msg.type === "c9f82f30e6a00db0") {
-			socket.onmessage = socket_message;
+			socket.onmessage = socket_recv_msg;
 			console.log('Handshake response at ' + msg.ts);
 			return;
 		}
@@ -176,7 +189,7 @@ var git_hash = function(data) {
 };
 
 var drag_file = function(file) {
-	if (!dragging) {
+	if (file !== undefined && !dragging) {
 		dragging = true;
 
 		console.log('drag_file');
@@ -188,8 +201,8 @@ var drag_file = function(file) {
 				dragArray = new Uint8Array(e.target.result);
 				console.log('drag_file.reader.onload: git_hash: '
 				            + git_hash(dragArray));
-				var blob = new Blob([dragArray], {type: "image/png"});
-				dragImg.src = urlCreator.createObjectURL(blob);
+//				var blob = new Blob([dragArray], {type: "image/png"});
+//				dragImg.src = urlCreator.createObjectURL(blob);
 			};
 
 			reader.readAsArrayBuffer(file);
@@ -260,6 +273,18 @@ thumb.ondragstart = function (e) {
 	console.log('thumb.ondragstart');
 };
 
+var thumb_mousemove = function(e) {
+	dbg.innerHTML = '&nbsp;&nbsp;&nbsp;&nbsp;{ '
+	                + e.clientX + ', ' + e.clientY + ' }';
+};
+
+var thumb_mouseout = function() {
+	dbg.innerHTML = "";
+};
+
+thumb.onmousemove = thumb_mousemove;
+thumb.onmouseout = thumb_mouseout;
+
 thumb.ondragenter = function (e) {
 	console.log('thumb.ondragenter');
 	e.preventDefault();
@@ -268,9 +293,9 @@ thumb.ondragenter = function (e) {
 };
 
 thumb.ondragover = function (e) {
-	console.log('thumb.ondragover');
 	this.className = 'hover';
 	e.preventDefault();
+	thumb_mousemove(e);
 	drag_file(e.dataTransfer.files[0]);
 	return false;
 };
@@ -279,6 +304,7 @@ thumb.ondragleave = function () {
 	console.log('thumb.ondragleave');
 	this.className = '';
 	dragging = false;
+	thumb_mouseout();
 	return false;
 };
 
