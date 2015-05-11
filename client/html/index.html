@@ -18,7 +18,19 @@
 
   <div style="width:100%;position:relative">
     <div id="thumb" style="margin:0px auto;width:auto;height:auto;display:table;float:left">
-      <canvas id="thumbCanvas" width="640" height="512" style="border:0px solid #000000;">
+      <canvas id="thumbCanvas"
+              style="z-index: 1;
+                     position: absolute;
+                     left: 0px;
+                     top: 0px;
+                     border:0px solid #000000;">
+      </canvas>
+      <canvas id="dragCanvas"
+              style="z-index: 2;
+                     position: absolute;
+                     left: 0px;
+                     top: 0px;
+                     border:0px solid #000000;">
       </canvas>
     </div>
     <div id="bannerQueue" style="margin:0px auto;width:auto;height:auto;display:table:float:left">
@@ -30,15 +42,59 @@
 <script>
 var urlCreator = window.URL || window.webkitURL;
 var thumb = document.getElementById('thumb');
+var thumb_canvas = document.getElementById('thumbCanvas');
+var thumb_ctx = thumb_canvas.getContext("2d");
+var thumb_width = 0;
+var thumb_height = 0;
+var thumb_scaling = 1.0;
+
+/* infoscreen dimensions */
+var screen_width = 0;
+var screen_height = 0;
+
 var bq = document.getElementById('bannerQueue');
 var dbg = document.getElementById('debug');
 
+var drag_canvas = document.getElementById('dragCanvas');
+var drag_ctx = drag_canvas.getContext("2d");
 var dragging = false;
 var dragArray;
-var dragImg = new Image();
-dragImg.onload = function(e) {
-	console.log('dragImg.onload: ' + this.width + 'x' + this.height);
-	document.body.appendChild(this);
+
+var drag_img = new Image();
+var drag_img_width = 0;
+var drag_img_height = 0;
+var drag_img_scaled_width = 0;
+var drag_img_scaled_height = 0;
+var drag_img_x_offset = 0;
+var drag_img_y_offset = 0;
+
+drag_img.onload = function(e) {
+	drag_img_width = this.width;
+	drag_img_height = this.height;
+	drag_img_scaled_width = drag_img_width * thumb_scaling;
+	drag_img_scaled_height = drag_img_height * thumb_scaling;
+	drag_img_x_offset = -Math.round(drag_img_scaled_width / 2.0);
+	drag_img_y_offset = -Math.round(drag_img_scaled_height / 2.0);
+
+	console.log('drag_img_width=' + drag_img_width);
+	console.log('drag_img_height=' + drag_img_height);
+	console.log('drag_img_scaled_width=' + drag_img_scaled_width);
+	console.log('drag_img_scaled_height=' + drag_img_scaled_height);
+	console.log('drag_img_x_offset=' + drag_img_x_offset);
+	console.log('drag_img_y_offset=' + drag_img_y_offset);
+
+//	console.log('drag_img.onload: ' + this.width + 'x' + this.height);
+//	document.body.appendChild(this);
+};
+
+var drag_canvas_draw = function(x, y) {
+	drag_ctx.clearRect(0, 0, thumb_width, thumb_height);
+	drag_ctx.fillStyle = "#4488EE";
+	drag_ctx.beginPath();
+	drag_ctx.rect(x + drag_img_x_offset, y + drag_img_y_offset,
+	              drag_img_scaled_width, drag_img_scaled_height);
+	drag_ctx.closePath();
+	drag_ctx.fill();
 };
 
 var scale2D = function(w, h, f) {
@@ -52,9 +108,16 @@ var clearCanvas = function(ctx, w, h) {
 	ctx.clearRect(0, 0, w, h);
 };
 
-var resizeCanvas = function(c, w, h) {
-	c.width = w;
-	c.height = h;
+var thumb_resize = function(w, h) {
+	if (thumb_width != w || thumb_height != h) {
+	        thumb_width = w;
+		thumb_height = h;
+		thumb_scaling = thumb_width / screen_width;
+		thumb_canvas.width = thumb_width;
+		thumb_canvas.height = thumb_height;
+		drag_canvas.width = thumb_width;
+		drag_canvas.height = thumb_height;
+	}
 };
 
 var socket_recv_thumb = function(data) {
@@ -62,10 +125,8 @@ var socket_recv_thumb = function(data) {
 	var img = new Image();
 
 	img.onload = function (e) {
-		var cnv = document.getElementById("thumbCanvas");
-		var ctx = cnv.getContext("2d");
-		resizeCanvas(cnv, img.width, img.height);
-		ctx.drawImage(img, 0, 0);
+		thumb_resize(img.width, img.height);
+		thumb_ctx.drawImage(img, 0, 0);
 		urlCreator.revokeObjectURL(img.src);
 		img = null;
 	};
@@ -132,6 +193,9 @@ var socket_recv_handshake = function(e) {
 		if (msg.type === "c9f82f30e6a00db0") {
 			socket.onmessage = socket_recv_msg;
 			console.log('Handshake response at ' + msg.ts);
+			screen_width = msg.w;
+			screen_height = msg.h;
+			thumb_resize(msg.tw, msg.th);
 			return;
 		}
 	}
@@ -201,8 +265,8 @@ var drag_file = function(file) {
 				dragArray = new Uint8Array(e.target.result);
 				console.log('drag_file.reader.onload: git_hash: '
 				            + git_hash(dragArray));
-//				var blob = new Blob([dragArray], {type: "image/png"});
-//				dragImg.src = urlCreator.createObjectURL(blob);
+				var blob = new Blob([dragArray], {type: "image/png"});
+				drag_img.src = urlCreator.createObjectURL(blob);
 			};
 
 			reader.readAsArrayBuffer(file);
@@ -274,8 +338,11 @@ thumb.ondragstart = function (e) {
 };
 
 var thumb_mousemove = function(e) {
-	dbg.innerHTML = '&nbsp;&nbsp;&nbsp;&nbsp;{ '
-	                + e.clientX + ', ' + e.clientY + ' }';
+	var rect = thumb_canvas.getBoundingClientRect();
+	var x = e.clientX - rect.left;
+	var y = e.clientY - rect.top;
+	dbg.innerHTML = '&nbsp;&nbsp;{ ' + x + ', ' + y + ' }';
+	drag_canvas_draw(x, y);
 };
 
 var thumb_mouseout = function() {
