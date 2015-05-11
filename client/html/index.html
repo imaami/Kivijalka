@@ -108,6 +108,7 @@ var drag_canvas_draw = function(x, y) {
 	drag_canvas_clear();
 	drag_img_scaled_x = x + drag_img_x_offset;
 	drag_img_scaled_y = y + drag_img_y_offset;
+	drag_ctx.globalAlpha = 0.5;
 	drag_ctx.drawImage(drag_img_canvas, drag_img_scaled_x, drag_img_scaled_y);
 };
 
