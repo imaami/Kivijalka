@@ -61,17 +61,17 @@ void WSServer::onNewConnection()
 void WSServer::respondToHS(QWebSocket *dest)
 {
 	dest->sendTextMessage(
-		"{\n\t\"type\": \"c9f82f30e6a00db0\",\n\t\"ts\": \""
+		"{\n\t\"type\": \"c9f82f30e6a00db0\",\n\t\"ts\": "
 		+ QString::number(QDateTime::currentDateTimeUtc().toMSecsSinceEpoch())
-		+ "\",\n\t\"w\": \""
+		+ ",\n\t\"w\": "
 		+ QString::number(displayWidth)
-		+ "\",\n\t\"h\": \""
+		+ ",\n\t\"h\": "
 		+ QString::number(displayHeight)
-		+ "\",\n\t\"tw\": \""
+		+ ",\n\t\"tw\": "
 		+ QString::number(thumbWidth)
-		+ "\",\n\t\"th\": \""
+		+ ",\n\t\"th\": "
 		+ QString::number(thumbHeight)
-		+ "\"\n}"
+		+ "\n}"
 	);
 }
 
