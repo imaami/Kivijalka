@@ -7,7 +7,7 @@
   <script type="text/javascript" src="rusha.js"></script>
 </head>
 
-<body>
+<body onload="my_body_is_ready();">
 
 <!--<style>
 #thumb { border: 10px dashed #ccc; width: 300px; min-height: 300px; margin: 20px auto; }
@@ -40,6 +40,11 @@
   </div>
 
 <script>
+var my_body_is_ready = function() {
+	window.addEventListener("dragover", function(e) { e.preventDefault(); });
+	window.addEventListener("drop", function(e) { e.preventDefault(); });
+};
+
 var urlCreator = window.URL || window.webkitURL;
 var thumb = document.getElementById('thumb');
 var thumb_canvas = document.getElementById('thumbCanvas');
@@ -60,11 +65,15 @@ var drag_ctx = drag_canvas.getContext("2d");
 var dragging = false;
 var dragArray;
 
+var drag_img_canvas = document.createElement('canvas');
+var drag_img_ctx = drag_img_canvas.getContext("2d");
 var drag_img = new Image();
 var drag_img_width = 0;
 var drag_img_height = 0;
 var drag_img_scaled_width = 0;
 var drag_img_scaled_height = 0;
+var drag_img_scaled_x = 0;
+var drag_img_scaled_y = 0;
 var drag_img_x_offset = 0;
 var drag_img_y_offset = 0;
 
@@ -76,36 +85,30 @@ drag_img.onload = function(e) {
 	drag_img_x_offset = -Math.round(drag_img_scaled_width / 2.0);
 	drag_img_y_offset = -Math.round(drag_img_scaled_height / 2.0);
 
+	drag_img_canvas.width = drag_img_scaled_width;
+	drag_img_canvas.height = drag_img_scaled_height;
+	drag_img_ctx.drawImage(drag_img, 0, 0,
+	                       drag_img_scaled_width,
+	                       drag_img_scaled_height);
+
 	console.log('drag_img_width=' + drag_img_width);
 	console.log('drag_img_height=' + drag_img_height);
 	console.log('drag_img_scaled_width=' + drag_img_scaled_width);
 	console.log('drag_img_scaled_height=' + drag_img_scaled_height);
 	console.log('drag_img_x_offset=' + drag_img_x_offset);
 	console.log('drag_img_y_offset=' + drag_img_y_offset);
+};
 
-//	console.log('drag_img.onload: ' + this.width + 'x' + this.height);
-//	document.body.appendChild(this);
+var drag_canvas_clear = function() {
+	drag_ctx.clearRect(drag_img_scaled_x, drag_img_scaled_y,
+	                   drag_img_scaled_width, drag_img_scaled_height);
 };
 
 var drag_canvas_draw = function(x, y) {
-	drag_ctx.clearRect(0, 0, thumb_width, thumb_height);
-	drag_ctx.fillStyle = "#4488EE";
-	drag_ctx.beginPath();
-	drag_ctx.rect(x + drag_img_x_offset, y + drag_img_y_offset,
-	              drag_img_scaled_width, drag_img_scaled_height);
-	drag_ctx.closePath();
-	drag_ctx.fill();
-};
-
-var scale2D = function(w, h, f) {
-	return {
-		width: w * f,
-		height: h * f
-	};
-};
-
-var clearCanvas = function(ctx, w, h) {
-	ctx.clearRect(0, 0, w, h);
+	drag_canvas_clear();
+	drag_img_scaled_x = x + drag_img_x_offset;
+	drag_img_scaled_y = y + drag_img_y_offset;
+	drag_ctx.drawImage(drag_img_canvas, drag_img_scaled_x, drag_img_scaled_y);
 };
 
 var thumb_resize = function(w, h) {
@@ -337,20 +340,17 @@ thumb.ondragstart = function (e) {
 	console.log('thumb.ondragstart');
 };
 
-var thumb_mousemove = function(e) {
+var thumb_mousemove = function (e) {
 	var rect = thumb_canvas.getBoundingClientRect();
 	var x = e.clientX - rect.left;
 	var y = e.clientY - rect.top;
-	dbg.innerHTML = '&nbsp;&nbsp;{ ' + x + ', ' + y + ' }';
 	drag_canvas_draw(x, y);
+	dbg.innerHTML = '&nbsp;&nbsp;{ ' + x + ', ' + y + ' }';
 };
 
 var thumb_mouseout = function() {
 	dbg.innerHTML = "";
 };
-
-thumb.onmousemove = thumb_mousemove;
-thumb.onmouseout = thumb_mouseout;
 
 thumb.ondragenter = function (e) {
 	console.log('thumb.ondragenter');
@@ -371,6 +371,9 @@ thumb.ondragleave = function () {
 	console.log('thumb.ondragleave');
 	this.className = '';
 	dragging = false;
+	drag_canvas_clear();
+	drag_img_canvas.width = 0;
+	drag_img_canvas.height = 0;
 	thumb_mouseout();
 	return false;
 };
@@ -385,6 +388,10 @@ thumb.ondragend = function () {
 thumb.ondrop = function (e) {
 	console.log('thumb.ondrop');
 	this.className = '';
+	dragging = false;
+	drag_canvas_clear();
+	drag_img_canvas.width = 0;
+	drag_img_canvas.height = 0;
 	e.preventDefault();
 
 	var types = e.dataTransfer.types;
@@ -401,8 +408,6 @@ thumb.ondrop = function (e) {
 	} else {
 		console.log('Socket not open');
 	}
-
-	dragging = false;
 };
 
 new_socket();
