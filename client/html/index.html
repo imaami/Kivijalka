@@ -77,6 +77,29 @@ var drag_img_scaled_y = 0;
 var drag_img_x_offset = 0;
 var drag_img_y_offset = 0;
 
+/**
+ * Fadeout dropped image.
+ *
+ * @param a Target alpha value.
+ * @param s Step size.
+ * @param t Time in milliseconds to wait between steps.
+ */
+var fadeout_dropped = function (a, s, t) {
+	var v = drag_ctx.globalAlpha;
+	if (v > a) {
+		v -= s;
+		if (v < a) {
+			v = a;
+		}
+		drag_canvas_clear();
+		drag_ctx.globalAlpha = v;
+		drag_ctx.drawImage(drag_img_canvas, drag_img_scaled_x, drag_img_scaled_y);
+		if (v != a) {
+			setTimeout(fadeout_dropped, t, a, s, t);
+		}
+	}
+};
+
 drag_img.onload = function(e) {
 	drag_img_width = this.width;
 	drag_img_height = this.height;
@@ -108,7 +131,7 @@ var drag_canvas_draw = function(x, y) {
 	drag_canvas_clear();
 	drag_img_scaled_x = x + drag_img_x_offset;
 	drag_img_scaled_y = y + drag_img_y_offset;
-	drag_ctx.globalAlpha = 0.5;
+	drag_ctx.globalAlpha = 0.95;
 	drag_ctx.drawImage(drag_img_canvas, drag_img_scaled_x, drag_img_scaled_y);
 };
 
@@ -389,12 +412,14 @@ thumb.ondragend = function () {
 thumb.ondrop = function (e) {
 	console.log('thumb.ondrop');
 	this.className = '';
+	e.preventDefault();
 	dragging = false;
+	fadeout_dropped(0.5, 0.02, 20);
+/*
 	drag_canvas_clear();
 	drag_img_canvas.width = 0;
 	drag_img_canvas.height = 0;
-	e.preventDefault();
-
+*/
 	var types = e.dataTransfer.types;
 	for (var i = 0; i < types.length; ++i) {
 		if (types[i] === 'text/uri-list') {
