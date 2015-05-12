@@ -18,15 +18,22 @@
 
   <div style="width:100%;position:relative">
     <div id="thumb" style="margin:0px auto;width:auto;height:auto;display:table;float:left">
-      <canvas id="thumbCanvas"
+      <canvas id="cvs0"
               style="z-index: 1;
                      position: absolute;
                      left: 0px;
                      top: 0px;
                      border:0px solid #000000;">
       </canvas>
-      <canvas id="dragCanvas"
+      <canvas id="cvs1"
               style="z-index: 2;
+                     position: absolute;
+                     left: 0px;
+                     top: 0px;
+                     border:0px solid #000000;">
+      </canvas>
+      <canvas id="cvs2"
+              style="z-index: 3;
                      position: absolute;
                      left: 0px;
                      top: 0px;
@@ -47,11 +54,17 @@ var my_body_is_ready = function() {
 
 var urlCreator = window.URL || window.webkitURL;
 var thumb = document.getElementById('thumb');
-var thumb_canvas = document.getElementById('thumbCanvas');
-var thumb_ctx = thumb_canvas.getContext("2d");
 var thumb_width = 0;
 var thumb_height = 0;
 var thumb_scaling = 1.0;
+
+var cvs0 = document.getElementById('cvs0'),
+    cvs1 = document.getElementById('cvs1'),
+    cvs2 = document.getElementById('cvs2');
+
+var ctx0 = cvs0.getContext("2d"),
+    ctx1 = cvs1.getContext("2d"),
+    ctx2 = cvs2.getContext("2d");
 
 /* infoscreen dimensions */
 var screen_width = 0;
@@ -60,8 +73,6 @@ var screen_height = 0;
 var bq = document.getElementById('bannerQueue');
 var dbg = document.getElementById('debug');
 
-var drag_canvas = document.getElementById('dragCanvas');
-var drag_ctx = drag_canvas.getContext("2d");
 var dragging = false;
 var dragArray;
 
@@ -76,6 +87,7 @@ var drag_img_scaled_x = 0;
 var drag_img_scaled_y = 0;
 var drag_img_x_offset = 0;
 var drag_img_y_offset = 0;
+var drag_img_is_drawable = false;
 
 /**
  * Fadeout dropped image.
@@ -85,19 +97,36 @@ var drag_img_y_offset = 0;
  * @param t Time in milliseconds to wait between steps.
  */
 var fadeout_dropped = function (a, s, t) {
-	var v = drag_ctx.globalAlpha;
+	var v = ctx1.globalAlpha;
 	if (v > a) {
 		v -= s;
 		if (v < a) {
 			v = a;
 		}
-		drag_canvas_clear();
-		drag_ctx.globalAlpha = v;
-		drag_ctx.drawImage(drag_img_canvas, drag_img_scaled_x, drag_img_scaled_y);
+		drag_img_clear();
+		ctx1.globalAlpha = v;
+		ctx1.drawImage(drag_img_canvas, drag_img_scaled_x, drag_img_scaled_y);
 		if (v != a) {
 			setTimeout(fadeout_dropped, t, a, s, t);
 		}
 	}
+};
+
+/**
+ * Apply visual effects when to-be-uploaded
+ * banner is dropped on thumbnail canvas.
+ */
+var drag_img_dropped = function () {
+	ctx2.strokeStyle = "#ff0000";
+	ctx2.lineWidth = 4;
+	ctx2.strokeRect(drag_img_scaled_x, drag_img_scaled_y,
+	                drag_img_scaled_width, drag_img_scaled_height);
+	fadeout_dropped(0.618034, 0.01, 20);
+};
+
+var drag_img_set_coords = function(x, y) {
+	drag_img_scaled_x = x + drag_img_x_offset;
+	drag_img_scaled_y = y + drag_img_y_offset;
 };
 
 drag_img.onload = function(e) {
@@ -114,6 +143,11 @@ drag_img.onload = function(e) {
 	                       drag_img_scaled_width,
 	                       drag_img_scaled_height);
 
+	ctx1.clearRect(0, 0, cvs1.width, cvs1.height);
+	ctx1.globalAlpha = 0.99;
+
+	drag_img_is_drawable = true;
+
 	console.log('drag_img_width=' + drag_img_width);
 	console.log('drag_img_height=' + drag_img_height);
 	console.log('drag_img_scaled_width=' + drag_img_scaled_width);
@@ -122,28 +156,30 @@ drag_img.onload = function(e) {
 	console.log('drag_img_y_offset=' + drag_img_y_offset);
 };
 
-var drag_canvas_clear = function() {
-	drag_ctx.clearRect(drag_img_scaled_x, drag_img_scaled_y,
-	                   drag_img_scaled_width, drag_img_scaled_height);
+var drag_img_clear = function() {
+	ctx1.clearRect(drag_img_scaled_x, drag_img_scaled_y,
+	               drag_img_scaled_width, drag_img_scaled_height);
 };
 
-var drag_canvas_draw = function(x, y) {
-	drag_canvas_clear();
-	drag_img_scaled_x = x + drag_img_x_offset;
-	drag_img_scaled_y = y + drag_img_y_offset;
-	drag_ctx.globalAlpha = 0.95;
-	drag_ctx.drawImage(drag_img_canvas, drag_img_scaled_x, drag_img_scaled_y);
+var drag_img_draw = function(x, y) {
+	if (drag_img_is_drawable) {
+		drag_img_clear();
+		drag_img_set_coords(x, y);
+		ctx1.drawImage(drag_img_canvas, drag_img_scaled_x, drag_img_scaled_y);
+	}
 };
 
 var thumb_resize = function(w, h) {
 	if (thumb_width != w || thumb_height != h) {
 	        thumb_width = w;
 		thumb_height = h;
-		thumb_scaling = thumb_width / screen_width;
-		thumb_canvas.width = thumb_width;
-		thumb_canvas.height = thumb_height;
-		drag_canvas.width = thumb_width;
-		drag_canvas.height = thumb_height;
+		thumb_scaling = w / screen_width;
+		cvs0.width = w;
+		cvs0.height = h;
+		cvs1.width = w;
+		cvs1.height = h;
+		cvs2.width = w;
+		cvs2.height = h;
 	}
 };
 
@@ -153,7 +189,7 @@ var socket_recv_thumb = function(data) {
 
 	img.onload = function (e) {
 		thumb_resize(img.width, img.height);
-		thumb_ctx.drawImage(img, 0, 0);
+		ctx0.drawImage(img, 0, 0);
 		urlCreator.revokeObjectURL(img.src);
 		img = null;
 	};
@@ -304,7 +340,7 @@ var drag_file = function(file) {
 var upload_file = function(file) {
 	console.log('upload_file');
 
-	if (file.type === 'image/png') {
+	if (file !== undefined && file.type === 'image/png') {
 		var reader = new FileReader();
 		var bytearray;
 
@@ -365,10 +401,10 @@ thumb.ondragstart = function (e) {
 };
 
 var thumb_mousemove = function (e) {
-	var rect = thumb_canvas.getBoundingClientRect();
+	var rect = cvs0.getBoundingClientRect();
 	var x = e.clientX - rect.left;
 	var y = e.clientY - rect.top;
-	drag_canvas_draw(x, y);
+	drag_img_draw(x, y);
 	dbg.innerHTML = '&nbsp;&nbsp;{ ' + x + ', ' + y + ' }';
 };
 
@@ -379,6 +415,7 @@ var thumb_mouseout = function() {
 thumb.ondragenter = function (e) {
 	console.log('thumb.ondragenter');
 	e.preventDefault();
+	ctx2.clearRect(0, 0, cvs2.width, cvs2.height);
 	drag_file(e.dataTransfer.files[0]);
 	return false;
 };
@@ -387,7 +424,6 @@ thumb.ondragover = function (e) {
 	this.className = 'hover';
 	e.preventDefault();
 	thumb_mousemove(e);
-	drag_file(e.dataTransfer.files[0]);
 	return false;
 };
 
@@ -395,9 +431,10 @@ thumb.ondragleave = function () {
 	console.log('thumb.ondragleave');
 	this.className = '';
 	dragging = false;
-	drag_canvas_clear();
+	drag_img_clear();
 	drag_img_canvas.width = 0;
 	drag_img_canvas.height = 0;
+	drag_img_is_drawable = false;
 	thumb_mouseout();
 	return false;
 };
@@ -414,12 +451,9 @@ thumb.ondrop = function (e) {
 	this.className = '';
 	e.preventDefault();
 	dragging = false;
-	fadeout_dropped(0.5, 0.02, 20);
-/*
-	drag_canvas_clear();
-	drag_img_canvas.width = 0;
-	drag_img_canvas.height = 0;
-*/
+
+	drag_img_dropped();
+
 	var types = e.dataTransfer.types;
 	for (var i = 0; i < types.length; ++i) {
 		if (types[i] === 'text/uri-list') {
