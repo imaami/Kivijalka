@@ -88,6 +88,46 @@ var drag_img_scaled_y = 0;
 var drag_img_x_offset = 0;
 var drag_img_y_offset = 0;
 var drag_img_is_drawable = false;
+var drag_img_ants = false;
+var drag_img_ants_timeout = null;
+
+var drag_img_ants_draw = function (t, o, l, d) {
+	ctx2.strokeStyle = "#ff0000";
+	ctx2.lineWidth = l;
+	ctx2.setLineDash(d);
+	ctx2.lineDashOffset = o;
+	var x = drag_img_scaled_x,
+	    y = drag_img_scaled_y,
+	    w = drag_img_scaled_width,
+	    h = drag_img_scaled_height;
+	ctx2.strokeRect(x+(l/2), y+(l/2), w-l, h-l);
+	drag_img_ants_timeout = setTimeout(drag_img_ants_refresh, t,
+	                                   x, y, w, h, t, o + 1, l, d);
+};
+
+var drag_img_ants_refresh = function (prev_x, prev_y, prev_w, prev_h, t, o, l, d) {
+	ctx2.clearRect(prev_x, prev_y, prev_w, prev_h);
+	if (drag_img_ants) {
+		if (o > (d[0]+d[1])) {
+			o = 0;
+		}
+		drag_img_ants_draw(t, o, l, d);
+	} else {
+		drag_img_ants_timeout = null;
+	}
+};
+
+var drag_img_ants_start = function (t, l, d) {
+	if (!drag_img_ants) {
+		drag_img_ants = true;
+		ctx2.clearRect(0, 0, cvs2.width, cvs2.height);
+		drag_img_ants_draw(t, 0, l, d);
+	}
+};
+
+var drag_img_ants_stop = function () {
+	drag_img_ants = false;
+};
 
 /**
  * Fadeout dropped image.
@@ -117,10 +157,7 @@ var fadeout_dropped = function (a, s, t) {
  * banner is dropped on thumbnail canvas.
  */
 var drag_img_dropped = function () {
-	ctx2.strokeStyle = "#ff0000";
-	ctx2.lineWidth = 4;
-	ctx2.strokeRect(drag_img_scaled_x, drag_img_scaled_y,
-	                drag_img_scaled_width, drag_img_scaled_height);
+	drag_img_ants_start(20, 3, [8, 6]);
 	fadeout_dropped(0.618034, 0.01, 20);
 };
 
@@ -416,6 +453,7 @@ thumb.ondragenter = function (e) {
 	console.log('thumb.ondragenter');
 	e.preventDefault();
 	ctx2.clearRect(0, 0, cvs2.width, cvs2.height);
+	drag_img_ants_stop();
 	drag_file(e.dataTransfer.files[0]);
 	return false;
 };
@@ -431,6 +469,7 @@ thumb.ondragleave = function () {
 	console.log('thumb.ondragleave');
 	this.className = '';
 	dragging = false;
+	drag_img_ants_stop();
 	drag_img_clear();
 	drag_img_canvas.width = 0;
 	drag_img_canvas.height = 0;
