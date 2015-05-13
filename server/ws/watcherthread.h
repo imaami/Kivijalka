@@ -1,10 +1,10 @@
 #ifndef WATCHERTHREAD_H
 #define WATCHERTHREAD_H
 
-#include <QThread>
-#include <QString>
-#include <QMutex>
-#include <QWaitCondition>
+#include <QtCore/QThread>
+#include <QtCore/QString>
+#include <QtCore/QMutex>
+#include <QtCore/QWaitCondition>
 #include "watcher.h"
 
 class WatcherThread : public QThread
