@@ -251,17 +251,15 @@ var socket_opened = function() {
 };
 
 var socket_reconnect = function() {
-	if (socket !== null) {
-		if (socket.readyState == 3) {
-			// CLOSED
-			new_socket();
-		} else if (socket.readyState == 0
-		           || socket.readyState == 2) {
-			// CONNECTING or CLOSING
-			setTimeout(socket_reconnect(), 4000);
-		} else {
-			// OPEN
-		}
+	if (socket.readyState == 3) {
+		// CLOSED
+		new_socket();
+	} else if (socket.readyState == 0
+	           || socket.readyState == 2) {
+		// CONNECTING or CLOSING
+		setTimeout(socket_reconnect, 4000);
+	} else {
+		// OPEN
 	}
 };
 
@@ -303,7 +301,6 @@ var socket_recv_handshake = function(e) {
 	}
 	console.log('Wrong handshake');
 	socket.close();
-	socket = null;
 };
 
 var new_socket = function() {
