@@ -9,42 +9,67 @@
 
 <body onload="my_body_is_ready();">
 
-<!--<style>
-#thumb { border: 10px dashed #ccc; width: 300px; min-height: 300px; margin: 20px auto; }
-#thumb.hover { border: 10px dashed #0c0; }
-#thumb img { display: block; margin: 10px auto; }
-#thumb p { margin: 10px; font-size: 14px; }
-</style>-->
+<style>
+* {
+	margin: 0;
+	padding: 0;
+}
 
-  <div style="width:100%;position:relative">
-    <div id="thumb" style="margin:0px auto;width:auto;height:auto;display:table;float:left">
-      <canvas id="cvs0"
-              style="z-index: 1;
-                     position: absolute;
-                     left: 0px;
-                     top: 0px;
-                     border:0px solid #000000;">
-      </canvas>
-      <canvas id="cvs1"
-              style="z-index: 2;
-                     position: absolute;
-                     left: 0px;
-                     top: 0px;
-                     border:0px solid #000000;">
-      </canvas>
-      <canvas id="cvs2"
-              style="z-index: 3;
-                     position: absolute;
-                     left: 0px;
-                     top: 0px;
-                     border:0px solid #000000;">
-      </canvas>
+html, body {
+	width: 100%;
+	height: 100%;
+}
+
+#thumbSection {
+	width: 100%;
+}
+
+#thumbDiv {
+	float: left;
+	overflow: hidden;
+}
+
+#bannerQueue {
+	float: left;
+	overflow: hidden;
+}
+
+#cvs0 {
+	z-index: 1;
+	position: absolute;
+	left: 0px;
+	top: 0px;
+	border:0px solid #000000;
+}
+
+#cvs1 {
+	z-index: 2;
+	position: absolute;
+	left: 0px;
+	top: 0px;
+	border:0px solid #000000;
+}
+
+#cvs2 {
+	z-index: 3;
+	position: absolute;
+	left: 0px;
+	top: 0px;
+	border:0px solid #000000;
+}
+</style>
+
+  <section id="thumbSection">
+    <div id="thumbDiv">
+      <canvas id="cvs0"></canvas>
+      <canvas id="cvs1"></canvas>
+      <canvas id="cvs2"></canvas>
     </div>
-    <div id="bannerQueue" style="margin:0px auto;width:auto;height:auto;display:table:float:left">
+    <div id="bannerQueue">
 <!--  <img src="/usr/share/kivijalka/banners/banner.png" alt="banner" />-->
-      <p id="debug"></p>
+      <p id="debug">&Ouml;&ouml;h tuota</p>
     </div>
-  </div>
+  </section>
 
 <script>
 var my_body_is_ready = function() {
@@ -53,7 +78,7 @@ var my_body_is_ready = function() {
 };
 
 var urlCreator = window.URL || window.webkitURL;
-var thumb = document.getElementById('thumb');
+var thumb = document.getElementById('thumbDiv');
 var thumb_width = 0;
 var thumb_height = 0;
 var thumb_scaling = 1.0;
@@ -253,6 +278,11 @@ var thumb_resize = function(w, h) {
 	        thumb_width = w;
 		thumb_height = h;
 		thumb_scaling = w / screen_width;
+		var ws = w + "px", hs = h + "px";
+		thumb.style.width=ws;
+		thumb.style.height=hs;
+		bq.style.width="200px"
+		bq.style.height=hs;
 		cvs0.width = w;
 		cvs0.height = h;
 		cvs1.width = w;
