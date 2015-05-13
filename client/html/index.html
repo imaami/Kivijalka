@@ -117,11 +117,53 @@ var drag_img_ants_refresh = function (prev_x, prev_y, prev_w, prev_h, t, o, l, d
 	}
 };
 
-var drag_img_ants_start = function (t, l, d) {
+var drag_img_ants_start = function (t, l) {
 	if (!drag_img_ants) {
 		drag_img_ants = true;
 		ctx2.clearRect(0, 0, cvs2.width, cvs2.height);
-		drag_img_ants_draw(t, 0, l, d);
+		drag_img_ants_draw(t, 0, l, [8, 6]);
+	}
+};
+
+var drag_img_ants_draw2 = function (t, o, l, d) {
+	ctx2.strokeStyle = "#ff0000";
+	ctx2.lineWidth = l;
+	ctx2.setLineDash(d);
+	ctx2.lineDashOffset = (o == 1) ? 0 : d[0];
+	var x = drag_img_scaled_x,
+	    y = drag_img_scaled_y,
+	    w = drag_img_scaled_width,
+	    h = drag_img_scaled_height;
+	ctx2.strokeRect(x+(l/2), y+(l/2), w-l, h-l);
+	drag_img_ants_timeout = setTimeout(drag_img_ants_refresh2, t,
+	                                   x, y, w, h, t, o, l, d);
+};
+
+var drag_img_ants_refresh2 = function (prev_x, prev_y, prev_w, prev_h, t, o, l, d) {
+	ctx2.clearRect(prev_x, prev_y, prev_w, prev_h);
+	if (drag_img_ants) {
+		d[0] += o;
+		d[1] -= o;
+		if (o == 1) {
+			if (d[1] == 0) {
+				o = -1;
+			}
+		} else {
+			if (d[0] == 0) {
+				o = 1;
+			}
+		}
+		drag_img_ants_draw2(t, o, l, d);
+	} else {
+		drag_img_ants_timeout = null;
+	}
+};
+
+var drag_img_ants_start2 = function (t, l) {
+	if (!drag_img_ants) {
+		drag_img_ants = true;
+		ctx2.clearRect(0, 0, cvs2.width, cvs2.height);
+		drag_img_ants_draw2(t, 1, l, [1, 31]);
 	}
 };
 
@@ -157,7 +199,7 @@ var fadeout_dropped = function (a, s, t) {
  * banner is dropped on thumbnail canvas.
  */
 var drag_img_dropped = function () {
-	drag_img_ants_start(20, 3, [8, 6]);
+	drag_img_ants_start2(20, 3);
 	fadeout_dropped(0.618034, 0.01, 20);
 };
 
