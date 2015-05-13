@@ -250,14 +250,14 @@ var socket_opened = function() {
 	socket_init_handshake();
 };
 
-var socket_reconnect = function() {
+var socket_reconnect = function(t) {
 	if (socket.readyState == 3) {
 		// CLOSED
 		new_socket();
 	} else if (socket.readyState == 0
 	           || socket.readyState == 2) {
 		// CONNECTING or CLOSING
-		setTimeout(socket_reconnect, 4000);
+		setTimeout(socket_reconnect, t, t);
 	} else {
 		// OPEN
 	}
@@ -265,7 +265,8 @@ var socket_reconnect = function() {
 
 var socket_closed = function() {
 	console.log('Disconnected; will try to reconnect soon...');
-	setTimeout(socket_reconnect, 4000);
+	var t = 4000;
+	setTimeout(socket_reconnect, t, t);
 };
 
 var socket_error = function() {
