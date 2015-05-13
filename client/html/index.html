@@ -265,7 +265,7 @@ var socket_reconnect = function() {
 
 var socket_closed = function() {
 	console.log('Disconnected; will try to reconnect soon...');
-	socket_reconnect();
+	setTimeout(socket_reconnect, 4000);
 };
 
 var socket_error = function() {
