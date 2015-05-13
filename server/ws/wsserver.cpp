@@ -21,12 +21,17 @@ WSServer::WSServer(quint16 port,
 	clients(),
 	thumbnail(thumbFile),
 	banner(bannerFile),
+	imageData(),
 	bannerCache(bannerDir, this)
 {
 	this->displayWidth = displayWidth;
 	this->displayHeight = displayHeight;
 	this->thumbWidth = thumbWidth;
 	this->thumbHeight = thumbHeight;
+
+	if (!readThumbnail()) {
+		qDebug() << "Couldn't read thumbnail file";
+	}
 
 	if (m_pWebSocketServer->listen(QHostAddress::LocalHost, port)) {
 		qDebug() << "Websocket server listening on port" << port;
@@ -84,7 +89,6 @@ void WSServer::processTextMessage(QString message)
 	if (pClient) {
 		if (message == "71bf2d31e9e4e15c") {
 			respondToHS(pClient);
-		} else {
 			pushThumbnail(pClient);
 		}
 	}
@@ -143,15 +147,23 @@ void WSServer::pushThumbnails()
 }
 
 
-void WSServer::thumbnailUpdated()
+bool WSServer::readThumbnail()
 {
-	qDebug() << "Thumbnail updated";
-	if (thumbnail.open(QIODevice::ReadOnly)) {
+	bool r;
+	if ((r = thumbnail.open(QIODevice::ReadOnly))) {
 		if (!imageData.isEmpty()) {
 			imageData.clear();
 		}
 		imageData = thumbnail.readAll();
 		thumbnail.close();
+	}
+	return r;
+}
+
+void WSServer::thumbnailUpdated()
+{
+	qDebug() << "Thumbnail updated";
+	if (readThumbnail()) {
 		pushThumbnails();
 	} else {
 		qDebug() << "thumbnailUpdated: Failed to open" + thumbnail.fileName();
