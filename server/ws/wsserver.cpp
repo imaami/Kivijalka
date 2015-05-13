@@ -32,10 +32,12 @@ WSServer::WSServer(quint16 port,
 		qDebug() << "Websocket server listening on port" << port;
 		connect(m_pWebSocketServer, &QWebSocketServer::newConnection,
 		        this, &WSServer::onNewConnection);
-		connect(m_pWebSocketServer, &QWebSocketServer::closed, this, &WSServer::closed);
+		connect(m_pWebSocketServer, &QWebSocketServer::closed,
+		        this, &WSServer::closed);
 
 		if ((watcherThread = new WatcherThread(thumbFile, this))) {
-			connect(watcherThread, &WatcherThread::fileUpdated, this, &WSServer::thumbnailUpdated);
+			connect(watcherThread, &WatcherThread::fileUpdated,
+			        this, &WSServer::thumbnailUpdated);
 			watcherThread->start();
 		}
 	}
