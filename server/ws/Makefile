@@ -9,7 +9,7 @@ test-watcher: path.o watcher.o test-watcher.o
 	$(CC) $(CFLAGS) -std=gnu11 path.o watcher.o test-watcher.o -o test-watcher
 
 test-img: img.o test-img.o
-	$(CC) -fopenmp -I/usr/include/ImageMagick $(CFLAGS) -std=gnu11 img.o test-img.o -lMagickWand -lMagickCore -o test-img
+	$(CC) $(CFLAGS) -std=gnu11 `pkg-config --libs MagickWand` img.o test-img.o -o test-img
 
 path.o: path.c
 	$(CC) $(CFLAGS) -std=gnu11 -c path.c -o path.o
@@ -18,7 +18,7 @@ watcher.o: watcher.c
 	$(CC) $(CFLAGS) -std=gnu11 -c watcher.c -o watcher.o
 
 img.o: img.c
-	$(CC) -fopenmp -I/usr/include/ImageMagick $(CFLAGS) -std=gnu11 -c img.c -o img.o
+	$(CC) $(CFLAGS) -std=gnu11 `pkg-config --cflags MagickWand` -c img.c -o img.o
 
 test-path.o: test-path.c
 	$(CC) $(CFLAGS) -std=gnu11 -c test-path.c -o test-path.o
@@ -27,7 +27,7 @@ test-watcher.o: test-watcher.c
 	$(CC) $(CFLAGS) -std=gnu11 -c test-watcher.c -o test-watcher.o
 
 test-img.o: test-img.c
-	$(CC) $(CFLAGS) -std=gnu11 -c test-img.c -o test-img.o
+	$(CC) $(CFLAGS) -std=gnu11 `pkg-config --cflags MagickWand` -c test-img.c -o test-img.o
 
 wsserver:
 	./build.sh
