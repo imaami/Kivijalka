@@ -10,16 +10,15 @@
 extern "C" {
 #endif
 
-#include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <wand/MagickWand.h>
+#include <unistd.h>
 
 typedef struct img img_t;
 
 struct img {
-	MagickWand *screen;
-	MagickWand *banner;
+	void *screen;
+	void *banner;
 } __attribute__((gcc_struct,packed));
 
 extern bool
@@ -38,6 +37,10 @@ extern bool
 img_render_screen (img_t         *im,
                    const ssize_t  banner_x,
                    const ssize_t  banner_y);
+
+extern bool
+img_write (img_t      *im,
+           const char *file);
 
 extern void
 img_destroy (img_t *im);

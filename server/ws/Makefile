@@ -30,7 +30,7 @@ test-watcher.o: test-watcher.c
 	$(CC) $(CFLAGS) -std=gnu11 -c test-watcher.c -o test-watcher.o
 
 test-img.o: test-img.c
-	$(CC) $(CFLAGS) -std=gnu11 `pkg-config --cflags MagickWand` -c test-img.c -o test-img.o
+	$(CC) $(CFLAGS) -std=gnu11 -c test-img.c -o test-img.o
 
 wsserver:
 	./build.sh
@@ -44,6 +44,9 @@ clean-test-path:
 
 clean-test-watcher:
 	rm -f test-watcher test-watcher.o watcher.o
+
+clean-test-img:
+	rm -f test-img test-img.o img.o read-file.o
 
 clean-wsserver:
 	rm -f *.o
