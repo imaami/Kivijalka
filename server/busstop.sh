@@ -11,7 +11,7 @@ CAP="cap-$STOP.png"
 TMP="tmp-$STOP.png"
 OUT="out-$STOP.png"
 PIDFILE="$OUTPATH/lock-$STOP.pid"
-DELAY=5
+#DELAY=5
 BANNER_SRC="/usr/share/kivijalka/banners/banner.png"
 BANNER="$OUTPATH/banner.png"
 BANNER_PAD=10
@@ -23,8 +23,8 @@ mkdir -p "$OUTPATH"
 #x=$(xrandr -q|egrep "^Screen 0"|sed -r 's|(^.*current )([1-9][0-9]*) x ([1-9][0-9]*),.*$|\2 \3|')
 #PX_W="${x%% *}"
 #PX_H="${x##* }"
-PX_W=1280
-PX_H=1024
+PX_W=1920
+PX_H=1080
 
 # defaults if we didn't find a resolution
 if [[ -z $PX_W ]]
@@ -121,7 +121,8 @@ fi
   done
 ) &>/dev/null &
 
-/usr/bin/feh --no-fehbg --reload $DELAY --scale-down -qpFxY "$OUTPATH/$OUT"
+#/usr/bin/feh --no-fehbg --reload $DELAY -g "${PX_W}x${PX_H}+0+0" --zoom 100 --keep-zoom-vp -qpxY "$OUTPATH/$OUT"
+/usr/bin/qiv -RT "$OUTPATH/$OUT"
 
 if [[ -f "$PIDFILE" ]]
 then
