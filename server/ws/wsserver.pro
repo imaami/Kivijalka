@@ -16,7 +16,8 @@ SOURCES += \
     wsserver.cpp \
     watcherthread.cpp \
     watcher.c \
-    path.c
+    path.c \
+    img.c
 
 HEADERS += \
     banner.h \
@@ -24,4 +25,5 @@ HEADERS += \
     wsserver.h \
     watcherthread.h \
     watcher.h \
-    path.h
+    path.h \
+    img.h
