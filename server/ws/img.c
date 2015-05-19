@@ -45,6 +45,18 @@ img_load_screen (img_t      *im,
 	return true;
 }
 
+size_t
+img_get_screen_width (img_t *im)
+{
+	return (im) ? MagickGetImageWidth (im->screen) : 0;
+}
+
+size_t
+img_get_screen_height (img_t *im)
+{
+	return (im) ? MagickGetImageHeight (im->screen) : 0;
+}
+
 bool
 img_load_banner (img_t         *im,
                  const uint8_t *data,

@@ -28,6 +28,12 @@ extern bool
 img_load_screen (img_t      *im,
                  const char *path);
 
+extern size_t
+img_get_screen_width (img_t *im);
+
+extern size_t
+img_get_screen_height (img_t *im);
+
 extern bool
 img_load_banner (img_t         *im,
                  const uint8_t *data,
