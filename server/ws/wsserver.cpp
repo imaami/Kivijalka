@@ -21,7 +21,7 @@ WSServer::WSServer(quint16 port,
 	clients(),
 	thumbnail(thumbFile),
 	banner(bannerFile),
-	imageData(),
+	thumbData(),
 	bannerCache(bannerDir, this)
 {
 	this->displayWidth = displayWidth;
@@ -99,7 +99,6 @@ void WSServer::processTextMessage(QString message)
 
 void WSServer::recvBanner(QByteArray message)
 {
-	qDebug() << "recvBanner: " + banner;
 	QWebSocket *pClient = qobject_cast<QWebSocket *>(sender());
 	if (pClient) {
 		if (!message.isEmpty()) {
@@ -130,21 +129,21 @@ void WSServer::socketDisconnected()
 
 void WSServer::pushThumbnail(QWebSocket *dest)
 {
-	if (imageData.isEmpty()) {
+	if (thumbData.isEmpty()) {
 		qDebug() << "pushThumbnail: no image data";
 	} else {
-		dest->sendBinaryMessage(imageData);
+		dest->sendBinaryMessage(thumbData);
 	}
 }
 
 void WSServer::pushThumbnails()
 {
-	if (imageData.isEmpty()) {
+	if (thumbData.isEmpty()) {
 		qDebug() << "pushThumbnails: no image data";
 	} else {
 		if (clients.size() > 0) {
 			for (int i = 0; i < clients.size(); ++i) {
-				clients.at(i)->sendBinaryMessage(imageData);
+				clients.at(i)->sendBinaryMessage(thumbData);
 			}
 			qDebug() << "pushThumbnails: Sent thumbnail to client(s)";
 		} else {
@@ -158,10 +157,10 @@ bool WSServer::readThumbnail()
 {
 	bool r;
 	if ((r = thumbnail.open(QIODevice::ReadOnly))) {
-		if (!imageData.isEmpty()) {
-			imageData.clear();
+		if (!thumbData.isEmpty()) {
+			thumbData.clear();
 		}
-		imageData = thumbnail.readAll();
+		thumbData = thumbnail.readAll();
 		thumbnail.close();
 	}
 	return r;

@@ -47,7 +47,7 @@ private:
 	quint16 thumbWidth, thumbHeight;
 	QFile thumbnail;
 	QString banner;
-	QByteArray imageData;
+	QByteArray thumbData;
 	WatcherThread *watcherThread;
 	BannerCache bannerCache;
 	img_t img;
