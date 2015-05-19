@@ -13,7 +13,7 @@ main (int    argc,
 	}
 
 	char *pngdata;
-	size_t pngsize;
+	size_t pngsize, thumb_w, thumb_h;
 	img_t im;
 
 	if (!(pngdata = read_binary_file (argv[2], &pngsize))) {
@@ -29,7 +29,10 @@ main (int    argc,
 		return EXIT_FAILURE;
 	}
 
-	if (img_render_screen (&im, 0, 0)) {
+	thumb_w = img_get_screen_width (&im) >> 1;
+	thumb_h = img_get_screen_height (&im) >> 1;
+
+	if (img_render_thumb (&im, 0, 0, thumb_w, thumb_h)) {
 		if (argc > 3 && argv[3]) {
 			(void) img_write (&im, argv[3]);
 		}

@@ -76,24 +76,26 @@ img_load_banner (img_t         *im,
 }
 
 bool
-img_render_screen (img_t         *im,
-                   const ssize_t  banner_x,
-                   const ssize_t  banner_y)
+img_render_thumb (img_t         *im,
+                  const ssize_t  banner_x,
+                  const ssize_t  banner_y,
+                  const size_t   thumb_w,
+                  const size_t   thumb_h)
 {
-	if (!im) {
-		return false;
-	}
+	if (im) {
+		if (MagickCompositeImage ((MagickWand *) im->screen,
+		                          (MagickWand *) im->banner,
+		                          OverCompositeOp,
+		                          banner_x, banner_y) == MagickTrue
+		    && MagickScaleImage ((MagickWand *) im->screen,
+		                         thumb_w, thumb_h) == MagickTrue) {
+			return true;
+		}
 
-	if (MagickCompositeImage ((MagickWand *) im->screen,
-	                          (MagickWand *) im->banner,
-	                          OverCompositeOp,
-	                          banner_x, banner_y)
-	    == MagickFalse) {
 		img_exception ((MagickWand *) im->screen);
-		return false;
 	}
 
-	return true;
+	return false;
 }
 
 bool

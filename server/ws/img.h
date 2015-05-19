@@ -40,9 +40,11 @@ img_load_banner (img_t         *im,
                  const size_t   size);
 
 extern bool
-img_render_screen (img_t         *im,
-                   const ssize_t  banner_x,
-                   const ssize_t  banner_y);
+img_render_thumb (img_t         *im,
+                  const ssize_t  banner_x,
+                  const ssize_t  banner_y,
+                  const size_t   thumb_w,
+                  const size_t   thumb_h);
 
 extern bool
 img_write (img_t      *im,
