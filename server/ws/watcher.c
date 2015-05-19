@@ -260,56 +260,14 @@ watcher_handle_events (watcher_t *w)
 		for (em = 0, ptr = buf; ptr < buf + len;
 		     ptr += sizeof(struct inotify_event) + event->len) {
 			event = (const struct inotify_event *) ptr;
-			if (event->mask) {
-/*
-				if ((event->mask & IN_ACCESS))
-					printf ("IN_ACCESS ");
-				if ((event->mask & IN_MODIFY))
-					printf ("IN_MODIFY ");
-				if ((event->mask & IN_ATTRIB))
-					printf ("IN_ATTRIB ");
-				if ((event->mask & IN_CLOSE_WRITE))
-					printf ("IN_CLOSE_WRITE ");
-				if ((event->mask & IN_CLOSE_NOWRITE))
-					printf ("IN_CLOSE_NOWRITE ");
-				if ((event->mask & IN_OPEN))
-					printf ("IN_OPEN ");
-				if ((event->mask & IN_MOVED_FROM))
-					printf ("IN_MOVED_FROM ");
-				if ((event->mask & IN_MOVED_TO))
-					printf ("IN_MOVED_TO ");
-				if ((event->mask & IN_CREATE))
-					printf ("IN_CREATE ");
-				if ((event->mask & IN_DELETE))
-					printf ("IN_DELETE ");
-				if ((event->mask & IN_DELETE_SELF))
-					printf ("IN_DELETE_SELF ");
-				if ((event->mask & IN_MOVE_SELF))
-					printf ("IN_MOVE_SELF ");
-				if ((event->mask & IN_UNMOUNT))
-					printf ("IN_UNMOUNT ");
-				if ((event->mask & IN_Q_OVERFLOW))
-					printf ("IN_Q_OVERFLOW ");
-				if ((event->mask & IN_IGNORED))
-					printf ("IN_IGNORED ");
-*/
-				if ((event->mask & IN_ISDIR)) {
-//					printf ("(dir) ");
-				} else if (event->len && !strcmp (event->name, w->file)) {
-						em |= (event->mask & (IN_CLOSE_WRITE|IN_MOVED_TO));
+
+			if (!(event->mask & IN_ISDIR) && event->len
+			    && (event->mask & (IN_CLOSE_WRITE|IN_MOVED_TO))) {
+				if (!strcmp (event->name, w->file)) {
+					em |= 1;
+				} else if (!strncmp (event->name, "cap-", 4)) {
+					em |= 2;
 				}
-/*
-				if (event->len && event->name) {
-					printf ("%s", event->name);
-					if (!strcmp (event->name, w->file)) {
-						printf (" *\n");
-					} else {
-						puts("");
-					}
-				} else {
-					puts("");
-				}
-*/
 			}
 		}
 

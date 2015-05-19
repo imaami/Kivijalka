@@ -35,6 +35,7 @@ private Q_SLOTS:
 	void respondToHS(QWebSocket *dest);
 	void recvBanner(QByteArray message);
 	void socketDisconnected();
+	void captureUpdated();
 	bool readThumbnail();
 	void thumbnailUpdated();
 	void pushThumbnail(QWebSocket *dest);

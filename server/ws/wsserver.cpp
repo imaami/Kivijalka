@@ -43,6 +43,8 @@ WSServer::WSServer(quint16 port,
 		        this, &WSServer::closed);
 
 		if ((watcherThread = new WatcherThread(thumbFile, this))) {
+			connect(watcherThread, &WatcherThread::capFileUpdated,
+			        this, &WSServer::captureUpdated);
 			connect(watcherThread, &WatcherThread::fileUpdated,
 			        this, &WSServer::thumbnailUpdated);
 			watcherThread->start();
@@ -102,8 +104,10 @@ void WSServer::recvBanner(QByteArray message)
 	QWebSocket *pClient = qobject_cast<QWebSocket *>(sender());
 	if (pClient) {
 		if (!message.isEmpty()) {
-			if (!img_load_banner (&img, (const uint8_t *) message.constData(),
+			if (img_load_banner (&img, (const uint8_t *) message.constData(),
 			                      message.size())) {
+				(void) img_render_thumb (&img, 0, 0, thumbWidth, thumbHeight);
+			} else {
 				fprintf (stderr, "img_load_banner failed\n");
 			}
 			QFile file(banner);
@@ -168,10 +172,16 @@ bool WSServer::readThumbnail()
 
 void WSServer::thumbnailUpdated()
 {
-	qDebug() << "Thumbnail updated";
 	if (readThumbnail()) {
 		pushThumbnails();
 	} else {
 		qDebug() << "thumbnailUpdated: Failed to open" + thumbnail.fileName();
+	}
+}
+
+void WSServer::captureUpdated()
+{
+	if (!img_load_screen (&img, "/dev/shm/busstop/cap-0510.png")) {
+		fprintf (stderr, "img_load_screen failed\n");
 	}
 }
