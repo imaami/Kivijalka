@@ -9,7 +9,7 @@ test-watcher: path.o watcher.o test-watcher.o
 	$(CC) $(CFLAGS) -std=gnu11 path.o watcher.o test-watcher.o -o test-watcher
 
 test-img: img.o test-img.o read-file.o
-	$(CC) $(CFLAGS) -std=gnu11 `pkg-config --libs MagickWand` img.o test-img.o read-file.o -o test-img
+	$(CC) $(CFLAGS) -std=gnu11 img.o test-img.o read-file.o `pkg-config --libs MagickWand` -o test-img
 
 path.o: path.c
 	$(CC) $(CFLAGS) -std=gnu11 -c path.c -o path.o
