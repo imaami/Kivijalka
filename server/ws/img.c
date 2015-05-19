@@ -27,7 +27,10 @@ img_init (img_t *im)
 	if (im) {
 		im->screen = (void *) NewMagickWand();
 		im->banner = (void *) NewMagickWand();
+		return true;
 	}
+
+	return false;
 }
 
 bool
