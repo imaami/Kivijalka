@@ -33,6 +33,8 @@ WSServer::WSServer(quint16 port,
 		qDebug() << "Couldn't read thumbnail file";
 	}
 
+	(void) img_init (&img);
+
 	if (m_pWebSocketServer->listen(QHostAddress::LocalHost, port)) {
 		qDebug() << "Websocket server listening on port" << port;
 		connect(m_pWebSocketServer, &QWebSocketServer::newConnection,
@@ -52,6 +54,7 @@ WSServer::WSServer(quint16 port,
 WSServer::~WSServer()
 {
 	m_pWebSocketServer->close();
+	img_destroy (&img);
 	qDeleteAll(clients.begin(), clients.end());
 }
 
@@ -100,6 +103,10 @@ void WSServer::recvBanner(QByteArray message)
 	QWebSocket *pClient = qobject_cast<QWebSocket *>(sender());
 	if (pClient) {
 		if (!message.isEmpty()) {
+			if (!img_load_banner (&img, (const uint8_t *) message.constData(),
+			                      message.size())) {
+				fprintf (stderr, "img_load_banner failed\n");
+			}
 			QFile file(banner);
 			if (file.open(QIODevice::WriteOnly)) {
 				qDebug() << "opened banner";

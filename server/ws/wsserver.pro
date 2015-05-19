@@ -1,8 +1,9 @@
 QT       += core websockets gui
 
 TARGET = wsserver
-CONFIG   += console c++11
+CONFIG   += console c++11 link_pkgconfig
 CONFIG   -= app_bundle
+PKGCONFIG += MagickWand
 
 TEMPLATE = app
 
