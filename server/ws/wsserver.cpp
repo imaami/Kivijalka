@@ -11,6 +11,7 @@ QT_USE_NAMESPACE
 WSServer::WSServer(quint16 port,
                    quint16 displayWidth, quint16 displayHeight,
                    quint16 thumbWidth, quint16 thumbHeight,
+                   quint16 bannerX, quint16 bannerY,
                    const QString &thumbFile,
                    const QString &bannerFile,
                    const QString &bannerDir,
@@ -28,10 +29,8 @@ WSServer::WSServer(quint16 port,
 	this->displayHeight = displayHeight;
 	this->thumbWidth = thumbWidth;
 	this->thumbHeight = thumbHeight;
-
-	if (!readThumbnail()) {
-		qDebug() << "Couldn't read thumbnail file";
-	}
+	this->bannerX = bannerX;
+	this->bannerY = bannerY;
 
 	(void) img_init (&img);
 
@@ -50,7 +49,6 @@ WSServer::WSServer(quint16 port,
 			watcherThread->start();
 		}
 	}
-
 }
 
 WSServer::~WSServer()
@@ -106,16 +104,11 @@ void WSServer::recvBanner(QByteArray message)
 		if (!message.isEmpty()) {
 			if (img_load_banner (&img, (const uint8_t *) message.constData(),
 			                      message.size())) {
-				(void) img_render_thumb (&img, 0, 0, thumbWidth, thumbHeight);
+				(void) img_render_thumb (&img,
+				                         bannerX, bannerY,
+				                         thumbWidth, thumbHeight);
 			} else {
 				fprintf (stderr, "img_load_banner failed\n");
-			}
-			QFile file(banner);
-			if (file.open(QIODevice::WriteOnly)) {
-				qDebug() << "opened banner";
-				qint64 bytes = file.write(message);
-				file.close();
-				qDebug() << "wrote" << bytes << "bytes";
 			}
 		}
 	}
@@ -133,25 +126,16 @@ void WSServer::socketDisconnected()
 
 void WSServer::pushThumbnail(QWebSocket *dest)
 {
-	if (thumbData.isEmpty()) {
-		qDebug() << "pushThumbnail: no image data";
-	} else {
+	if (!thumbData.isEmpty()) {
 		dest->sendBinaryMessage(thumbData);
 	}
 }
 
 void WSServer::pushThumbnails()
 {
-	if (thumbData.isEmpty()) {
-		qDebug() << "pushThumbnails: no image data";
-	} else {
-		if (clients.size() > 0) {
-			for (int i = 0; i < clients.size(); ++i) {
-				clients.at(i)->sendBinaryMessage(thumbData);
-			}
-			qDebug() << "pushThumbnails: Sent thumbnail to client(s)";
-		} else {
-			qDebug() << "pushThumbnails: no client(s)";
+	if (!thumbData.isEmpty()) {
+		for (int i = 0; i < clients.size(); ++i) {
+			clients.at(i)->sendBinaryMessage(thumbData);
 		}
 	}
 }

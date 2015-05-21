@@ -4,7 +4,7 @@
 int main(int argc, char *argv[])
 {
 	QCoreApplication a(argc, argv);
-	WSServer *server = new WSServer(8001, 1280, 1024, 640, 512,
+	WSServer *server = new WSServer(8001, 1280, 1024, 640, 512, 1024, 768,
 	                                QString("/dev/shm/busstop/thumb.png"),
 	                                QString("/dev/shm/busstop/banner.png"),
 	                                QString("/usr/share/kivijalka/banners"));

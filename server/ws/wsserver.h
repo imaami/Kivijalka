@@ -20,6 +20,7 @@ public:
 	explicit WSServer(quint16 port,
 	                  quint16 displayWidth, quint16 displayHeight,
 	                  quint16 thumbWidth, quint16 thumbHeight,
+	                  quint16 bannerX, quint16 bannerY,
 	                  const QString &thumbFile,
 	                  const QString &bannerFile,
 	                  const QString &bannerDir,
@@ -46,6 +47,7 @@ private:
 	QList<QWebSocket *> clients;
 	quint16 displayWidth, displayHeight;
 	quint16 thumbWidth, thumbHeight;
+	quint16 bannerX, bannerY;
 	QFile thumbnail;
 	QString banner;
 	QByteArray thumbData;
