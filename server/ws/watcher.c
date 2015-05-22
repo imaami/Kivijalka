@@ -227,7 +227,6 @@ watcher_handle_events (watcher_t *w)
 	const struct inotify_event *event;
 	ssize_t len;
 	char *ptr;
-	int64_t em;
 
 	/* Loop while events can be read from inotify file descriptor. */
 
@@ -257,21 +256,16 @@ watcher_handle_events (watcher_t *w)
 
 		/* Loop over all events in the buffer */
 
-		for (em = 0, ptr = buf; ptr < buf + len;
+		for (ptr = buf; ptr < buf + len;
 		     ptr += sizeof(struct inotify_event) + event->len) {
 			event = (const struct inotify_event *) ptr;
 
 			if (!(event->mask & IN_ISDIR) && event->len
-			    && (event->mask & (IN_CLOSE_WRITE|IN_MOVED_TO))) {
-				if (!strcmp (event->name, w->file)) {
-					em |= 1;
-				} else if (!strncmp (event->name, "cap-", 4)) {
-					em |= 2;
-				}
+			    && (event->mask & (IN_CLOSE_WRITE|IN_MOVED_TO))
+			    && !strcmp (event->name, w->file)) {
+				return 1;
 			}
 		}
-
-		return em;
 	}
 
 	return 0;

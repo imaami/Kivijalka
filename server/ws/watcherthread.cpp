@@ -22,14 +22,8 @@ WatcherThread::~WatcherThread()
 void WatcherThread::run()
 {
 	while (!abort) {
-		int64_t i = watcher_run_once (watcher);
-		if (i > 0) {
-			if ((i & 1)) {
-				emit fileUpdated();
-			}
-			if ((i & 2)) {
-				emit capFileUpdated();
-			}
+		if (watcher_run_once (watcher) > 0) {
+			emit fileUpdated();
 		}
 	}
 /*

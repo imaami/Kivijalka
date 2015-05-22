@@ -17,7 +17,6 @@ public:
 
 signals:
 	void fileUpdated();
-	void capFileUpdated();
 
 protected:
 	void run() Q_DECL_OVERRIDE;

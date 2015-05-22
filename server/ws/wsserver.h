@@ -21,8 +21,7 @@ public:
 	                  quint16 displayWidth, quint16 displayHeight,
 	                  quint16 thumbWidth, quint16 thumbHeight,
 	                  quint16 bannerX, quint16 bannerY,
-	                  const QString &thumbFile,
-	                  const QString &bannerFile,
+	                  const QString &captureFile,
 	                  const QString &bannerDir,
 	                  QObject *parent = Q_NULLPTR);
 	~WSServer();
@@ -37,8 +36,6 @@ private Q_SLOTS:
 	void recvBanner(QByteArray message);
 	void socketDisconnected();
 	void captureUpdated();
-	bool readThumbnail();
-	void thumbnailUpdated();
 	void pushThumbnail(QWebSocket *dest);
 	void pushThumbnails();
 
@@ -48,8 +45,7 @@ private:
 	quint16 displayWidth, displayHeight;
 	quint16 thumbWidth, thumbHeight;
 	quint16 bannerX, bannerY;
-	QFile thumbnail;
-	QString banner;
+	QString capture;
 	QByteArray thumbData;
 	WatcherThread *watcherThread;
 	BannerCache bannerCache;

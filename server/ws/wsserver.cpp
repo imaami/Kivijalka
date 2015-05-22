@@ -1,6 +1,7 @@
 #include "wsserver.h"
 #include "watcherthread.h"
 
+#include <cstring>
 #include <QtWebSockets/QWebSocketServer>
 #include <QtWebSockets/QWebSocket>
 #include <QtCore/QDebug>
@@ -12,16 +13,14 @@ WSServer::WSServer(quint16 port,
                    quint16 displayWidth, quint16 displayHeight,
                    quint16 thumbWidth, quint16 thumbHeight,
                    quint16 bannerX, quint16 bannerY,
-                   const QString &thumbFile,
-                   const QString &bannerFile,
+                   const QString &captureFile,
                    const QString &bannerDir,
                    QObject *parent) :
 	QObject(parent),
 	m_pWebSocketServer(new QWebSocketServer(QStringLiteral("Websocket Server"),
 	                                        QWebSocketServer::NonSecureMode, this)),
 	clients(),
-	thumbnail(thumbFile),
-	banner(bannerFile),
+	capture(captureFile),
 	thumbData(),
 	bannerCache(bannerDir, this)
 {
@@ -41,11 +40,9 @@ WSServer::WSServer(quint16 port,
 		connect(m_pWebSocketServer, &QWebSocketServer::closed,
 		        this, &WSServer::closed);
 
-		if ((watcherThread = new WatcherThread(thumbFile, this))) {
-			connect(watcherThread, &WatcherThread::capFileUpdated,
-			        this, &WSServer::captureUpdated);
+		if ((watcherThread = new WatcherThread(captureFile, this))) {
 			connect(watcherThread, &WatcherThread::fileUpdated,
-			        this, &WSServer::thumbnailUpdated);
+			        this, &WSServer::captureUpdated);
 			watcherThread->start();
 		}
 	}
@@ -104,9 +101,20 @@ void WSServer::recvBanner(QByteArray message)
 		if (!message.isEmpty()) {
 			if (img_load_banner (&img, (const uint8_t *) message.constData(),
 			                      message.size())) {
-				(void) img_render_thumb (&img,
-				                         bannerX, bannerY,
-				                         thumbWidth, thumbHeight);
+				if (img_render_thumb (&img,
+				                      bannerX, bannerY,
+				                      thumbWidth, thumbHeight)) {
+					thumbData.resize (img.thumb.size);
+					if (std::memcpy ((void *) thumbData.data(),
+					                 (const void *) img.thumb.data,
+					                 img.thumb.size)) {
+						pushThumbnails();
+					} else {
+						fprintf (stderr, "memcpy failed\n");
+					}
+				} else {
+					fprintf (stderr, "img_render_thumb failed\n");
+				}
 			} else {
 				fprintf (stderr, "img_load_banner failed\n");
 			}
@@ -140,32 +148,9 @@ void WSServer::pushThumbnails()
 	}
 }
 
-
-bool WSServer::readThumbnail()
-{
-	bool r;
-	if ((r = thumbnail.open(QIODevice::ReadOnly))) {
-		if (!thumbData.isEmpty()) {
-			thumbData.clear();
-		}
-		thumbData = thumbnail.readAll();
-		thumbnail.close();
-	}
-	return r;
-}
-
-void WSServer::thumbnailUpdated()
-{
-	if (readThumbnail()) {
-		pushThumbnails();
-	} else {
-		qDebug() << "thumbnailUpdated: Failed to open" + thumbnail.fileName();
-	}
-}
-
 void WSServer::captureUpdated()
 {
-	if (!img_load_screen (&img, "/dev/shm/busstop/cap-0510.png")) {
+	if (!img_load_screen (&img, capture.toUtf8().data())) {
 		fprintf (stderr, "img_load_screen failed\n");
 	}
 }

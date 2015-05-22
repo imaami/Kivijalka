@@ -13,12 +13,17 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <wand/MagickWand.h>
 
 typedef struct img img_t;
 
 struct img {
-	void *screen;
-	void *banner;
+	MagickWand *screen;
+	MagickWand *banner;
+	struct {
+		uint8_t *data;
+		size_t   size;
+	} thumb;
 } __attribute__((gcc_struct,packed));
 
 extern bool

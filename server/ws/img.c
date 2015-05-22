@@ -8,7 +8,6 @@
 #include "img.h"
 
 #include <stdio.h>
-#include <wand/MagickWand.h>
 
 #define img_exception(_w) { \
 	char *_d; \
@@ -25,8 +24,10 @@ img_init (img_t *im)
 	MagickWandGenesis();
 
 	if (im) {
-		im->screen = (void *) NewMagickWand();
-		im->banner = (void *) NewMagickWand();
+		im->screen = NewMagickWand();
+		im->banner = NewMagickWand();
+		im->thumb.data = NULL;
+		im->thumb.size = 0;
 		return true;
 	}
 
@@ -37,11 +38,11 @@ bool
 img_load_screen (img_t      *im,
                  const char *path)
 {
-	ClearMagickWand ((MagickWand *) im->screen);
+	ClearMagickWand (im->screen);
 
-	if (MagickReadImage ((MagickWand *) im->screen, path)
+	if (MagickReadImage (im->screen, path)
 	    == MagickFalse) {
-		img_exception ((MagickWand *) im->screen);
+		img_exception (im->screen);
 		return false;
 	}
 
@@ -65,17 +66,45 @@ img_load_banner (img_t         *im,
                  const uint8_t *data,
                  const size_t   size)
 {
-	ClearMagickWand ((MagickWand *) im->banner);
+	ClearMagickWand (im->banner);
 
-	if (MagickReadImageBlob ((MagickWand *) im->banner,
+	if (MagickReadImageBlob (im->banner,
 	                         (const void *) data,
 	                         size)
 	    == MagickFalse) {
-		img_exception ((MagickWand *) im->banner);
+		img_exception (im->banner);
 		return false;
 	}
 
 	return true;
+}
+
+bool
+img_export (img_t    *im,
+            uint8_t **buf,
+            size_t   *len)
+{
+	unsigned char *b;
+	size_t l;
+	bool r;
+
+	MagickResetIterator (im->screen);
+
+	if (MagickSetImageFormat (im->screen, "PNG") == MagickFalse
+	    || !(b = MagickGetImageBlob (im->screen, &l))) {
+		*buf = NULL;
+		*len = 0;
+		r = false;
+	} else {
+		*buf = b;
+		*len = l;
+		r = true;
+	}
+
+	b = NULL;
+	l = 0;
+
+	return r;
 }
 
 bool
@@ -86,16 +115,17 @@ img_render_thumb (img_t         *im,
                   const size_t   thumb_h)
 {
 	if (im) {
-		if (MagickCompositeImage ((MagickWand *) im->screen,
-		                          (MagickWand *) im->banner,
+		if (MagickCompositeImage (im->screen,
+		                          im->banner,
 		                          OverCompositeOp,
 		                          banner_x, banner_y) == MagickTrue
-		    && MagickScaleImage ((MagickWand *) im->screen,
-		                         thumb_w, thumb_h) == MagickTrue) {
+		    && MagickScaleImage (im->screen,
+		                         thumb_w, thumb_h) == MagickTrue
+		    && img_export (im, &im->thumb.data, &im->thumb.size)) {
 			return true;
 		}
 
-		img_exception ((MagickWand *) im->screen);
+		img_exception (im->screen);
 	}
 
 	return false;
@@ -109,8 +139,8 @@ img_write (img_t      *im,
 		return false;
 	}
 
-	if (MagickWriteImage ((MagickWand *) im->screen, file) == MagickFalse) {
-		img_exception ((MagickWand *) im->screen);
+	if (MagickWriteImage (im->screen, file) == MagickFalse) {
+		img_exception (im->screen);
 		return false;
 	}
 
@@ -122,12 +152,12 @@ img_destroy (img_t *im)
 {
 	if (im) {
 		if (im->banner) {
-			im->banner = (void *) DestroyMagickWand((MagickWand *) im->banner);
+			im->banner = DestroyMagickWand (im->banner);
 		}
 		im->banner = NULL;
 
 		if (im->screen) {
-			im->screen = (void *) DestroyMagickWand((MagickWand *) im->screen);
+			im->screen = DestroyMagickWand (im->screen);
 		}
 		im->screen = NULL;
 	}
