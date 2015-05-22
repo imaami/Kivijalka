@@ -56,24 +56,3 @@ void Banner::constructMetadata()
 {
 	// TODO: write metadata JSON to this->json
 }
-
-/*
-	if (thumbnail.open(QIODevice::ReadOnly)) {
-		imageData = thumbnail.readAll();
-		thumbnail.close();
-
-	if (QDir(dirPath).isReadable()) {
-		path = QDir(dirPath).absolutePath();
-		QDirIterator di(path,
-		                {"*.png", "*.jpg", "*.jpeg", "*.gif"},
-		                QDir::Files|QDir::Readable);
-		while (di.hasNext()) {
-			QFileInfo fi(di.next());
-			if (!fi.isReadable()) {
-				std::fprintf(stderr, "%s: cannot read file\n",
-				             di.fileName().toUtf8().data());
-				continue;
-			}
-		}
-	}
-*/
