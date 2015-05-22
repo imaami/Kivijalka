@@ -47,6 +47,12 @@ cutycapt --url="$URL" \
   --min-height=$PX_H \
   --out="$OUTPATH/$CAP"
 
+if [[ ! -f "$OUTPATH/$CAP" ]]; then
+  exit 1
+fi
+
+cp "$OUTPATH/$CAP" "$OUTPATH/$OUT"
+
 (
   echo $BASHPID > "$PIDFILE"
   while true
