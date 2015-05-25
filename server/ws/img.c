@@ -24,10 +24,10 @@ img_init (img_t *im)
 	MagickWandGenesis();
 
 	if (im) {
-		im->screen = NewMagickWand();
-		im->banner = NewMagickWand();
 		im->thumb.data = NULL;
 		im->thumb.size = 0;
+		im->layers[0] = NewMagickWand();
+		im->layers[1] = NewMagickWand();
 		return true;
 	}
 
@@ -35,63 +35,73 @@ img_init (img_t *im)
 }
 
 bool
-img_load_screen (img_t      *im,
-                 const char *path)
+img_load_file (img_t        *im,
+               unsigned int  layer,
+               const char   *path)
 {
-	ClearMagickWand (im->screen);
+	MagickWand *w = im->layers[layer];
 
-	if (MagickReadImage (im->screen, path)
-	    == MagickFalse) {
-		img_exception (im->screen);
+	ClearMagickWand (w);
+
+	if (MagickReadImage (w, path) == MagickFalse) {
+		img_exception (w);
 		return false;
 	}
+
+	printf ("loaded image file\n");
 
 	return true;
 }
 
 size_t
-img_get_screen_width (img_t *im)
+img_get_width (img_t    *im,
+               unsigned  int layer)
 {
-	return (im) ? MagickGetImageWidth (im->screen) : 0;
+	return (im) ? MagickGetImageWidth (im->layers[layer]) : 0;
 }
 
 size_t
-img_get_screen_height (img_t *im)
+img_get_height (img_t    *im,
+                unsigned  int layer)
 {
-	return (im) ? MagickGetImageHeight (im->screen) : 0;
+	return (im) ? MagickGetImageHeight (im->layers[layer]) : 0;
 }
 
 bool
-img_load_banner (img_t         *im,
-                 const uint8_t *data,
-                 const size_t   size)
+img_load_data (img_t         *im,
+               unsigned int   layer,
+               const uint8_t *data,
+               const size_t   size)
 {
-	ClearMagickWand (im->banner);
+	MagickWand *w = im->layers[layer];
 
-	if (MagickReadImageBlob (im->banner,
-	                         (const void *) data,
-	                         size)
-	    == MagickFalse) {
-		img_exception (im->banner);
+	ClearMagickWand (w);
+
+	if (MagickReadImageBlob (w, (const void *) data, size) == MagickFalse) {
+		img_exception (w);
 		return false;
 	}
+
+	printf ("loaded image buffer\n");
 
 	return true;
 }
 
 bool
-img_export (img_t    *im,
-            uint8_t **buf,
-            size_t   *len)
+img_export (img_t         *im,
+            unsigned int   layer,
+            uint8_t      **buf,
+            size_t        *len)
 {
+	MagickWand *w = im->layers[layer];
 	unsigned char *b;
 	size_t l;
 	bool r;
 
-	MagickResetIterator (im->screen);
+	MagickResetIterator (w);
 
-	if (MagickSetImageFormat (im->screen, "PNG") == MagickFalse
-	    || !(b = MagickGetImageBlob (im->screen, &l))) {
+	if (MagickSetImageFormat (w, "PNG") == MagickFalse
+	    || !(b = MagickGetImageBlob (w, &l))) {
 		*buf = NULL;
 		*len = 0;
 		r = false;
@@ -99,6 +109,7 @@ img_export (img_t    *im,
 		*buf = b;
 		*len = l;
 		r = true;
+		printf ("exported image data\n");
 	}
 
 	b = NULL;
@@ -108,41 +119,61 @@ img_export (img_t    *im,
 }
 
 bool
-img_render_thumb (img_t         *im,
-                  const ssize_t  banner_x,
-                  const ssize_t  banner_y,
-                  const size_t   thumb_w,
-                  const size_t   thumb_h)
+img_render (img_t         *im,
+            const ssize_t  x,
+            const ssize_t  y)
 {
 	if (im) {
-		if (MagickCompositeImage (im->screen,
-		                          im->banner,
-		                          OverCompositeOp,
-		                          banner_x, banner_y) == MagickTrue
-		    && MagickScaleImage (im->screen,
-		                         thumb_w, thumb_h) == MagickTrue
-		    && img_export (im, &im->thumb.data, &im->thumb.size)) {
+		MagickWand *l0 = im->layers[0], *l1 = im->layers[1];
+
+		if (MagickCompositeImage (l0, l1, OverCompositeOp, x, y) == MagickTrue) {
+			printf ("composited image\n");
 			return true;
 		}
 
-		img_exception (im->screen);
+		img_exception (l0);
 	}
 
 	return false;
 }
 
 bool
-img_write (img_t      *im,
-           const char *file)
+img_scale (img_t        *im,
+           unsigned int  layer,
+           const size_t  width,
+           const size_t  height)
+{
+	if (im) {
+		MagickWand *w = im->layers[layer];
+
+		if (MagickScaleImage (w, width, height) == MagickTrue) {
+			printf ("scaled image\n");
+			return true;
+		}
+
+		img_exception (w);
+	}
+
+	return false;
+}
+
+bool
+img_write (img_t        *im,
+           unsigned int  layer,
+           const char   *file)
 {
 	if (!im) {
 		return false;
 	}
 
-	if (MagickWriteImage (im->screen, file) == MagickFalse) {
-		img_exception (im->screen);
+	MagickWand *w = im->layers[layer];
+
+	if (MagickWriteImage (w, file) == MagickFalse) {
+		img_exception (w);
 		return false;
 	}
+
+	printf ("wrote image file\n");
 
 	return true;
 }
@@ -151,15 +182,17 @@ void
 img_destroy (img_t *im)
 {
 	if (im) {
-		if (im->banner) {
-			im->banner = DestroyMagickWand (im->banner);
-		}
-		im->banner = NULL;
+		MagickWand *l0 = im->layers[0], *l1 = im->layers[1];
 
-		if (im->screen) {
-			im->screen = DestroyMagickWand (im->screen);
+		if (l1) {
+			l1 = DestroyMagickWand (l1);
 		}
-		im->screen = NULL;
+		l1 = NULL;
+
+		if (l0) {
+			l0 = DestroyMagickWand (l0);
+		}
+		l0 = NULL;
 	}
 
 	MagickWandTerminus();

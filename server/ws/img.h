@@ -18,42 +18,56 @@ extern "C" {
 typedef struct img img_t;
 
 struct img {
-	MagickWand *screen;
-	MagickWand *banner;
 	struct {
 		uint8_t *data;
 		size_t   size;
 	} thumb;
+	MagickWand *layers[2];
 } __attribute__((gcc_struct,packed));
 
 extern bool
 img_init (img_t *im);
 
-extern bool
-img_load_screen (img_t      *im,
-                 const char *path);
+extern size_t
+img_get_width (img_t    *im,
+               unsigned  int layer);
 
 extern size_t
-img_get_screen_width (img_t *im);
-
-extern size_t
-img_get_screen_height (img_t *im);
+img_get_height (img_t    *im,
+                unsigned  int layer);
 
 extern bool
-img_load_banner (img_t         *im,
-                 const uint8_t *data,
-                 const size_t   size);
+img_load_file (img_t        *im,
+               unsigned int  layer,
+               const char   *path);
 
 extern bool
-img_render_thumb (img_t         *im,
-                  const ssize_t  banner_x,
-                  const ssize_t  banner_y,
-                  const size_t   thumb_w,
-                  const size_t   thumb_h);
+img_load_data (img_t         *im,
+               unsigned int   layer,
+               const uint8_t *data,
+               const size_t   size);
 
 extern bool
-img_write (img_t      *im,
-           const char *file);
+img_render (img_t         *im,
+            const ssize_t  banner_x,
+            const ssize_t  banner_y);
+
+extern bool
+img_scale (img_t        *im,
+           unsigned int  layer,
+           const size_t  width,
+           const size_t  height);
+
+extern bool
+img_write (img_t        *im,
+           unsigned int  layer,
+           const char   *file);
+
+extern bool
+img_export (img_t         *im,
+            unsigned int   layer,
+            uint8_t      **buf,
+            size_t        *len);
 
 extern void
 img_destroy (img_t *im);

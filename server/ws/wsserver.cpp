@@ -14,6 +14,7 @@ WSServer::WSServer(quint16 port,
                    quint16 thumbWidth, quint16 thumbHeight,
                    quint16 bannerX, quint16 bannerY,
                    const QString &captureFile,
+                   const QString &outputFile,
                    const QString &bannerDir,
                    QObject *parent) :
 	QObject(parent),
@@ -21,6 +22,7 @@ WSServer::WSServer(quint16 port,
 	                                        QWebSocketServer::NonSecureMode, this)),
 	clients(),
 	capture(captureFile),
+	output(outputFile),
 	thumbData(),
 	bannerCache(bannerDir, this)
 {
@@ -99,24 +101,27 @@ void WSServer::recvBanner(QByteArray message)
 	QWebSocket *pClient = qobject_cast<QWebSocket *>(sender());
 	if (pClient) {
 		if (!message.isEmpty()) {
-			if (img_load_banner (&img, (const uint8_t *) message.constData(),
-			                      message.size())) {
-				if (img_render_thumb (&img,
-				                      bannerX, bannerY,
-				                      thumbWidth, thumbHeight)) {
-					thumbData.resize (img.thumb.size);
-					if (std::memcpy ((void *) thumbData.data(),
-					                 (const void *) img.thumb.data,
-					                 img.thumb.size)) {
-						pushThumbnails();
-					} else {
-						fprintf (stderr, "memcpy failed\n");
+			printf ("received banner\n");
+			if (img_load_data (&img, 1, (const uint8_t *) message.constData(),
+			                   message.size())) {
+				if (img_render (&img, bannerX, bannerY)) {
+					(void) img_write (&img, 0, output.toUtf8().data());
+					if (img_scale (&img, 0, thumbWidth, thumbHeight)
+					    && img_export (&img, 0, &img.thumb.data, &img.thumb.size)) {
+						thumbData.resize (img.thumb.size);
+						if (std::memcpy ((void *) thumbData.data(),
+						                 (const void *) img.thumb.data,
+						                 img.thumb.size)) {
+							pushThumbnails();
+						} else {
+							fprintf (stderr, "memcpy failed\n");
+						}
 					}
 				} else {
-					fprintf (stderr, "img_render_thumb failed\n");
+					fprintf (stderr, "img_render failed\n");
 				}
 			} else {
-				fprintf (stderr, "img_load_banner failed\n");
+				fprintf (stderr, "img_load_data failed\n");
 			}
 		}
 	}
@@ -150,7 +155,22 @@ void WSServer::pushThumbnails()
 
 void WSServer::captureUpdated()
 {
-	if (!img_load_screen (&img, capture.toUtf8().data())) {
-		fprintf (stderr, "img_load_screen failed\n");
+	printf ("capture file updated\n");
+	if (img_load_file (&img, 0, capture.toUtf8().data())) {
+		(void) img_render (&img, bannerX, bannerY);
+		(void) img_write (&img, 0, output.toUtf8().data());
+		if (img_scale (&img, 0, thumbWidth, thumbHeight)
+		    && img_export (&img, 0, &img.thumb.data, &img.thumb.size)) {
+			thumbData.resize (img.thumb.size);
+			if (std::memcpy ((void *) thumbData.data(),
+			                 (const void *) img.thumb.data,
+			                 img.thumb.size)) {
+				pushThumbnails();
+			} else {
+				fprintf (stderr, "memcpy failed\n");
+			}
+		}
+	} else {
+		fprintf (stderr, "img_load_file failed\n");
 	}
 }

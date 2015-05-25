@@ -16,6 +16,7 @@ SOURCES += \
     bannercache.cpp \
     wsserver.cpp \
     watcherthread.cpp \
+    diskthread.cpp \
     watcher.c \
     path.c \
     img.c
@@ -25,6 +26,7 @@ HEADERS += \
     bannercache.h \
     wsserver.h \
     watcherthread.h \
+    diskthread.h \
     watcher.h \
     path.h \
     img.h
