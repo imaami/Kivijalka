@@ -28,10 +28,10 @@ public:
 	                  QObject *parent = Q_NULLPTR);
 	~WSServer();
 
-Q_SIGNALS:
+signals:
 	void closed();
 
-private Q_SLOTS:
+private slots:
 	void onNewConnection();
 	void processTextMessage(QString message);
 	void respondToHS(QWebSocket *dest);

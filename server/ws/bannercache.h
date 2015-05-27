@@ -18,7 +18,7 @@ public:
 	bool del(Banner &b);
 	Banner *get (const QString &filePath);
 
-Q_SIGNALS:
+signals:
 	void bannerAdded(Banner *);
 	void bannerRemoved(const QString &);
 	void bannerModified(Banner *);

@@ -17,7 +17,7 @@ public:
 	QString file;
 	QImage img;
 
-Q_SIGNALS:
+signals:
 	void placementChanged();
 
 private:
