@@ -50,4 +50,4 @@ clean-test-img:
 
 clean-wsserver:
 	rm -f *.o
-	rm -f wsserver moc_*
+	rm -f wsserver moc_* Makefile.qt.old
