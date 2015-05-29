@@ -16,17 +16,26 @@ SOURCES += \
     bannercache.cpp \
     wsserver.cpp \
     watcherthread.cpp \
-    diskthread.cpp \
+    diskreader.cpp \
+    imgthread.cpp \
+    diskwriter.cpp \
+    read-file.c \
     watcher.c \
+    global.c \
     path.c \
     img.c
 
 HEADERS += \
+    atomic.h \
     banner.h \
     bannercache.h \
     wsserver.h \
     watcherthread.h \
-    diskthread.h \
+    diskreader.h \
+    imgthread.h \
+    diskwriter.h \
+    read-file.h \
     watcher.h \
+    global.h \
     path.h \
     img.h

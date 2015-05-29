@@ -1,11 +1,16 @@
 #include "wsserver.h"
 #include "watcherthread.h"
+#include "diskreader.h"
+#include "imgthread.h"
+#include "diskwriter.h"
+#include "global.h"
 
 #include <cstring>
 #include <QtWebSockets/QWebSocketServer>
 #include <QtWebSockets/QWebSocket>
 #include <QtCore/QDebug>
 #include <QtCore/QDateTime>
+//#include "atomic.h"
 
 QT_USE_NAMESPACE
 
@@ -21,19 +26,19 @@ WSServer::WSServer(quint16 port,
 	m_pWebSocketServer(new QWebSocketServer(QStringLiteral("Websocket Server"),
 	                                        QWebSocketServer::NonSecureMode, this)),
 	clients(),
-	capture(captureFile),
-	output(outputFile),
-	thumbData(),
 	bannerCache(bannerDir, this)
 {
+	(void) global_init();
+
+	capture_file = (const char *) strdup (captureFile.toUtf8().data());
+	output_file = (const char *) strdup (outputFile.toUtf8().data());
+
 	this->displayWidth = displayWidth;
 	this->displayHeight = displayHeight;
 	this->thumbWidth = thumbWidth;
 	this->thumbHeight = thumbHeight;
 	this->bannerX = bannerX;
 	this->bannerY = bannerY;
-
-	(void) img_init (&img);
 
 	if (m_pWebSocketServer->listen(QHostAddress::LocalHost, port)) {
 		qDebug() << "Websocket server listening on port" << port;
@@ -42,9 +47,13 @@ WSServer::WSServer(quint16 port,
 		connect(m_pWebSocketServer, &QWebSocketServer::closed,
 		        this, &WSServer::closed);
 
-		if ((watcherThread = new WatcherThread(captureFile, this))) {
-			connect(watcherThread, &WatcherThread::fileUpdated,
-			        this, &WSServer::captureUpdated);
+		if ((watcherThread = new WatcherThread(this))
+		    && (diskReader = new DiskReader(this))
+		    && (imgThread = new ImgThread(this))
+		    && (diskWriter = new DiskWriter(this))) {
+			diskWriter->start();
+			imgThread->start();
+			diskReader->start();
 			watcherThread->start();
 		}
 	}
@@ -53,8 +62,8 @@ WSServer::WSServer(quint16 port,
 WSServer::~WSServer()
 {
 	m_pWebSocketServer->close();
-	img_destroy (&img);
 	qDeleteAll(clients.begin(), clients.end());
+	global_fini();
 }
 
 void WSServer::onNewConnection()
@@ -99,31 +108,24 @@ void WSServer::processTextMessage(QString message)
 void WSServer::recvBanner(QByteArray message)
 {
 	QWebSocket *pClient = qobject_cast<QWebSocket *>(sender());
-	if (pClient) {
-		if (!message.isEmpty()) {
-			printf ("received banner\n");
-			if (img_load_data (&img, 1, (const uint8_t *) message.constData(),
-			                   message.size())) {
-				if (img_render (&img, bannerX, bannerY)) {
-					(void) img_write (&img, 0, output.toUtf8().data());
-					if (img_scale (&img, 0, thumbWidth, thumbHeight)
-					    && img_export (&img, 0, &img.thumb.data, &img.thumb.size)) {
-						thumbData.resize (img.thumb.size);
-						if (std::memcpy ((void *) thumbData.data(),
-						                 (const void *) img.thumb.data,
-						                 img.thumb.size)) {
-							pushThumbnails();
-						} else {
-							fprintf (stderr, "memcpy failed\n");
-						}
-					}
-				} else {
-					fprintf (stderr, "img_render failed\n");
-				}
-			} else {
-				fprintf (stderr, "img_load_data failed\n");
+	if (!pClient || message.isEmpty()) {
+		return;
+	}
+
+	printf ("received banner\n");
+	if (img_load_data (&img, 1, message.constData(),
+	                   message.size())) {
+		if (img_render (&img, bannerX, bannerY)) {
+			(void) img_write (&img, 0, output_file);
+			if (img_scale (&img, 0, thumbWidth, thumbHeight)
+			    && img_export (&img, 0, &thumb_data, &thumb_size)) {
+				pushThumbnails();
 			}
+		} else {
+			fprintf (stderr, "img_render failed\n");
 		}
+	} else {
+		fprintf (stderr, "img_load_data failed\n");
 	}
 }
 
@@ -139,6 +141,7 @@ void WSServer::socketDisconnected()
 
 void WSServer::pushThumbnail(QWebSocket *dest)
 {
+	QByteArray thumbData(thumb_data);
 	if (!thumbData.isEmpty()) {
 		dest->sendBinaryMessage(thumbData);
 	}
@@ -146,6 +149,7 @@ void WSServer::pushThumbnail(QWebSocket *dest)
 
 void WSServer::pushThumbnails()
 {
+	QByteArray thumbData(thumb_data);
 	if (!thumbData.isEmpty()) {
 		for (int i = 0; i < clients.size(); ++i) {
 			clients.at(i)->sendBinaryMessage(thumbData);
@@ -156,19 +160,12 @@ void WSServer::pushThumbnails()
 void WSServer::captureUpdated()
 {
 	printf ("capture file updated\n");
-	if (img_load_file (&img, 0, capture.toUtf8().data())) {
+	if (img_load_file (&img, 0, capture_file)) {
 		(void) img_render (&img, bannerX, bannerY);
-		(void) img_write (&img, 0, output.toUtf8().data());
+		(void) img_write (&img, 0, output_file);
 		if (img_scale (&img, 0, thumbWidth, thumbHeight)
-		    && img_export (&img, 0, &img.thumb.data, &img.thumb.size)) {
-			thumbData.resize (img.thumb.size);
-			if (std::memcpy ((void *) thumbData.data(),
-			                 (const void *) img.thumb.data,
-			                 img.thumb.size)) {
-				pushThumbnails();
-			} else {
-				fprintf (stderr, "memcpy failed\n");
-			}
+		    && img_export (&img, 0, &thumb_data, &thumb_size)) {
+			pushThumbnails();
 		}
 	} else {
 		fprintf (stderr, "img_load_file failed\n");

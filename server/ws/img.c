@@ -28,6 +28,7 @@ img_init (img_t *im)
 		im->thumb.size = 0;
 		im->layers[0] = NewMagickWand();
 		im->layers[1] = NewMagickWand();
+		im->layers[2] = NewMagickWand();
 		return true;
 	}
 
@@ -68,10 +69,10 @@ img_get_height (img_t    *im,
 }
 
 bool
-img_load_data (img_t         *im,
-               unsigned int   layer,
-               const uint8_t *data,
-               const size_t   size)
+img_load_data (img_t        *im,
+               unsigned int  layer,
+               const char   *data,
+               const size_t  size)
 {
 	MagickWand *w = im->layers[layer];
 
@@ -90,7 +91,7 @@ img_load_data (img_t         *im,
 bool
 img_export (img_t         *im,
             unsigned int   layer,
-            uint8_t      **buf,
+            char         **buf,
             size_t        *len)
 {
 	MagickWand *w = im->layers[layer];
@@ -106,7 +107,7 @@ img_export (img_t         *im,
 		*len = 0;
 		r = false;
 	} else {
-		*buf = b;
+		*buf = (char *) b;
 		*len = l;
 		r = true;
 		printf ("exported image data\n");
@@ -124,9 +125,11 @@ img_render (img_t         *im,
             const ssize_t  y)
 {
 	if (im) {
-		MagickWand *l0 = im->layers[0], *l1 = im->layers[1];
+		MagickWand *l0 = im->layers[0], *l1 = im->layers[1], *l2 = im->layers[2];
 
-		if (MagickCompositeImage (l0, l1, OverCompositeOp, x, y) == MagickTrue) {
+		// TODO: clone l1 to l0
+
+		if (MagickCompositeImage (l0, l2, OverCompositeOp, x, y) == MagickTrue) {
 			printf ("composited image\n");
 			return true;
 		}
@@ -182,7 +185,12 @@ void
 img_destroy (img_t *im)
 {
 	if (im) {
-		MagickWand *l0 = im->layers[0], *l1 = im->layers[1];
+		MagickWand *l0 = im->layers[0], *l1 = im->layers[1], *l2 = im->layers[2];
+
+		if (l2) {
+			l2 = DestroyMagickWand (l2);
+		}
+		l2 = NULL;
 
 		if (l1) {
 			l1 = DestroyMagickWand (l1);

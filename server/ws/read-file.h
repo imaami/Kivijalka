@@ -18,6 +18,10 @@
 #ifndef READ_FILE_H
 #define READ_FILE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Get size_t.  */
 #include <stddef.h>
 
@@ -29,5 +33,9 @@ extern char *fread_file (FILE * stream, size_t * length);
 extern char *read_file (const char *filename, size_t * length);
 
 extern char *read_binary_file (const char *filename, size_t * length);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* READ_FILE_H */

@@ -23,7 +23,7 @@ Banner::Banner(const QString &imageFile,
 		if (f.open(QIODevice::ReadOnly)) {
 			QByteArray buf = f.readAll();
 			f.close();
-			img = QImage::fromData(buf);
+			this->img = QImage::fromData(buf);
 		}
 	} else {
 		std::fprintf(stderr, "Cannot read %s\n",

@@ -22,7 +22,7 @@ struct img {
 		uint8_t *data;
 		size_t   size;
 	} thumb;
-	MagickWand *layers[2];
+	MagickWand *layers[3];
 } __attribute__((gcc_struct,packed));
 
 extern bool
@@ -42,10 +42,10 @@ img_load_file (img_t        *im,
                const char   *path);
 
 extern bool
-img_load_data (img_t         *im,
-               unsigned int   layer,
-               const uint8_t *data,
-               const size_t   size);
+img_load_data (img_t        *im,
+               unsigned int  layer,
+               const char   *data,
+               const size_t  size);
 
 extern bool
 img_render (img_t         *im,
@@ -66,7 +66,7 @@ img_write (img_t        *im,
 extern bool
 img_export (img_t         *im,
             unsigned int   layer,
-            uint8_t      **buf,
+            char         **buf,
             size_t        *len);
 
 extern void

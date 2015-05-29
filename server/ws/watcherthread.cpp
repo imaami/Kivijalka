@@ -1,44 +1,30 @@
 #include "watcherthread.h"
+#include "global.h"
 
-WatcherThread::WatcherThread(const QString &path, QObject *parent)
+#include <cstdio>
+#include <cerrno>
+#include <cstring>
+
+WatcherThread::WatcherThread(QObject *parent)
     : QThread(parent)
 {
-	abort = (!(watcher = watcher_create (path.toUtf8().data())));
+	watcher = watcher_create (capture_file);
 }
 
 WatcherThread::~WatcherThread()
 {
-	mutex.lock();
-	abort = true;
-	condition.wakeOne();
-	mutex.unlock();
-
-	wait();
-
 	watcher_destroy (watcher);
 	watcher = NULL;
 }
 
 void WatcherThread::run()
 {
-	while (!abort) {
+	for (;;) {
 		if (watcher_run_once (watcher) > 0) {
-			emit fileUpdated();
+			if (sem_post (&capture_sem)) {
+				std::fprintf (stderr, "%s: sem_post failed: %s\n",
+				              __func__, std::strerror (errno));
+			}
 		}
 	}
-/*
-        mutex.lock();
-        QSize resultSize = this->resultSize;
-        double scaleFactor = this->scaleFactor;
-        double centerX = this->centerX;
-        double centerY = this->centerY;
-        mutex.unlock();
-*/
-/*
-        mutex.lock();
-        if (!restart)
-            condition.wait(&mutex);
-        restart = false;
-        mutex.unlock();
-*/
 }

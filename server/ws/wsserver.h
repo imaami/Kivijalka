@@ -3,7 +3,6 @@
 
 #include <QtCore/QObject>
 #include <QtCore/QList>
-#include <QtCore/QFile>
 #include <QtCore/QString>
 #include <QtCore/QByteArray>
 #include "bannercache.h"
@@ -12,7 +11,9 @@
 QT_FORWARD_DECLARE_CLASS(QWebSocketServer)
 QT_FORWARD_DECLARE_CLASS(QWebSocket)
 QT_FORWARD_DECLARE_CLASS(WatcherThread)
-QT_FORWARD_DECLARE_CLASS(DiskThread)
+QT_FORWARD_DECLARE_CLASS(DiskReader)
+QT_FORWARD_DECLARE_CLASS(ImgThread)
+QT_FORWARD_DECLARE_CLASS(DiskWriter)
 
 class WSServer : public QObject
 {
@@ -47,12 +48,11 @@ private:
 	quint16 displayWidth, displayHeight;
 	quint16 thumbWidth, thumbHeight;
 	quint16 bannerX, bannerY;
-	QString capture, output;
-	QByteArray thumbData;
 	WatcherThread *watcherThread;
-	DiskThread *diskThread;
+	DiskReader *diskReader;
+	ImgThread *imgThread;
+	DiskWriter *diskWriter;
 	BannerCache bannerCache;
-	img_t img;
 };
 
 #endif //WSSERVER_H
