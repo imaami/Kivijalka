@@ -11,6 +11,9 @@ test-watcher: path.o watcher.o test-watcher.o
 test-img: img.o test-img.o read-file.o
 	$(CC) $(CFLAGS) -std=gnu11 img.o test-img.o read-file.o `pkg-config --libs MagickWand` -o test-img
 
+global.o: global.c
+	$(CC) $(CFLAGS) -std=gnu11 -c global.c -o global.o
+
 path.o: path.c
 	$(CC) $(CFLAGS) -std=gnu11 -c path.c -o path.o
 
