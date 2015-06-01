@@ -24,8 +24,6 @@ img_init (img_t *im)
 	MagickWandGenesis();
 
 	if (im) {
-		im->thumb.data = NULL;
-		im->thumb.size = 0;
 		im->layers[0] = NewMagickWand();
 		im->layers[1] = NewMagickWand();
 		im->layers[2] = NewMagickWand();

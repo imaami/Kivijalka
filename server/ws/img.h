@@ -18,10 +18,6 @@ extern "C" {
 typedef struct img img_t;
 
 struct img {
-	struct {
-		uint8_t *data;
-		size_t   size;
-	} thumb;
 	MagickWand *layers[3];
 } __attribute__((gcc_struct,packed));
 
