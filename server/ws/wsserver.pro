@@ -26,7 +26,6 @@ SOURCES += \
     img.c
 
 HEADERS += \
-    atomic.h \
     banner.h \
     bannercache.h \
     wsserver.h \

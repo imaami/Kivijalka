@@ -10,7 +10,6 @@
 #include <QtWebSockets/QWebSocket>
 #include <QtCore/QDebug>
 #include <QtCore/QDateTime>
-//#include "atomic.h"
 
 QT_USE_NAMESPACE
 
