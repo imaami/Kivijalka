@@ -6,6 +6,10 @@
 #ifndef __TASK_BUF_H__
 #define __TASK_BUF_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -130,5 +134,9 @@ task_post_read (void)
 {
 	(void) task_post (&task_read_sem);
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // __TASK_BUF_H__
