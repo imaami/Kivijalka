@@ -1,6 +1,6 @@
 all: test wsserver
 
-test: test-path test-watcher
+test: test-path test-watcher test-img
 
 test-path: path.o test-path.o
 	$(CC) $(CFLAGS) -std=gnu11 path.o test-path.o -o test-path
@@ -40,7 +40,7 @@ wsserver:
 
 clean: clean-test clean-wsserver
 
-clean-test: clean-test-path clean-test-watcher
+clean-test: clean-test-path clean-test-watcher clean-test-img
 
 clean-test-path:
 	rm -f test-path test-path.o path.o
@@ -53,4 +53,4 @@ clean-test-img:
 
 clean-wsserver:
 	rm -f *.o
-	rm -f wsserver moc_* Makefile.qt.old
+	rm -f wsserver moc_* Makefile.qt Makefile.qt.old
