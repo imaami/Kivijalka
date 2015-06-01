@@ -1,5 +1,6 @@
 #include "diskwriter.h"
 #include "global.h"
+#include "img.h"
 
 #include <cstdlib>
 #include <cstdio>
@@ -18,16 +19,13 @@ DiskWriter::~DiskWriter()
 void DiskWriter::run()
 {
 	for (;;) {
-		if (!sem_wait (&output_sem)) {
+		if (img_file_wait (&output_file)) {
 			std::printf("diskwriter triggered\n");
 /*			if (output.open(QIODevice::WriteOnly)) {
 				(void) output.write((const char *) *(this->data), *this->size);
 				output.close();
 				std::printf("wrote output data\n");
 			}*/
-		} else if (errno != EINTR) {
-			std::fprintf (stderr, "%s: sem_wait failed: %s\n",
-			              __func__, std::strerror (errno));
 		}
 	}
 }

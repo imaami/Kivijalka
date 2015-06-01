@@ -6,8 +6,12 @@
 #define _GNU_SOURCE
 
 #include "img.h"
+#include "read-file.h"
 
 #include <stdio.h>
+#include <errno.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define img_exception(_w) { \
 	char *_d; \
@@ -30,6 +34,118 @@ img_init (img_t *im)
 		return true;
 	}
 
+	return false;
+}
+
+void
+img_file_init (img_file_t *imf)
+{
+	if (imf) {
+		if (sem_init (&(imf->lock), 0, 0)) {
+			fprintf (stderr, "%s: sem_init failed: %s\n",
+			                 __func__, strerror (errno));
+			abort();
+		}
+		imf->path = NULL;
+		imf->size = 0;
+		imf->data = NULL;
+	}
+}
+
+void
+img_file_fini (img_file_t *imf)
+{
+	if (imf) {
+		if (imf->data) {
+			free (imf->data);
+			imf->data = NULL;
+		}
+		imf->size = 0;
+		if (imf->path) {
+			free ((void *) imf->path);
+			imf->path = NULL;
+		}
+		if (sem_destroy (&(imf->lock))) {
+			fprintf (stderr, "%s: sem_destroy failed: %s\n",
+			                 __func__, strerror (errno));
+		}
+	}
+}
+
+bool
+img_file_wait (img_file_t *imf)
+{
+	if (imf) {
+		for (;;) {
+			if (!sem_wait (&(imf->lock))) {
+				return true;
+			} else if (errno != EINTR) {
+				fprintf (stderr, "%s: sem_wait failed: %s\n",
+				                 __func__, strerror (errno));
+				break;
+			}
+		}
+	}
+	return false;
+}
+
+bool
+img_file_post (img_file_t *imf)
+{
+	if (sem_post (&(imf->lock))) {
+		fprintf (stderr, "%s: sem_post failed: %s\n",
+		                 __func__, strerror (errno));
+		return false;
+	}
+	return true;
+}
+
+bool
+img_file_set_path (img_file_t *imf,
+                   const char *path)
+{
+	if (imf && path) {
+		if (imf->path) {
+			free ((void *) imf->path);
+		}
+		if ((imf->path = (const char *) strdup (path))) {
+			return true;
+		}
+		fprintf (stderr, "%s: strdup failed: %s\n",
+		                 __func__, strerror (errno));
+	}
+	return false;
+}
+
+bool
+img_file_set_data (img_file_t *imf,
+                   size_t      size,
+                   char       *data)
+{
+	if (imf && size > 0 && data) {
+		if (imf->data) {
+			free (imf->data);
+		}
+		imf->size = size;
+		imf->data = data;
+		return true;
+	}
+	return false;
+}
+
+bool
+img_file_read_data (img_file_t *imf)
+{
+	if (imf && imf->path) {
+		if (imf->data) {
+			free (imf->data);
+		}
+		if ((imf->data = read_binary_file (imf->path, &(imf->size)))) {
+			return true;
+		}
+		imf->size = 0;
+		fprintf (stderr, "%s: read_binary_file failed\n", __func__);
+	}
 	return false;
 }
 
@@ -87,34 +203,28 @@ img_load_data (img_t        *im,
 }
 
 bool
-img_export (img_t         *im,
-            unsigned int   layer,
-            char         **buf,
-            size_t        *len)
+img_file_import_layer (img_file_t   *imf,
+                       img_t        *im,
+                       unsigned int  layer)
 {
-	MagickWand *w = im->layers[layer];
-	unsigned char *b;
-	size_t l;
-	bool r;
+	if (imf && im) {
+		MagickWand *w = im->layers[layer];
 
-	MagickResetIterator (w);
+		if (imf->data) {
+			free (imf->data);
+			imf->data = NULL;
+			imf->size = 0;
+		}
 
-	if (MagickSetImageFormat (w, "PNG") == MagickFalse
-	    || !(b = MagickGetImageBlob (w, &l))) {
-		*buf = NULL;
-		*len = 0;
-		r = false;
-	} else {
-		*buf = (char *) b;
-		*len = l;
-		r = true;
-		printf ("exported image data\n");
+		MagickResetIterator (w);
+
+		if (MagickSetImageFormat (w, "PNG") == MagickTrue
+		    && (imf->data = (char *) MagickGetImageBlob (w, &(imf->size)))) {
+			return true;
+		}
 	}
 
-	b = NULL;
-	l = 0;
-
-	return r;
+	return false;
 }
 
 bool

@@ -28,10 +28,10 @@ WSServer::WSServer(quint16 port,
 	clients(),
 	bannerCache(bannerDir, this)
 {
-	(void) global_init();
+	global_init();
 
-	capture_file = (const char *) strdup (captureFile.toUtf8().data());
-	output_file = (const char *) strdup (outputFile.toUtf8().data());
+	(void) img_file_set_path (&capture_file, captureFile.toUtf8().data());
+	(void) img_file_set_path (&output_file, outputFile.toUtf8().data());
 
 	this->displayWidth = displayWidth;
 	this->displayHeight = displayHeight;
@@ -116,9 +116,9 @@ void WSServer::recvBanner(QByteArray message)
 	if (img_load_data (&img, 1, message.constData(),
 	                   message.size())) {
 		if (img_render (&img, bannerX, bannerY)) {
-			(void) img_write (&img, 0, output_file);
+			(void) img_write (&img, 0, output_file.path);
 			if (img_scale (&img, 0, thumbWidth, thumbHeight)
-			    && img_export (&img, 0, &thumb_data, &thumb_size)) {
+			    && img_file_import_layer (&thumb_file, &img, 0)) {
 				pushThumbnails();
 			}
 		} else {
@@ -141,7 +141,7 @@ void WSServer::socketDisconnected()
 
 void WSServer::pushThumbnail(QWebSocket *dest)
 {
-	QByteArray thumbData(thumb_data);
+	QByteArray thumbData(thumb_file.data);
 	if (!thumbData.isEmpty()) {
 		dest->sendBinaryMessage(thumbData);
 	}
@@ -149,7 +149,7 @@ void WSServer::pushThumbnail(QWebSocket *dest)
 
 void WSServer::pushThumbnails()
 {
-	QByteArray thumbData(thumb_data);
+	QByteArray thumbData(thumb_file.data);
 	if (!thumbData.isEmpty()) {
 		for (int i = 0; i < clients.size(); ++i) {
 			clients.at(i)->sendBinaryMessage(thumbData);
@@ -160,11 +160,11 @@ void WSServer::pushThumbnails()
 void WSServer::captureUpdated()
 {
 	printf ("capture file updated\n");
-	if (img_load_file (&img, 0, capture_file)) {
+	if (img_load_file (&img, 0, capture_file.path)) {
 		(void) img_render (&img, bannerX, bannerY);
-		(void) img_write (&img, 0, output_file);
+		(void) img_write (&img, 0, output_file.path);
 		if (img_scale (&img, 0, thumbWidth, thumbHeight)
-		    && img_export (&img, 0, &thumb_data, &thumb_size)) {
+		    && img_file_import_layer (&thumb_file, &img, 0)) {
 			pushThumbnails();
 		}
 	} else {

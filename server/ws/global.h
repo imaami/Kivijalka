@@ -16,13 +16,16 @@ extern "C" {
 
 #include "img.h"
 
-extern sem_t capture_sem, process_sem, output_sem;
-extern const char *capture_file, *output_file;
-extern char *capture_data, *banner_data, *output_data, *thumb_data;
-extern size_t capture_size, banner_size, output_size, thumb_size;
+enum global_flags {
+	CAP_UPDATED = 1,
+	
+};
+
+extern sem_t process_sem;
+extern img_file_t capture_file, banner_file, output_file, thumb_file;
 extern img_t img;
 
-extern bool
+extern void
 global_init (void);
 
 extern void

@@ -20,12 +20,9 @@ void ImgThread::run()
 {
 	for (;;) {
 		if (!sem_wait (&process_sem)) {
-			if (img_load_data (&img, 1, capture_data, capture_size)) {
+			if (img_load_data (&img, 1, capture_file.data, capture_file.size)) {
 				std::printf ("loaded capture data\n");
-				if (sem_post (&output_sem)) {
-					std::fprintf (stderr, "%s: sem_post failed: %s\n",
-					              __func__, std::strerror (errno));
-				}
+				(void) img_file_post (&output_file);
 			}
 		} else if (errno != EINTR) {
 			std::fprintf (stderr, "%s: sem_wait failed: %s\n",
