@@ -82,6 +82,9 @@ img_file_wait (img_file_t *imf);
 extern bool
 img_file_post (img_file_t *imf);
 
+extern bool
+img_file_update (img_file_t *imf);
+
 #ifdef __cplusplus
 }
 #endif

@@ -124,3 +124,30 @@ img_file_replace_data (img_file_t *imf,
 	}
 	return false;
 }
+
+bool
+img_file_update (img_file_t *imf)
+{
+	img_data_t *imd;
+
+	if (!(imd = img_data_new_from_file (imf->path))) {
+		fprintf (stderr, "%s: failed to read file\n", __func__);
+		return false;
+	}
+
+	if (imd->size < 1) {
+		fprintf (stderr, "%s: file empty\n", __func__);
+		goto fail_free_data;
+	}
+
+	if (!img_file_replace_data (imf, imd)) {
+		fprintf (stderr, "%s: failed to replace data\n", __func__);
+	fail_free_data:
+		img_data_free (imd);
+		imd = NULL;
+		return false;
+	}
+
+	imd = NULL;
+	return true;
+}
