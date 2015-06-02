@@ -12,6 +12,7 @@ fi
 
 if qmake -makefile -o "${MAKEFILE}" wsserver.pro; then
   sed -ri \
+      -e 's|(CFLAGS.*)[ ]*-fopenmp|\1|' \
       -e 's|(C(XX)?FLAGS.*)-O2|\1|' \
       -e 's|(C(XX)?FLAGS.*)-std=c\+\+0x|\1|' \
       "${MAKEFILE}"
