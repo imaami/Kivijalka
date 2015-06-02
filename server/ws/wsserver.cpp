@@ -112,6 +112,18 @@ void WSServer::recvBanner(QByteArray message)
 	}
 
 	printf ("received banner\n");
+
+	img_data_t *imd;
+
+	if ((imd = img_data_new_from_buffer (message.size(),
+	                                     (char *) message.constData()))) {
+		if (!img_file_replace_data (&banner_file, imd)) {
+			img_data_free (imd);
+			fprintf (stderr, "%s: img_file_replace_data failed\n", __func__);
+		}
+		imd = NULL;
+	}
+/*
 	if (img_load_data (&img, 1, message.constData(),
 	                   message.size())) {
 		if (img_render (&img, bannerX, bannerY)) {
@@ -126,6 +138,7 @@ void WSServer::recvBanner(QByteArray message)
 	} else {
 		fprintf (stderr, "img_load_data failed\n");
 	}
+*/
 }
 
 void WSServer::socketDisconnected()
@@ -140,7 +153,7 @@ void WSServer::socketDisconnected()
 
 void WSServer::pushThumbnail(QWebSocket *dest)
 {
-	QByteArray thumbData(thumb_file.data);
+	QByteArray thumbData(thumb_file.data->data);
 	if (!thumbData.isEmpty()) {
 		dest->sendBinaryMessage(thumbData);
 	}
@@ -148,7 +161,7 @@ void WSServer::pushThumbnail(QWebSocket *dest)
 
 void WSServer::pushThumbnails()
 {
-	QByteArray thumbData(thumb_file.data);
+	QByteArray thumbData(thumb_file.data->data);
 	if (!thumbData.isEmpty()) {
 		for (int i = 0; i < clients.size(); ++i) {
 			clients.at(i)->sendBinaryMessage(thumbData);
@@ -156,6 +169,7 @@ void WSServer::pushThumbnails()
 	}
 }
 
+/*
 void WSServer::captureUpdated()
 {
 	printf ("capture file updated\n");
@@ -170,3 +184,4 @@ void WSServer::captureUpdated()
 		fprintf (stderr, "img_load_file failed\n");
 	}
 }
+*/

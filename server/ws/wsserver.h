@@ -38,7 +38,7 @@ private slots:
 	void respondToHS(QWebSocket *dest);
 	void recvBanner(QByteArray message);
 	void socketDisconnected();
-	void captureUpdated();
+//	void captureUpdated();
 	void pushThumbnail(QWebSocket *dest);
 	void pushThumbnails();
 

@@ -23,7 +23,9 @@ SOURCES += \
     watcher.c \
     global.c \
     path.c \
-    img.c
+    img.c \
+    img_file.c \
+    img_data.c
 
 HEADERS += \
     banner.h \
@@ -37,4 +39,6 @@ HEADERS += \
     watcher.h \
     global.h \
     path.h \
-    img.h
+    img.h \
+    img_file.h \
+    img_data.h

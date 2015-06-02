@@ -37,118 +37,6 @@ img_init (img_t *im)
 	return false;
 }
 
-void
-img_file_init (img_file_t *imf)
-{
-	if (imf) {
-		if (sem_init (&(imf->lock), 0, 0)) {
-			fprintf (stderr, "%s: sem_init failed: %s\n",
-			                 __func__, strerror (errno));
-			abort();
-		}
-		imf->path = NULL;
-		imf->size = 0;
-		imf->data = NULL;
-	}
-}
-
-void
-img_file_fini (img_file_t *imf)
-{
-	if (imf) {
-		if (imf->data) {
-			free (imf->data);
-			imf->data = NULL;
-		}
-		imf->size = 0;
-		if (imf->path) {
-			free ((void *) imf->path);
-			imf->path = NULL;
-		}
-		if (sem_destroy (&(imf->lock))) {
-			fprintf (stderr, "%s: sem_destroy failed: %s\n",
-			                 __func__, strerror (errno));
-		}
-	}
-}
-
-bool
-img_file_wait (img_file_t *imf)
-{
-	if (imf) {
-		for (;;) {
-			if (!sem_wait (&(imf->lock))) {
-				return true;
-			} else if (errno != EINTR) {
-				fprintf (stderr, "%s: sem_wait failed: %s\n",
-				                 __func__, strerror (errno));
-				break;
-			}
-		}
-	}
-	return false;
-}
-
-bool
-img_file_post (img_file_t *imf)
-{
-	if (sem_post (&(imf->lock))) {
-		fprintf (stderr, "%s: sem_post failed: %s\n",
-		                 __func__, strerror (errno));
-		return false;
-	}
-	return true;
-}
-
-bool
-img_file_set_path (img_file_t *imf,
-                   const char *path)
-{
-	if (imf && path) {
-		if (imf->path) {
-			free ((void *) imf->path);
-		}
-		if ((imf->path = (const char *) strdup (path))) {
-			return true;
-		}
-		fprintf (stderr, "%s: strdup failed: %s\n",
-		                 __func__, strerror (errno));
-	}
-	return false;
-}
-
-bool
-img_file_set_data (img_file_t *imf,
-                   size_t      size,
-                   char       *data)
-{
-	if (imf && size > 0 && data) {
-		if (imf->data) {
-			free (imf->data);
-		}
-		imf->size = size;
-		imf->data = data;
-		return true;
-	}
-	return false;
-}
-
-bool
-img_file_read_data (img_file_t *imf)
-{
-	if (imf && imf->path) {
-		if (imf->data) {
-			free (imf->data);
-		}
-		if ((imf->data = read_binary_file (imf->path, &(imf->size)))) {
-			return true;
-		}
-		imf->size = 0;
-		fprintf (stderr, "%s: read_binary_file failed\n", __func__);
-	}
-	return false;
-}
-
 bool
 img_load_file (img_t        *im,
                unsigned int  layer,
@@ -202,6 +90,7 @@ img_load_data (img_t        *im,
 	return true;
 }
 
+/*
 bool
 img_file_import_layer (img_file_t   *imf,
                        img_t        *im,
@@ -226,6 +115,7 @@ img_file_import_layer (img_file_t   *imf,
 
 	return false;
 }
+*/
 
 bool
 img_render (img_t         *im,
