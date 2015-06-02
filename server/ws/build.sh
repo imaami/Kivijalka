@@ -11,8 +11,10 @@ if [[ -f "${MAKEFILE}" ]]; then
 fi
 
 if qmake -makefile -o "${MAKEFILE}" wsserver.pro; then
+  while grep -q 'CFLAGS.*-fopenmp' "${MAKEFILE}"; do
+    sed -ri 's|(CFLAGS.*)[ ]*-fopenmp[a-z0-9-]*|\1|' "${MAKEFILE}"
+  done
   sed -ri \
-      -e 's|(CFLAGS.*)[ ]*-fopenmp|\1|' \
       -e 's|(C(XX)?FLAGS.*)-O2|\1|' \
       -e 's|(C(XX)?FLAGS.*)-std=c\+\+0x|\1|' \
       "${MAKEFILE}"
