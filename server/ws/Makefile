@@ -26,6 +26,12 @@ watcher.o: watcher.c
 img.o: img.c
 	$(CC) $(CFLAGS) -std=gnu11 `pkg-config --cflags MagickWand` -c img.c -o img.o
 
+img_file.o: img_file.c
+	$(CC) $(CFLAGS) -std=gnu11 -c img_file.c -o img_file.o
+
+img_data.o: img_data.c
+	$(CC) $(CFLAGS) -std=gnu11 -c img_data.c -o img_data.o
+
 task_buf.o: task_buf.c
 	$(CC) $(CFLAGS) -std=gnu11 -c task_buf.c -o task_buf.o
 
