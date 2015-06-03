@@ -57,14 +57,10 @@ void ImgThread::run()
 				banner_data = NULL;
 
 			do_render_update:
-				if (img_clone_layer (&img, 2, 0)) {
-					if (img_layer_empty (&img, 1)
-					    || img_composite (&img, 2, 1, 0, 0)) {
-						(void) img_file_post (&output_file);
-						if (img_clone_layer (&img, 3, 2)) {
-							(void) img_scale (&img, 3, 640, 512);
-						}
-					}
+				if (!img_render (&img)) {
+					std::printf ("ImgThread::%s: render failed\n", __func__);
+				} else {
+					(void) img_file_post (&output_file);
 				}
 
 			} else {

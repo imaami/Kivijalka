@@ -37,26 +37,13 @@ img_import_data (img_t        *im,
 
 
 extern bool
-img_layer_empty (img_t        *im,
-                 const size_t  layer);
-
-extern bool
-img_composite (img_t         *im,
-               const size_t   dst,
-               const size_t   src,
-               const ssize_t  x,
-               const ssize_t  y);
-
-extern bool
-img_clone_layer (img_t        *im,
-                 const size_t  dst,
-                 const size_t  src);
-
-extern bool
 img_scale (img_t        *im,
            const size_t  layer,
            const size_t  width,
            const size_t  height);
+
+extern bool
+img_render (img_t *im);
 
 extern bool
 img_write (img_t        *im,

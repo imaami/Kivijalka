@@ -87,11 +87,12 @@ img_import_data (img_t        *im,
 	return false;
 }
 
-bool
+__attribute__((always_inline))
+static inline bool
 img_layer_empty (img_t        *im,
                  const size_t  layer)
 {
-	return (!im || !MagickGetNumberImages (img_layer (im, layer)));
+	return (!MagickGetNumberImages (img_layer (im, layer)));
 }
 
 /*
@@ -121,7 +122,8 @@ img_file_import_layer (img_file_t   *imf,
 }
 */
 
-bool
+__attribute__((always_inline))
+static inline bool
 img_composite (img_t         *im,
                const size_t   dst,
                const size_t   src,
@@ -147,7 +149,8 @@ img_composite (img_t         *im,
 	return false;
 }
 
-bool
+__attribute__((always_inline))
+static inline bool
 img_clone_layer (img_t        *im,
                  const size_t  dst,
                  const size_t  src)
@@ -203,6 +206,34 @@ img_scale (img_t        *im,
 			img_exception (w, "MagickScaleImage failed");
 		} else {
 			printf ("scaled image\n");
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool
+img_render (img_t *im)
+{
+	if (im) {
+		const size_t x = 1024, y = 768, tw = 640, th = 512;
+
+		if (img_layer_empty (im, 0)) {
+			fprintf (stderr, "%s: capture layer empty\n", __func__);
+		} else if (!img_clone_layer (im, 2, 0)) {
+			fprintf (stderr, "%s: img_clone_layer failed\n", __func__);
+		} else {
+			if (!img_layer_empty (im, 1)
+			    && !img_composite (im, 2, 1, x, y)) {
+				fprintf (stderr, "%s: img_composite failed\n", __func__);
+			}
+			if (!img_clone_layer (im, 3, 2)
+			    || !img_scale (im, 3, tw, th)) {
+				fprintf (stderr, "%s: thumbnail render failed\n", __func__);
+			} else {
+				// todo: export layer 3 to thumb_file
+			}
 			return true;
 		}
 	}
