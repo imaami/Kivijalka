@@ -22,7 +22,11 @@ typedef struct img_file img_file_t;
 struct img_file {
 	sem_t       lock;
 	const char *path;
+#ifdef __cplusplus
 	img_data_t *data;
+#else
+	img_data_t *_Atomic data;
+#endif
 } __attribute__((gcc_struct,packed));
 
 extern void
