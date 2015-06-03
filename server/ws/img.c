@@ -22,6 +22,14 @@
 	_d = (char *) MagickRelinquishMemory(_d); \
 }
 
+__attribute__((always_inline))
+static inline MagickWand *
+img_layer (img_t        *im,
+           const size_t  layer)
+{
+	return im->layers[(layer & 3)];
+}
+
 bool
 img_init (img_t *im)
 {
@@ -36,7 +44,7 @@ img_init (img_t *im)
 			cleanup:
 				for (; i;) {
 					--i;
-					im->layers[i] = DestroyMagickWand (im->layers[i]);
+					im->layers[i] = DestroyMagickWand (img_layer (im, i));
 					im->layers[i] = NULL;
 				}
 
@@ -63,7 +71,7 @@ img_import_data (img_t        *im,
                  img_data_t   *imd)
 {
 	if (im && imd) {
-		MagickWand *w = im->layers[(layer & 3)];
+		MagickWand *w = img_layer (im, layer);
 
 		ClearMagickWand (w);
 
@@ -83,7 +91,7 @@ bool
 img_layer_empty (img_t        *im,
                  const size_t  layer)
 {
-	return (!im || !MagickGetNumberImages (im->layers[(layer & 3)]));
+	return (!im || !MagickGetNumberImages (img_layer (im, layer)));
 }
 
 /*
@@ -93,7 +101,7 @@ img_file_import_layer (img_file_t   *imf,
                        unsigned int  layer)
 {
 	if (imf && im) {
-		MagickWand *w = im->layers[layer];
+		MagickWand *w = img_layer (im, layer);
 
 		if (imf->data) {
 			free (imf->data);
@@ -121,8 +129,8 @@ img_composite (img_t         *im,
                const ssize_t  y)
 {
 	if (im) {
-		MagickWand *dw = im->layers[(dst & 3)],
-		           *sw = im->layers[(src & 3)];
+		MagickWand *dw = img_layer (im, dst),
+		           *sw = img_layer (im, src);
 
 		MagickResetIterator (dw);
 		MagickResetIterator (sw);
@@ -145,8 +153,8 @@ img_clone_layer (img_t        *im,
                  const size_t  src)
 {
 	if (im) {
-		MagickWand *dw = im->layers[(dst & 3)],
-		           *sw = im->layers[(src & 3)];
+		MagickWand *dw = img_layer (im, dst),
+		           *sw = img_layer (im, src);
 		size_t w, h;
 
 		MagickResetIterator (sw);
@@ -189,7 +197,7 @@ img_scale (img_t        *im,
            const size_t  height)
 {
 	if (im) {
-		MagickWand *w = im->layers[layer];
+		MagickWand *w = img_layer (im, layer);
 
 		if (MagickScaleImage (w, width, height) == MagickFalse) {
 			img_exception (w, "MagickScaleImage failed");
@@ -211,7 +219,7 @@ img_write (img_t        *im,
 		return false;
 	}
 
-	MagickWand *w = im->layers[layer];
+	MagickWand *w = img_layer (im, layer);
 
 	if (MagickWriteImage (w, file) == MagickFalse) {
 		img_exception (w, "MagickWriteImage failed");
@@ -230,7 +238,7 @@ img_destroy (img_t *im)
 		size_t i = 4;
 		do {
 			--i;
-			im->layers[i] = DestroyMagickWand (im->layers[i]);
+			im->layers[i] = DestroyMagickWand (img_layer (im, i));
 			im->layers[i] = NULL;
 		} while (i);
 
