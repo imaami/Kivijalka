@@ -13,81 +13,77 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define img_exception(_w) { \
+#define img_exception(_w, _m) { \
 	char *_d; \
 	ExceptionType _s; \
 	_d = MagickGetException (_w, &_s); \
-	(void) fprintf (stderr, "%s %s %lu %s\n", \
-	                GetMagickModule(), _d); \
+	(void) fprintf (stderr, "%s:%s:%lu: %s: %s\n", \
+	                GetMagickModule(), _m, _d); \
 	_d = (char *) MagickRelinquishMemory(_d); \
 }
 
 bool
 img_init (img_t *im)
 {
-	MagickWandGenesis();
-
 	if (im) {
-		im->layers[0] = NewMagickWand();
-		im->layers[1] = NewMagickWand();
-		im->layers[2] = NewMagickWand();
+		size_t i;
+		MagickWandGenesis ();
+
+		for (i = 0; i < 4; ++i) {
+			if (!(im->layers[i] = NewMagickWand ())) {
+				fprintf (stderr, "%s: NewMagickWand failed, cannot continue\n", __func__);
+
+			cleanup:
+				for (; i;) {
+					--i;
+					im->layers[i] = DestroyMagickWand (im->layers[i]);
+					im->layers[i] = NULL;
+				}
+
+				MagickWandTerminus ();
+				goto fail;
+			}
+		}
+
+		if (!(im->bgcolor = NewPixelWand ())) {
+			fprintf (stderr, "%s: NewPixelWand failed, cannot continue\n", __func__);
+			goto cleanup;
+		}
+
 		return true;
+	}
+
+fail:
+	return false;
+}
+
+bool
+img_import_data (img_t        *im,
+                 const size_t  layer,
+                 img_data_t   *imd)
+{
+	if (im && imd) {
+		MagickWand *w = im->layers[(layer & 3)];
+
+		ClearMagickWand (w);
+
+		if (MagickReadImageBlob (w, (const void *) imd->data,
+		                         (const size_t) imd->size)
+		    == MagickFalse) {
+			img_exception (w, "MagickReadImageBlob failed");
+		} else {
+			return true;
+		}
 	}
 
 	return false;
 }
 
 bool
-img_load_file (img_t        *im,
-               unsigned int  layer,
-               const char   *path)
+img_layer_empty (img_t        *im,
+                 const size_t  layer)
 {
-	MagickWand *w = im->layers[layer];
-
-	ClearMagickWand (w);
-
-	if (MagickReadImage (w, path) == MagickFalse) {
-		img_exception (w);
-		return false;
-	}
-
-	printf ("loaded image file\n");
-
-	return true;
-}
-
-size_t
-img_get_width (img_t    *im,
-               unsigned  int layer)
-{
-	return (im) ? MagickGetImageWidth (im->layers[layer]) : 0;
-}
-
-size_t
-img_get_height (img_t    *im,
-                unsigned  int layer)
-{
-	return (im) ? MagickGetImageHeight (im->layers[layer]) : 0;
-}
-
-bool
-img_load_data (img_t        *im,
-               unsigned int  layer,
-               const char   *data,
-               const size_t  size)
-{
-	MagickWand *w = im->layers[layer];
-
-	ClearMagickWand (w);
-
-	if (MagickReadImageBlob (w, (const void *) data, size) == MagickFalse) {
-		img_exception (w);
-		return false;
-	}
-
-	printf ("loaded image buffer\n");
-
-	return true;
+	return (!im || !MagickGetNumberImages (im->layers[(layer & 3)]));
 }
 
 /*
@@ -118,21 +114,69 @@ img_file_import_layer (img_file_t   *imf,
 */
 
 bool
-img_render (img_t         *im,
-            const ssize_t  x,
-            const ssize_t  y)
+img_composite (img_t         *im,
+               const size_t   dst,
+               const size_t   src,
+               const ssize_t  x,
+               const ssize_t  y)
 {
 	if (im) {
-		MagickWand *l0 = im->layers[0], *l1 = im->layers[1], *l2 = im->layers[2];
+		MagickWand *dw = im->layers[(dst & 3)],
+		           *sw = im->layers[(src & 3)];
 
-		// TODO: clone l1 to l0
+		MagickResetIterator (dw);
+		MagickResetIterator (sw);
 
-		if (MagickCompositeImage (l0, l2, OverCompositeOp, x, y) == MagickTrue) {
-			printf ("composited image\n");
+		if (MagickCompositeImage (dw, sw, OverCompositeOp, x, y)
+		    == MagickFalse) {
+			img_exception (dw, "MagickCompositeImage failed");
+		} else {
+			printf ("%s: composited image\n", __func__);
 			return true;
 		}
+	}
 
-		img_exception (l0);
+	return false;
+}
+
+bool
+img_clone_layer (img_t        *im,
+                 const size_t  dst,
+                 const size_t  src)
+{
+	if (im) {
+		MagickWand *dw = im->layers[(dst & 3)],
+		           *sw = im->layers[(src & 3)];
+		size_t w, h;
+
+		MagickResetIterator (sw);
+
+		w = MagickGetImageWidth (sw);
+		h = MagickGetImageHeight (sw);
+
+		if (MagickGetImageBackgroundColor (sw, im->bgcolor) == MagickFalse) {
+			img_exception (sw, "MagickGetImageBackgroundColor failed");
+
+		} else {
+			ClearMagickWand (dw);
+
+			if (MagickNewImage (dw, (const size_t) w, (const size_t) h,
+			                    (const PixelWand *) im->bgcolor)
+			    == MagickFalse) {
+				img_exception (dw, "MagickNewImage failed");
+
+			} else if (MagickCompositeImage (dw, sw,
+			                                 OverCompositeOp,
+			                                 0, 0)
+			           == MagickFalse) {
+				img_exception (dw, "MagickCompositeImage failed");
+
+			} else {
+				printf ("%s: cloned layer %zu to %zu\n",
+				        __func__, (src & 3), (dst & 3));
+				return true;
+			}
+		}
 	}
 
 	return false;
@@ -140,19 +184,19 @@ img_render (img_t         *im,
 
 bool
 img_scale (img_t        *im,
-           unsigned int  layer,
+           const size_t  layer,
            const size_t  width,
            const size_t  height)
 {
 	if (im) {
 		MagickWand *w = im->layers[layer];
 
-		if (MagickScaleImage (w, width, height) == MagickTrue) {
+		if (MagickScaleImage (w, width, height) == MagickFalse) {
+			img_exception (w, "MagickScaleImage failed");
+		} else {
 			printf ("scaled image\n");
 			return true;
 		}
-
-		img_exception (w);
 	}
 
 	return false;
@@ -160,7 +204,7 @@ img_scale (img_t        *im,
 
 bool
 img_write (img_t        *im,
-           unsigned int  layer,
+           const size_t  layer,
            const char   *file)
 {
 	if (!im) {
@@ -170,7 +214,7 @@ img_write (img_t        *im,
 	MagickWand *w = im->layers[layer];
 
 	if (MagickWriteImage (w, file) == MagickFalse) {
-		img_exception (w);
+		img_exception (w, "MagickWriteImage failed");
 		return false;
 	}
 
@@ -183,23 +227,18 @@ void
 img_destroy (img_t *im)
 {
 	if (im) {
-		MagickWand *l0 = im->layers[0], *l1 = im->layers[1], *l2 = im->layers[2];
+		size_t i = 4;
+		do {
+			--i;
+			im->layers[i] = DestroyMagickWand (im->layers[i]);
+			im->layers[i] = NULL;
+		} while (i);
 
-		if (l2) {
-			l2 = DestroyMagickWand (l2);
+		if (im->bgcolor) {
+			im->bgcolor = DestroyPixelWand (im->bgcolor);
+			im->bgcolor = NULL;
 		}
-		l2 = NULL;
 
-		if (l1) {
-			l1 = DestroyMagickWand (l1);
-		}
-		l1 = NULL;
-
-		if (l0) {
-			l0 = DestroyMagickWand (l0);
-		}
-		l0 = NULL;
+		MagickWandTerminus ();
 	}
-
-	MagickWandTerminus();
 }

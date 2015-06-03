@@ -10,6 +10,7 @@
 extern "C" {
 #endif
 
+#include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <unistd.h>
@@ -22,45 +23,44 @@ extern "C" {
 typedef struct img img_t;
 
 struct img {
-	MagickWand *layers[3];
+	MagickWand *layers[4];
+	PixelWand  *bgcolor;
 } __attribute__((gcc_struct,packed));
 
 extern bool
 img_init (img_t *im);
 
-extern size_t
-img_get_width (img_t    *im,
-               unsigned  int layer);
+extern bool
+img_import_data (img_t        *im,
+                 const size_t  layer,
+                 img_data_t   *imd);
 
-extern size_t
-img_get_height (img_t    *im,
-                unsigned  int layer);
 
 extern bool
-img_load_file (img_t        *im,
-               unsigned int  layer,
-               const char   *path);
+img_layer_empty (img_t        *im,
+                 const size_t  layer);
 
 extern bool
-img_load_data (img_t        *im,
-               unsigned int  layer,
-               const char   *data,
-               const size_t  size);
+img_composite (img_t         *im,
+               const size_t   dst,
+               const size_t   src,
+               const ssize_t  x,
+               const ssize_t  y);
 
 extern bool
-img_render (img_t         *im,
-            const ssize_t  banner_x,
-            const ssize_t  banner_y);
+img_clone_layer (img_t        *im,
+                 const size_t  dst,
+                 const size_t  src);
 
 extern bool
 img_scale (img_t        *im,
-           unsigned int  layer,
+           const size_t  layer,
            const size_t  width,
            const size_t  height);
 
 extern bool
 img_write (img_t        *im,
-           unsigned int  layer,
+           const size_t  layer,
            const char   *file);
 
 extern void
