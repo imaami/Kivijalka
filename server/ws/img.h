@@ -10,14 +10,10 @@
 extern "C" {
 #endif
 
-#include <stddef.h>
-#include <stdint.h>
 #include <stdbool.h>
-#include <unistd.h>
 #include <semaphore.h>
 #include <wand/MagickWand.h>
 
-#include "img_data.h"
 #include "img_file.h"
 
 typedef struct img img_t;
@@ -30,28 +26,16 @@ struct img {
 extern bool
 img_init (img_t *im);
 
-extern bool
-img_import_data (img_t        *im,
-                 const size_t  layer,
-                 img_data_t   *imd);
-
-
-extern bool
-img_scale (img_t        *im,
-           const size_t  layer,
-           const size_t  width,
-           const size_t  height);
-
-extern bool
-img_render (img_t *im);
-
-extern bool
-img_write (img_t        *im,
-           const size_t  layer,
-           const char   *file);
-
 extern void
 img_destroy (img_t *im);
+
+extern void
+img_thread (img_t      *im,
+            sem_t      *sem,
+            img_file_t *capture_file,
+            img_file_t *banner_file,
+            img_file_t *output_file,
+            img_file_t *thumb_file);
 
 #ifdef __cplusplus
 }

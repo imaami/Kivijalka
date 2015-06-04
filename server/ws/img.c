@@ -5,13 +5,15 @@
 
 #define _GNU_SOURCE
 
-#include "img.h"
-#include "read-file.h"
-
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stddef.h>
+#include <unistd.h>
+
+#include "img.h"
+#include "img_data.h"
 
 #define img_exception(_w, _m) { \
 	char *_d; \
@@ -65,7 +67,8 @@ fail:
 	return false;
 }
 
-bool
+__attribute__((always_inline))
+static inline bool
 img_import_data (img_t        *im,
                  const size_t  layer,
                  img_data_t   *imd)
@@ -197,7 +200,8 @@ img_clone_layer (img_t        *im,
 	return false;
 }
 
-bool
+__attribute__((always_inline))
+static inline bool
 img_scale (img_t        *im,
            const size_t  layer,
            const size_t  width,
@@ -217,7 +221,8 @@ img_scale (img_t        *im,
 	return false;
 }
 
-bool
+__attribute__((always_inline))
+static inline bool
 img_render (img_t *im)
 {
 	if (im) {
@@ -245,7 +250,8 @@ img_render (img_t *im)
 	return false;
 }
 
-bool
+__attribute__((always_inline))
+static inline bool
 img_write (img_t        *im,
            const size_t  layer,
            const char   *file)
@@ -283,5 +289,68 @@ img_destroy (img_t *im)
 		}
 
 		MagickWandTerminus ();
+	}
+}
+
+void
+img_thread (img_t      *im,
+            sem_t      *sem,
+            img_file_t *capture_file,
+            img_file_t *banner_file,
+            img_file_t *output_file,
+            img_file_t *thumb_file)
+{
+	for (;;) {
+		if (!sem_wait (sem)) {
+			img_data_t *capture_data, *banner_data;
+
+			if (!img_file_steal_data (capture_file,
+			                          &capture_data)) {
+				capture_data = NULL;
+			}
+
+			if (!img_file_steal_data (banner_file,
+			                          &banner_data)) {
+				banner_data = NULL;
+			}
+
+			if (capture_data) {
+				if (img_import_data (im, 0, capture_data)) {
+					printf ("%s: loaded capture data\n", __func__);
+				}
+
+				img_data_free (capture_data);
+				capture_data = NULL;
+
+				if (banner_data) {
+					goto have_banner_update;
+				} else {
+					goto do_render_update;
+				}
+
+			} else if (banner_data) {
+			have_banner_update:
+				if (img_import_data (im, 1, banner_data)) {
+					printf ("%s: loaded banner data\n", __func__);
+				}
+
+				img_data_free (banner_data);
+				banner_data = NULL;
+
+			do_render_update:
+				if (!img_render (im)) {
+					printf ("%s: render failed\n", __func__);
+				} else {
+					(void) img_file_post (output_file);
+				}
+
+			} else {
+				printf ("%s: nothing to update\n", __func__);
+			}
+
+		} else if (errno != EINTR) {
+			fprintf (stderr, "%s: sem_wait failed: %s\n",
+			         __func__, strerror (errno));
+		}
 	}
 }
