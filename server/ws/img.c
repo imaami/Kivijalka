@@ -223,18 +223,20 @@ img_scale (img_t        *im,
 
 __attribute__((always_inline))
 static inline bool
-img_render (img_t *im)
+img_render (img_t        *im,
+            const size_t  bx,
+            const size_t  by,
+            const size_t  tw,
+            const size_t  th)
 {
 	if (im) {
-		const size_t x = 1024, y = 768, tw = 640, th = 512;
-
 		if (img_layer_empty (im, 0)) {
 			fprintf (stderr, "%s: capture layer empty\n", __func__);
 		} else if (!img_clone_layer (im, 2, 0)) {
 			fprintf (stderr, "%s: img_clone_layer failed\n", __func__);
 		} else {
 			if (!img_layer_empty (im, 1)
-			    && !img_composite (im, 2, 1, x, y)) {
+			    && !img_composite (im, 2, 1, bx, by)) {
 				fprintf (stderr, "%s: img_composite failed\n", __func__);
 			}
 			if (!img_clone_layer (im, 3, 2)
@@ -294,6 +296,10 @@ img_destroy (img_t *im)
 
 void
 img_thread (img_t      *im,
+            size_t      bx,
+            size_t      by,
+            size_t      tw,
+            size_t      th,
             sem_t      *sem,
             img_file_t *capture_file,
             img_file_t *banner_file,
@@ -338,7 +344,7 @@ img_thread (img_t      *im,
 				banner_data = NULL;
 
 			do_render_update:
-				if (!img_render (im)) {
+				if (!img_render (im, bx, by, tw, th)) {
 					printf ("%s: render failed\n", __func__);
 				} else {
 					(void) img_file_post (output_file);

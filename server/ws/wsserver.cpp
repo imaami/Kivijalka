@@ -27,7 +27,7 @@ WSServer::WSServer(quint16 port,
 	clients(),
 	bannerCache(bannerDir, this)
 {
-	global_init();
+	global_init(bannerX, bannerY, thumbWidth, thumbHeight);
 
 	(void) img_file_set_path (&capture_file, captureFile.toUtf8().data());
 	(void) img_file_set_path (&output_file, outputFile.toUtf8().data());

@@ -31,6 +31,10 @@ img_destroy (img_t *im);
 
 extern void
 img_thread (img_t      *im,
+            size_t      bx,
+            size_t      by,
+            size_t      tw,
+            size_t      th,
             sem_t      *sem,
             img_file_t *capture_file,
             img_file_t *banner_file,
