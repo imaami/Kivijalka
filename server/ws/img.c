@@ -95,32 +95,36 @@ img_layer_empty (img_t        *im,
 	return (!MagickGetNumberImages (img_layer (im, layer)));
 }
 
-/*
-bool
-img_file_import_layer (img_file_t   *imf,
-                       img_t        *im,
-                       unsigned int  layer)
+__attribute__((always_inline))
+static inline bool
+img_export_data (img_t         *im,
+                 const size_t   layer,
+                 img_data_t   **imd)
 {
-	if (imf && im) {
+	if (im && imd) {
 		MagickWand *w = img_layer (im, layer);
-
-		if (imf->data) {
-			free (imf->data);
-			imf->data = NULL;
-			imf->size = 0;
-		}
 
 		MagickResetIterator (w);
 
-		if (MagickSetImageFormat (w, "PNG") == MagickTrue
-		    && (imf->data = (char *) MagickGetImageBlob (w, &(imf->size)))) {
-			return true;
+		if (!MagickGetNumberImages (w)) {
+			fprintf (stderr, "%s: layer empty\n", __func__);
+		} else if (MagickSetImageFormat (w, "PNG") == MagickFalse) {
+			img_exception (w, "MagickSetImageFormat failed");
+		} else {
+			char *blob;
+			size_t size;
+			if (!(blob = (char *) MagickGetImageBlob (w, &size))) {
+				img_exception (w, "MagickGetImageBlob failed");
+			} else {
+				*imd = img_data_new_from_buffer (size, blob);
+				blob = (char *) MagickRelinquishMemory (blob);
+				return (*imd != NULL);
+			}
 		}
 	}
 
 	return false;
 }
-*/
 
 __attribute__((always_inline))
 static inline bool
