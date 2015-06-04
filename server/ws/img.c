@@ -228,6 +228,7 @@ img_render_output (img_t        *im,
                    const size_t  by)
 {
 	if (img_layer_empty (im, 0)) {
+		// TODO: don't bail out, create empty single-color layer instead
 		fprintf (stderr, "%s: capture layer empty\n", __func__);
 	} else if (!img_clone_layer (im, 2, 0)) {
 		fprintf (stderr, "%s: img_clone_layer failed\n", __func__);
@@ -320,7 +321,7 @@ img_thread (img_t      *im,
 
 	for (;;) {
 		if (!sem_wait (sem)) {
-			img_data_t *capture_data, *banner_data;
+			img_data_t *capture_data, *banner_data, *output_data;
 
 			if (!img_file_steal_data (capture_file,
 			                          &capture_data)) {
@@ -359,7 +360,18 @@ img_thread (img_t      *im,
 				if (!img_render_output (im, bx, by)) {
 					printf ("%s: img_render_output failed\n", __func__);
 				} else {
-					(void) img_file_post (output_file);
+					if (!img_export_data (im, 2, &output_data)) {
+						printf ("%s: img_export_data failed\n", __func__);
+					} else {
+						if (!img_file_replace_data (output_file, output_data)) {
+							img_data_free (output_data);
+							printf ("%s: img_replace_data failed\n", __func__);
+						} else {
+							(void) img_file_post (output_file);
+						}
+						output_data = NULL;
+					}
+
 					if (!img_render_thumb (im, tw, th)) {
 						printf ("%s: img_render_thumb failed\n", __func__);
 					} else {
