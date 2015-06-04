@@ -16,11 +16,6 @@ extern "C" {
 
 #include "img.h"
 
-enum global_flags {
-	CAP_UPDATED = 1,
-	
-};
-
 extern sem_t process_sem;
 extern img_file_t capture_file, banner_file, output_file, thumb_file;
 extern img_t img;
