@@ -7,6 +7,8 @@
 #include <cerrno>
 #include <cstring>
 
+#include <QtCore/QDebug>
+
 DiskReader::DiskReader(QObject *parent) :
 	QThread(parent)
 {
@@ -18,9 +20,10 @@ DiskReader::~DiskReader()
 
 void DiskReader::run()
 {
+	qDebug() << "DiskReader id:" << QThread::currentThreadId();
 	for (;;) {
 		if (img_file_wait (&capture_file)) {
-			std::printf ("disk reader triggered\n");
+//			std::printf ("disk reader triggered\n");
 			if (!img_file_update (&capture_file)) {
 				std::fprintf (stderr, "%s: img_file_update failed\n", __func__);
 			} else if (sem_post (&process_sem)) {

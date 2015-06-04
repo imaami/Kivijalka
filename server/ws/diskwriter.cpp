@@ -5,6 +5,7 @@
 #include "img.h"
 
 #include <QtCore/QFile>
+#include <QtCore/QDebug>
 #include <cstdio>
 
 DiskWriter::DiskWriter(QObject *parent) :
@@ -18,10 +19,11 @@ DiskWriter::~DiskWriter()
 
 void DiskWriter::run()
 {
+	qDebug() << "DiskWriter id:" << QThread::currentThreadId();
 	for (;;) {
 		if (img_file_wait (&output_file)) {
 			img_data_t *imd;
-			std::printf ("diskwriter triggered\n");
+//			std::printf ("diskwriter triggered\n");
 			if (!img_file_steal_data (&output_file, &imd)) {
 				std::fprintf (stderr, "DiskWriter::%s: img_file_steal_data failed\n", __func__);
 			} else {
@@ -35,7 +37,7 @@ void DiskWriter::run()
 							break;
 						}
 						if (x == n) {
-							std::printf ("DiskWriter::%s: wrote output data\n", __func__);
+//							std::printf ("DiskWriter::%s: wrote output data\n", __func__);
 							break;
 						}
 						n -= x;

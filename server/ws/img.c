@@ -148,7 +148,7 @@ img_composite (img_t         *im,
 		    == MagickFalse) {
 			img_exception (dw, "MagickCompositeImage failed");
 		} else {
-			printf ("%s: composited image\n", __func__);
+//			printf ("%s: composited image\n", __func__);
 			return true;
 		}
 	}
@@ -190,8 +190,8 @@ img_clone_layer (img_t        *im,
 				img_exception (dw, "MagickCompositeImage failed");
 
 			} else {
-				printf ("%s: cloned layer %zu to %zu\n",
-				        __func__, (src & 3), (dst & 3));
+//				printf ("%s: cloned layer %zu to %zu\n",
+//				        __func__, (src & 3), (dst & 3));
 				return true;
 			}
 		}
@@ -213,7 +213,7 @@ img_scale (img_t        *im,
 		if (MagickScaleImage (w, width, height) == MagickFalse) {
 			img_exception (w, "MagickScaleImage failed");
 		} else {
-			printf ("scaled image\n");
+//			printf ("scaled image\n");
 			return true;
 		}
 	}
@@ -275,7 +275,7 @@ img_write (img_t        *im,
 		return false;
 	}
 
-	printf ("wrote image file\n");
+//	printf ("wrote image file\n");
 
 	return true;
 }
@@ -335,7 +335,7 @@ img_thread (img_t      *im,
 
 			if (capture_data) {
 				if (img_import_data (im, 0, capture_data)) {
-					printf ("%s: loaded capture data\n", __func__);
+//					printf ("%s: loaded capture data\n", __func__);
 				}
 
 				img_data_free (capture_data);
@@ -350,7 +350,7 @@ img_thread (img_t      *im,
 			} else if (banner_data) {
 			have_banner_update:
 				if (img_import_data (im, 1, banner_data)) {
-					printf ("%s: loaded banner data\n", __func__);
+//					printf ("%s: loaded banner data\n", __func__);
 				}
 
 				img_data_free (banner_data);
@@ -358,14 +358,14 @@ img_thread (img_t      *im,
 
 			do_render_update:
 				if (!img_render_output (im, bx, by)) {
-					printf ("%s: img_render_output failed\n", __func__);
+					fprintf (stderr, "%s: img_render_output failed\n", __func__);
 				} else {
 					if (!img_export_data (im, 2, &output_data)) {
-						printf ("%s: img_export_data failed\n", __func__);
+						fprintf (stderr, "%s: img_export_data failed\n", __func__);
 					} else {
 						if (!img_file_replace_data (output_file, output_data)) {
 							img_data_free (output_data);
-							printf ("%s: img_replace_data failed\n", __func__);
+							fprintf (stderr, "%s: img_replace_data failed\n", __func__);
 						} else {
 							(void) img_file_post (output_file);
 						}
@@ -373,13 +373,13 @@ img_thread (img_t      *im,
 					}
 
 					if (!img_render_thumb (im, tw, th)) {
-						printf ("%s: img_render_thumb failed\n", __func__);
+						fprintf (stderr, "%s: img_render_thumb failed\n", __func__);
 					} else {
 					}
 				}
 
-			} else {
-				printf ("%s: nothing to update\n", __func__);
+//			} else {
+//				printf ("%s: nothing to update\n", __func__);
 			}
 
 		} else if (errno != EINTR) {
