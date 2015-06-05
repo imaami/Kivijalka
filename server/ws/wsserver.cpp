@@ -117,10 +117,8 @@ void WSServer::recvBanner(QByteArray message)
 
 	if ((imd = img_data_new_from_buffer (message.size(),
 	                                     (char *) message.constData()))) {
-		if (!img_file_replace_data (&banner_file, imd)) {
-			img_data_free (imd);
-			std::fprintf (stderr, "%s: img_file_replace_data failed\n", __func__);
-		} else if (sem_post (&process_sem)) {
+		img_file_replace_data (&banner_file, imd);
+		if (sem_post (&process_sem)) {
 			std::fprintf (stderr, "%s: sem_post failed: %s\n",
 			              __func__, std::strerror (errno));
 		}

@@ -323,15 +323,8 @@ img_thread (img_t      *im,
 		if (!sem_wait (sem)) {
 			img_data_t *capture_data, *banner_data, *output_data;
 
-			if (!img_file_steal_data (capture_file,
-			                          &capture_data)) {
-				capture_data = NULL;
-			}
-
-			if (!img_file_steal_data (banner_file,
-			                          &banner_data)) {
-				banner_data = NULL;
-			}
+			capture_data = img_file_steal_data (capture_file);
+			banner_data = img_file_steal_data (banner_file);
 
 			if (capture_data) {
 				if (img_import_data (im, 0, capture_data)) {
@@ -363,12 +356,8 @@ img_thread (img_t      *im,
 					if (!img_export_data (im, 2, &output_data)) {
 						fprintf (stderr, "%s: img_export_data failed\n", __func__);
 					} else {
-						if (!img_file_replace_data (output_file, output_data)) {
-							img_data_free (output_data);
-							fprintf (stderr, "%s: img_replace_data failed\n", __func__);
-						} else {
-							(void) img_file_post (output_file);
-						}
+						img_file_replace_data (output_file, output_data);
+						(void) img_file_post (output_file);
 						output_data = NULL;
 					}
 

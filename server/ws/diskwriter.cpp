@@ -24,9 +24,7 @@ void DiskWriter::run()
 		if (img_file_wait (&output_file)) {
 			img_data_t *imd;
 //			std::printf ("diskwriter triggered\n");
-			if (!img_file_steal_data (&output_file, &imd)) {
-				std::fprintf (stderr, "DiskWriter::%s: img_file_steal_data failed\n", __func__);
-			} else {
+			if ((imd = img_file_steal_data (&output_file))) {
 				QFile f(QString (output_file.path));
 				if (f.open (QIODevice::WriteOnly)) {
 					const char *p = (const char *) imd->data;
