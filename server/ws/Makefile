@@ -9,7 +9,7 @@ test-watcher: path.o watcher.o test-watcher.o
 	$(CC) $(CFLAGS) -std=gnu11 path.o watcher.o test-watcher.o -o test-watcher
 
 test-img: img.o test-img.o read-file.o
-	$(CC) $(CFLAGS) -std=gnu11 img.o test-img.o read-file.o `pkg-config --libs MagickWand` -o test-img
+	$(CC) $(CFLAGS) -std=gnu11 img.o test-img.o read-file.o -o test-img
 
 test-task_buf: task_buf.o test-task_buf.o
 	$(CC) $(CFLAGS) -std=gnu11 task_buf.o test-task_buf.o -lpthread -o test-task_buf
@@ -24,7 +24,7 @@ watcher.o: watcher.c
 	$(CC) $(CFLAGS) -std=gnu11 -c watcher.c -o watcher.o
 
 img.o: img.c
-	$(CC) $(CFLAGS) -std=gnu11 `pkg-config --cflags MagickWand` -c img.c -o img.o
+	$(CC) $(CFLAGS) -std=gnu11 -c img.c -o img.o
 
 img_file.o: img_file.c
 	$(CC) $(CFLAGS) -std=gnu11 -c img_file.c -o img_file.o

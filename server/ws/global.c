@@ -3,6 +3,7 @@
  * Global variables.
  */
 
+#include <stdio.h>
 #include <errno.h>
 #include <string.h>
 
@@ -11,7 +12,6 @@
 size_t banner_x, banner_y, thumb_w, thumb_h;
 sem_t process_sem;
 img_file_t capture_file, banner_file, output_file, thumb_file;
-img_t img;
 
 void
 global_init (size_t bx,
@@ -31,13 +31,11 @@ global_init (size_t bx,
 	img_file_init (&banner_file);
 	img_file_init (&output_file);
 	img_file_init (&thumb_file);
-	(void) img_init (&img);
 }
 
 void
 global_fini (void)
 {
-	img_destroy (&img);
 	img_file_fini (&thumb_file);
 	img_file_fini (&output_file);
 	img_file_fini (&banner_file);

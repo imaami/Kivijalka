@@ -15,15 +15,6 @@
 #include "img.h"
 #include "img_data.h"
 
-#define img_exception(_w, _m) { \
-	char *_d; \
-	ExceptionType _s; \
-	_d = MagickGetException (_w, &_s); \
-	(void) fprintf (stderr, "%s:%s:%lu: %s: %s\n", \
-	                GetMagickModule(), _m, _d); \
-	_d = (char *) MagickRelinquishMemory(_d); \
-}
-
 __attribute__((always_inline))
 static inline MagickWand *
 img_layer (img_t        *im,

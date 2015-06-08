@@ -12,15 +12,13 @@ extern "C" {
 
 #include <stdbool.h>
 #include <semaphore.h>
-#include <wand/MagickWand.h>
 
 #include "img_file.h"
 
 typedef struct img img_t;
 
 struct img {
-	MagickWand *layers[4];
-	PixelWand  *bgcolor;
+	unsigned int _;
 } __attribute__((gcc_struct,packed));
 
 extern bool

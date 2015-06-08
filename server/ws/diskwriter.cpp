@@ -2,10 +2,8 @@
 #include "global.h"
 #include "img_data.h"
 #include "img_file.h"
-#include "img.h"
 
 #include <QtCore/QFile>
-#include <QtCore/QDebug>
 #include <cstdio>
 
 DiskWriter::DiskWriter(QObject *parent) :
@@ -19,7 +17,6 @@ DiskWriter::~DiskWriter()
 
 void DiskWriter::run()
 {
-	qDebug() << "DiskWriter id:" << QThread::currentThreadId();
 	for (;;) {
 		if (img_file_wait (&output_file)) {
 			img_data_t *imd;

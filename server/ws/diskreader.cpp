@@ -7,8 +7,6 @@
 #include <cerrno>
 #include <cstring>
 
-#include <QtCore/QDebug>
-
 DiskReader::DiskReader(QObject *parent) :
 	QThread(parent)
 {
@@ -20,7 +18,6 @@ DiskReader::~DiskReader()
 
 void DiskReader::run()
 {
-	qDebug() << "DiskReader id:" << QThread::currentThreadId();
 	for (;;) {
 		if (img_file_wait (&capture_file)) {
 //			std::printf ("disk reader triggered\n");

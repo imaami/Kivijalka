@@ -6,7 +6,6 @@
 #include <QtCore/QString>
 #include <QtCore/QByteArray>
 #include "bannercache.h"
-#include "img.h"
 
 QT_FORWARD_DECLARE_CLASS(QWebSocketServer)
 QT_FORWARD_DECLARE_CLASS(QWebSocket)

@@ -124,22 +124,6 @@ void WSServer::recvBanner(QByteArray message)
 		}
 		imd = NULL;
 	}
-/*
-	if (img_load_data (&img, 1, message.constData(),
-	                   message.size())) {
-		if (img_render (&img, bannerX, bannerY)) {
-			(void) img_write (&img, 0, output_file.path);
-			if (img_scale (&img, 0, thumbWidth, thumbHeight)
-			    && img_file_import_layer (&thumb_file, &img, 0)) {
-				pushThumbnails();
-			}
-		} else {
-			fprintf (stderr, "img_render failed\n");
-		}
-	} else {
-		fprintf (stderr, "img_load_data failed\n");
-	}
-*/
 }
 
 void WSServer::socketDisconnected()
@@ -169,20 +153,3 @@ void WSServer::pushThumbnails()
 		}
 	}
 }
-
-/*
-void WSServer::captureUpdated()
-{
-	printf ("capture file updated\n");
-	if (img_load_file (&img, 0, capture_file.path)) {
-		(void) img_render (&img, bannerX, bannerY);
-		(void) img_write (&img, 0, output_file.path);
-		if (img_scale (&img, 0, thumbWidth, thumbHeight)
-		    && img_file_import_layer (&thumb_file, &img, 0)) {
-			pushThumbnails();
-		}
-	} else {
-		fprintf (stderr, "img_load_file failed\n");
-	}
-}
-*/

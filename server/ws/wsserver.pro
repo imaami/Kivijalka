@@ -1,9 +1,8 @@
 QT       += core websockets gui
 
 TARGET = wsserver
-CONFIG   += console c++11 link_pkgconfig
+CONFIG   += console c++11
 CONFIG   -= app_bundle
-PKGCONFIG += MagickWand
 
 TEMPLATE = app
 
@@ -23,7 +22,6 @@ SOURCES += \
     watcher.c \
     global.c \
     path.c \
-    img.c \
     img_file.c \
     img_data.c
 
@@ -39,6 +37,5 @@ HEADERS += \
     watcher.h \
     global.h \
     path.h \
-    img.h \
     img_file.h \
     img_data.h

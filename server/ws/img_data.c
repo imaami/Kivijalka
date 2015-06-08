@@ -61,15 +61,13 @@ img_data_t *
 img_data_new_from_file (const char *path)
 {
 	if (path) {
+		img_data_t *data;
 		size_t size;
-		char *data;
-		if ((data = read_binary_file (path, &size))) {
+		if ((data = (img_data_t *) read_binary_file (path, &size, sizeof (size_t)))) {
+			data->size = size;
 //			printf ("%s: read %zu bytes\n", __func__, size);
-			img_data_t *imd = img_data_new_from_buffer (size, data);
-			free (data);
-			data = NULL;
 			size = 0;
-			return imd;
+			return data;
 		}
 	}
 	return NULL;

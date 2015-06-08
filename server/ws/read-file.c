@@ -38,102 +38,101 @@
    *LENGTH.  On errors, *LENGTH is undefined, errno preserves the
    values set by system functions (if any), and NULL is returned.  */
 char *
-fread_file (FILE *stream, size_t *length)
+fread_file (FILE *stream, size_t *length, size_t dest_off)
 {
-  char *buf = NULL;
-  size_t alloc = BUFSIZ;
+	char *buf = NULL;
+	size_t alloc, alloc_total;
 
   /* For a regular file, allocate a buffer that has exactly the right
      size.  This avoids the need to do dynamic reallocations later.  */
-  {
     struct stat st;
 
-    if (fstat (fileno (stream), &st) >= 0 && S_ISREG (st.st_mode))
-      {
-        off_t pos = ftello (stream);
+	if (fstat (fileno (stream), &st) >= 0 && S_ISREG (st.st_mode)) {
+		off_t pos = ftello (stream);
 
-        if (pos >= 0 && pos < st.st_size)
-          {
-            size_t alloc_off = st.st_size - pos;
+		if (pos >= 0 && pos < st.st_size) {
+			size_t alloc_off = st.st_size - pos;
 
-            /* '1' below, accounts for the trailing NUL.  */
-            if (SIZE_MAX - 1 < alloc_off)
-              {
-                errno = ENOMEM;
-                return NULL;
-              }
+			/* '1' below, accounts for the trailing NUL.  */
+			if (SIZE_MAX - (dest_off + 1) < alloc_off) {
+				errno = ENOMEM;
+				return NULL;
+			}
 
-            alloc = alloc_off + 1;
-          }
-      }
-  }
+			alloc = alloc_off + 1;
+		} else {
+			goto unknown_file_size;
+		}
+	} else {
+	unknown_file_size:
+		alloc = BUFSIZ;
+	}
 
-  if (!(buf = malloc (alloc)))
-    return NULL; /* errno is ENOMEM.  */
+	alloc_total = alloc + dest_off;
 
-  {
-    size_t size = 0; /* number of bytes read so far */
-    int save_errno;
+	if (!(buf = malloc (alloc_total))) {
+		return NULL; /* errno is ENOMEM.  */
+	}
 
-    for (;;)
-      {
+	size_t size = 0; /* number of bytes read so far */
+	int save_errno;
+
+	for (;;) {
         /* This reads 1 more than the size of a regular file
            so that we get eof immediately.  */
-        size_t requested = alloc - size;
-        size_t count = fread (buf + size, 1, requested, stream);
-        size += count;
+		size_t requested = alloc - size;
+		size_t count = fread (buf + dest_off + size, 1, requested, stream);
+		size += count;
 
-        if (count != requested)
-          {
-            save_errno = errno;
-            if (ferror (stream))
-              break;
+		if (count != requested) {
+			save_errno = errno;
+			if (ferror (stream)) {
+				break;
+			}
 
             /* Shrink the allocated memory if possible.  */
-            if (size < alloc - 1)
-              {
-                char *smaller_buf = realloc (buf, size + 1);
-                if (smaller_buf != NULL)
-                  buf = smaller_buf;
-              }
+			if (size < alloc - 1) {
+				char *smaller_buf = realloc (buf, size + 1);
+				if ((smaller_buf = realloc (buf, dest_off + size + 1))) {
+					buf = smaller_buf;
+				}
+			}
 
-            buf[size] = '\0';
-            *length = size;
-            return buf;
-          }
+			buf[dest_off + size] = '\0';
+			*length = size;
+			return buf;
+		}
 
-        {
-          char *new_buf;
+		char *new_buf;
 
-          if (alloc == SIZE_MAX)
-            {
-              save_errno = ENOMEM;
-              break;
-            }
+		if (alloc_total == SIZE_MAX) {
+			save_errno = ENOMEM;
+			break;
+		}
 
-          if (alloc < SIZE_MAX - alloc / 2)
-            alloc = alloc + alloc / 2;
-          else
-            alloc = SIZE_MAX;
+		if (alloc_total < SIZE_MAX - alloc_total / 2) {
+			alloc_total = alloc_total + alloc_total / 2;
+		} else {
+			alloc_total = SIZE_MAX;
+		}
 
-          if (!(new_buf = realloc (buf, alloc)))
-            {
-              save_errno = errno;
-              break;
-            }
+		alloc = alloc_total - dest_off;
 
-          buf = new_buf;
-        }
-      }
+		if (!(new_buf = realloc (buf, alloc_total))) {
+			save_errno = errno;
+			break;
+		}
 
-    free (buf);
-    errno = save_errno;
-    return NULL;
-  }
+		buf = new_buf;
+	}
+
+	free (buf);
+	errno = save_errno;
+	return NULL;
 }
 
 static char *
-internal_read_file (const char *filename, size_t *length, const char *mode)
+internal_read_file (const char *filename, size_t *length, const char *mode, size_t dest_off)
 {
   FILE *stream = fopen (filename, mode);
   char *out;
@@ -142,7 +141,7 @@ internal_read_file (const char *filename, size_t *length, const char *mode)
   if (!stream)
     return NULL;
 
-  out = fread_file (stream, length);
+  out = fread_file (stream, length, dest_off);
 
   save_errno = errno;
 
@@ -167,9 +166,9 @@ internal_read_file (const char *filename, size_t *length, const char *mode)
    undefined, errno preserves the values set by system functions (if
    any), and NULL is returned.  */
 char *
-read_file (const char *filename, size_t *length)
+read_file (const char *filename, size_t *length, size_t dest_off)
 {
-  return internal_read_file (filename, length, "r");
+  return internal_read_file (filename, length, "r", dest_off);
 }
 
 /* Open (on non-POSIX systems, in binary mode) and read the contents
@@ -180,7 +179,7 @@ read_file (const char *filename, size_t *length)
    preserves the values set by system functions (if any), and NULL is
    returned.  */
 char *
-read_binary_file (const char *filename, size_t *length)
+read_binary_file (const char *filename, size_t *length, size_t dest_off)
 {
-  return internal_read_file (filename, length, "rb");
+  return internal_read_file (filename, length, "rb", dest_off);
 }
