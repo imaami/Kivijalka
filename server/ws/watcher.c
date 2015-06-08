@@ -250,6 +250,8 @@ watcher_worker (void *arg)
 			(void) sem_post (&w->sem_out);
 		}
 	}
+
+	return (void *) 0;
 }
 
 bool
