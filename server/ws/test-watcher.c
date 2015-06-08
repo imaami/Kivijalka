@@ -14,16 +14,25 @@ main (int    argc,
 
 	watcher_t *w;
 
-	if ((w = watcher_create ((const char *) argv[1]))) {
-		int64_t r;
-		do {
-			if ((r = watcher_run_once (w)) > 0) {
-				printf ("%s: got watcher event\n", __func__);
-				r = 0;
-			}
-		} while (!r);
-		watcher_destroy (w);
+	if (!(w = watcher_create ((const char *) argv[1]))) {
+		fprintf (stderr, "%s: watcher_create failed\n", __func__);
+		return EXIT_FAILURE;
 	}
+
+	if (!watcher_prepare (w)) {
+		fprintf (stderr, "%s: watcher_prepare failed\n", __func__);
+	} else {
+		watcher_start (w);
+		for (unsigned int x = 0; x < 4;) {
+			if (watcher_wait (w)) {
+				++x;
+				printf ("%s: got watcher event\n", __func__);
+			}
+		}
+		watcher_stop (w);
+	}
+
+	watcher_destroy (w);
 
 	return EXIT_SUCCESS;
 }

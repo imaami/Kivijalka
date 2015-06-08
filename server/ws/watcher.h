@@ -10,15 +10,25 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
+#include <stdbool.h>
+#include <semaphore.h>
 
 typedef struct watcher watcher_t;
 
 extern watcher_t *
 watcher_create (const char *path);
 
-extern int64_t
-watcher_run_once (watcher_t *w);
+extern bool
+watcher_prepare (watcher_t *w);
+
+extern void
+watcher_start (watcher_t *w);
+
+extern bool
+watcher_wait (watcher_t *w);
+
+extern void
+watcher_stop (watcher_t *w);
 
 extern void
 watcher_destroy (watcher_t *w);

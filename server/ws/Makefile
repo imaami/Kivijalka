@@ -6,7 +6,7 @@ test-path: path.o test-path.o
 	$(CC) $(CFLAGS) -std=gnu11 path.o test-path.o -o test-path
 
 test-watcher: path.o watcher.o test-watcher.o
-	$(CC) $(CFLAGS) -std=gnu11 path.o watcher.o test-watcher.o -o test-watcher
+	$(CC) $(CFLAGS) -std=gnu11 path.o watcher.o test-watcher.o -lpthread -o test-watcher
 
 test-img: img.o test-img.o read-file.o
 	$(CC) $(CFLAGS) -std=gnu11 img.o test-img.o read-file.o -o test-img

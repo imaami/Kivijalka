@@ -9,7 +9,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
@@ -17,11 +16,16 @@
 #include <poll.h>
 #include <sys/inotify.h>
 #include <sys/time.h>
+#include <pthread.h>
+#include <semaphore.h>
 
 #include "watcher.h"
 #include "path.h"
 
 struct watcher {
+	pthread_t        tid;
+	sem_t            sem_in;
+	sem_t            sem_out;
 	int              wd;
 	sigset_t         ss;
 	struct pollfd    pf;
@@ -37,7 +41,9 @@ __attribute__((always_inline,pure))
 static inline size_t
 watcher_size (const size_t len)
 {
-	return sizeof (int)
+	return sizeof (pthread_t)
+	       + (2 * sizeof (sem_t))
+	       + sizeof (int)
 	       + sizeof (sigset_t)
 	       + sizeof (struct pollfd)
 	       + sizeof (struct timespec)
@@ -82,94 +88,8 @@ watcher_watch (watcher_t *w)
 	return true;
 }
 
-watcher_t *
-watcher_create (const char *path)
-{
-	watcher_t *w;
-	size_t len;
-	path_head_t head;
-
-	if (!path) {
-		fprintf (stderr, "%s: null path\n", __func__);
-	fail:
-		w = NULL;
-		goto cleanup_and_return;
-	}
-
-	if (path[0] != '/') {
-		fprintf (stderr, "%s: path must be absolute\n", __func__);
-		goto fail;
-	}
-
-	path_create (&head, path);
-
-	if (path_empty (&head)) {
-		fprintf (stderr, "%s: path_create failed\n", __func__);
-		goto fail;
-	}
-
-	len = path_strlen (&head);
-
-	if (!(w = malloc (watcher_size (len)))) {
-		fprintf (stderr, "%s: malloc failed: %s\n",
-		                 __func__, strerror (errno));
-	fail_destroy_path:
-		path_destroy (&head);
-		goto fail;
-	}
-
-	if (0 != sigfillset (&w->ss)) {
-		fprintf (stderr, "%s: sigfillset: %s\n",
-		         __func__, strerror (errno));
-	fail_free_watcher:
-		(void) memset ((void *) w, 0, watcher_size (len));
-		free (w);
-		goto fail_destroy_path;
-	}
-
-	w->pf.fd = inotify_init1 (IN_NONBLOCK);
-
-	if (-1 == w->pf.fd) {
-		fprintf (stderr, "%s: inotify_init: %s\n",
-		                 __func__, strerror (errno));
-		goto fail_free_watcher;
-	}
-
-	path_strcpy (w->data, &head);
-	path_move (&(w->path), &head);
-	w->trig = path_node (w->path.list.prev);
-
-	if (path_node_is_first (&(w->path), w->trig)) {
-		w->file = path_node_name (w->trig) + 1;
-		w->end = 1;
-	} else {
-		w->file = path_node_name (w->trig);
-		w->end = len - (path_node_strlen (w->trig) + 1);
-	}
-
-	w->data[w->end] = '\0';
-
-	if (!watcher_watch (w)) {
-		fprintf (stderr, "%s: watcher_watch failed\n", __func__);
-		path_destroy (&(w->path));
-		goto fail_free_watcher;
-	}
-
-	w->pf.events = POLLIN;
-	w->to.tv_sec = 0;
-	w->to.tv_nsec = 500000000;
-
-cleanup_and_return:
-
-	len = 0;
-	head.list.next = NULL;
-	head.list.prev = NULL;
-
-	return w;
-}
-
 __attribute__((always_inline))
-static inline int64_t
+static inline int
 watcher_handle_parent_dir (watcher_t *w,
                            char      *b,
                            ssize_t    l)
@@ -219,7 +139,7 @@ watcher_handle_parent_dir (watcher_t *w,
 }
 
 __attribute__((always_inline))
-static inline int64_t
+static inline int
 watcher_handle_events (watcher_t *w)
 {
 	char buf[1024]
@@ -271,7 +191,8 @@ watcher_handle_events (watcher_t *w)
 	return 0;
 }
 
-int64_t
+__attribute__((always_inline))
+static inline int
 watcher_run_once (watcher_t *w)
 {
 	int r = ppoll (&w->pf, (nfds_t)1, &w->to, &w->ss);
@@ -290,6 +211,180 @@ watcher_run_once (watcher_t *w)
 	}
 }
 
+__attribute__((always_inline))
+static inline bool
+watcher_thread_init (watcher_t *w)
+{
+	if (!watcher_watch (w)) {
+		fprintf (stderr, "%s: watcher_watch failed\n", __func__);
+		path_destroy (&(w->path));
+		return false;
+	}
+
+	w->pf.events = POLLIN;
+	w->to.tv_sec = 0;
+	w->to.tv_nsec = 500000000;
+
+	return true;
+}
+
+void *
+watcher_worker (void *arg)
+{
+	watcher_t *w = arg;
+	int x;
+
+	if (!watcher_thread_init (w)) {
+		fprintf (stderr, "%s: watcher_thread_init failed\n", __func__);
+		return (void *) -1;
+	}
+
+	if (sem_wait (&w->sem_in)) {
+		x = errno;
+		fprintf (stderr, "%s: sem_wait: %s\n", __func__, strerror (x));
+		return (void *) (ptrdiff_t) -x;
+	}
+
+	for (; 0 == sem_getvalue (&w->sem_in, &x) && 1 > x;) {
+		if (watcher_run_once (w) > 0) {
+			(void) sem_post (&w->sem_out);
+		}
+	}
+}
+
+bool
+watcher_prepare (watcher_t *w)
+{
+	if (w) {
+		int r;
+		if (!(r = pthread_create (&w->tid, NULL, watcher_worker, w))) {
+			return true;
+		}
+		fprintf (stderr, "%s: pthread_create: %s\n",
+		         __func__, strerror (r));
+	}
+	return false;
+}
+
+void
+watcher_start (watcher_t *w)
+{
+	if (w) {
+		(void) sem_post (&w->sem_in);
+	}
+}
+
+bool
+watcher_wait (watcher_t *w)
+{
+	return (w && !sem_wait (&w->sem_out));
+}
+
+void
+watcher_stop (watcher_t *w)
+{
+	if (w) {
+		void *r;
+		(void) sem_post (&w->sem_in);
+		if (pthread_tryjoin_np (w->tid, &r)) {
+			(void) sem_post (&w->sem_in);
+			(void) pthread_join (w->tid, &r);
+		}
+	}
+}
+
+watcher_t *
+watcher_create (const char *path)
+{
+	watcher_t *w;
+	size_t len;
+	path_head_t head;
+
+	if (!path) {
+		fprintf (stderr, "%s: null path\n", __func__);
+	fail:
+		w = NULL;
+		goto cleanup_and_return;
+	}
+
+	if (path[0] != '/') {
+		fprintf (stderr, "%s: path must be absolute\n", __func__);
+		goto fail;
+	}
+
+	path_create (&head, path);
+
+	if (path_empty (&head)) {
+		fprintf (stderr, "%s: path_create failed\n", __func__);
+		goto fail;
+	}
+
+	len = path_strlen (&head);
+
+	if (!(w = malloc (watcher_size (len)))) {
+		fprintf (stderr, "%s: malloc failed: %s\n",
+		                 __func__, strerror (errno));
+	fail_destroy_path:
+		path_destroy (&head);
+		goto fail;
+	}
+
+	if (sem_init (&w->sem_in, 0, 0)) {
+		fprintf (stderr, "%s: sem_init: %s\n",
+		         __func__, strerror (errno));
+	fail_free_watcher:
+		(void) memset ((void *) w, 0, watcher_size (len));
+		free (w);
+		goto fail_destroy_path;
+	}
+
+	if (sem_init (&w->sem_out, 0, 0)) {
+		fprintf (stderr, "%s: sem_init: %s\n",
+		         __func__, strerror (errno));
+	fail_destroy_sem_in:
+		(void) sem_destroy (&w->sem_in);
+		goto fail_free_watcher;
+	}
+
+	if (0 != sigfillset (&w->ss)) {
+		fprintf (stderr, "%s: sigfillset: %s\n",
+		         __func__, strerror (errno));
+	fail_destroy_sem:
+		(void) sem_destroy (&w->sem_out);
+		goto fail_destroy_sem_in;
+	}
+
+	w->pf.fd = inotify_init1 (IN_NONBLOCK);
+
+	if (-1 == w->pf.fd) {
+		fprintf (stderr, "%s: inotify_init: %s\n",
+		                 __func__, strerror (errno));
+		goto fail_destroy_sem;
+	}
+
+	path_strcpy (w->data, &head);
+	path_move (&(w->path), &head);
+	w->trig = path_node (w->path.list.prev);
+
+	if (path_node_is_first (&(w->path), w->trig)) {
+		w->file = path_node_name (w->trig) + 1;
+		w->end = 1;
+	} else {
+		w->file = path_node_name (w->trig);
+		w->end = len - (path_node_strlen (w->trig) + 1);
+	}
+
+	w->data[w->end] = '\0';
+
+cleanup_and_return:
+
+	len = 0;
+	head.list.next = NULL;
+	head.list.prev = NULL;
+
+	return w;
+}
+
 void
 watcher_destroy (watcher_t *w)
 {
@@ -303,6 +398,8 @@ watcher_destroy (watcher_t *w)
 			         __func__, strerror (errno));
 		}
 		close (w->pf.fd);
+		(void) sem_destroy (&w->sem_out);
+		(void) sem_destroy (&w->sem_in);
 		free (w);
 	}
 }
