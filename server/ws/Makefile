@@ -51,7 +51,7 @@ test-task_buf.o: test-task_buf.c
 	$(CC) $(CFLAGS) -std=gnu11 -c test-task_buf.c -o test-task_buf.o
 
 wsserver:
-	./build.sh
+	+./build.sh
 
 clean: clean-test clean-wsserver
 
