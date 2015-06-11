@@ -154,8 +154,7 @@ watcher_handle_events (watcher_t *w)
 		if ((len = read (w->pf.fd, buf, sizeof buf)) == -1) {
 //			printf ("read %ld bytes\n", len);
 			if (errno == EAGAIN) {
-//				printf ("errno == EAGAIN\n");
-				continue;
+				break;
 			} else {
 				fprintf (stderr, "%s: read: %s\n",
 				         __func__, strerror (errno));
