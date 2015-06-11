@@ -59,7 +59,8 @@ watcher_watch (watcher_t *w)
 {
 	printf ("Trying to watch %s for %s\n", w->data, w->file);
 
-	w->wd = inotify_add_watch (w->pf.fd, w->data, IN_ALL_EVENTS);
+	w->wd = inotify_add_watch (w->pf.fd, w->data,
+	                           IN_ONLYDIR|IN_CLOSE_WRITE|IN_MOVED_TO|IN_CREATE);
 
 	if (-1 == w->wd) {
 		if (ENOENT == errno
