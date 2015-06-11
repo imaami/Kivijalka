@@ -35,23 +35,13 @@ struct watcher {
 	const char      *file;
 	size_t           end;
 	char             data[];
-} __attribute__((gcc_struct,packed));
+} __attribute__((aligned(64)));
 
 __attribute__((always_inline,pure))
 static inline size_t
 watcher_size (const size_t len)
 {
-	return sizeof (pthread_t)
-	       + (2 * sizeof (sem_t))
-	       + sizeof (int)
-	       + sizeof (sigset_t)
-	       + sizeof (struct pollfd)
-	       + sizeof (struct timespec)
-	       + sizeof (path_head_t)
-	       + sizeof (path_node_t *)
-	       + sizeof (const char *)
-	       + sizeof (size_t)
-	       + len + 1;
+	return sizeof (struct watcher) + len + 1;
 }
 
 bool
