@@ -11,8 +11,8 @@ test-watcher: path.o watcher.o test-watcher.o
 test-img: img.o test-img.o read-file.o
 	$(CC) $(CFLAGS) -std=gnu11 img.o test-img.o read-file.o -o test-img
 
-test-task_buf: task_buf.o test-task_buf.o
-	$(CC) $(CFLAGS) -std=gnu11 task_buf.o test-task_buf.o -lpthread -o test-task_buf
+test-task: task.o test-task.o
+	$(CC) $(CFLAGS) -std=gnu11 task.o test-task.o -lpthread -o test-task
 
 global.o: global.c
 	$(CC) $(CFLAGS) -std=gnu11 -c global.c -o global.o
@@ -32,8 +32,8 @@ img_file.o: img_file.c
 img_data.o: img_data.c
 	$(CC) $(CFLAGS) -std=gnu11 -c img_data.c -o img_data.o
 
-task_buf.o: task_buf.c
-	$(CC) $(CFLAGS) -std=gnu11 -c task_buf.c -o task_buf.o
+task.o: task.c
+	$(CC) $(CFLAGS) -std=gnu11 -c task.c -o task.o
 
 read-file.o: read-file.c
 	$(CC) $(CFLAGS) -std=gnu11 -c read-file.c -o read-file.o
@@ -47,15 +47,15 @@ test-watcher.o: test-watcher.c
 test-img.o: test-img.c
 	$(CC) $(CFLAGS) -std=gnu11 -c test-img.c -o test-img.o
 
-test-task_buf.o: test-task_buf.c
-	$(CC) $(CFLAGS) -std=gnu11 -c test-task_buf.c -o test-task_buf.o
+test-task.o: test-task.c
+	$(CC) $(CFLAGS) -std=gnu11 -c test-task.c -o test-task.o
 
 wsserver:
 	+./build.sh
 
 clean: clean-test clean-wsserver
 
-clean-test: clean-test-path clean-test-watcher clean-test-img clean-test-task_buf
+clean-test: clean-test-path clean-test-watcher clean-test-img clean-test-task
 
 clean-test-path:
 	rm -f test-path test-path.o path.o
@@ -66,8 +66,8 @@ clean-test-watcher:
 clean-test-img:
 	rm -f test-img test-img.o img.o read-file.o
 
-clean-test-task_buf:
-	rm -f test-task_buf test-task_buf.o task_buf.o
+clean-test-task:
+	rm -f test-task test-task.o task.o
 
 clean-wsserver:
 	rm -f *.o
