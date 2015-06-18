@@ -1,6 +1,6 @@
 /** \file task.h
  *
- * Task buffer.
+ * Task scheduler.
  */
 
 #ifndef __TASK_H__
@@ -19,120 +19,201 @@ extern "C" {
 #include <stdatomic.h>
 #include <semaphore.h>
 
-typedef struct task task_t;
+typedef struct task_sched task_sched_t;
 
-#define TASK_POW (6)
-#define TASK_BUF_POW (4)
-#define TASK_BYTES ((size_t)1 << TASK_POW)
-#define TASK_BUF_BYTES (TASK_BYTES << TASK_BUF_POW)
-#define TASK_BUF_TASKS ((size_t)1 << TASK_BUF_POW)
-#define TASK_PTR_MASK (TASK_BUF_TASKS - 1)
+/**
+ * @class task_sched
+ * @author Juuso Alasuutari
+ * @brief Task scheduler.
+ */
+struct task_sched {
+	//! Write state
+	struct {
+		sem_t         q; //!< Write queue semaphore
+		atomic_size_t p; //!< Non-masked write offset
+	} w;
 
-struct task {
-	union {
-		uint64_t u64[TASK_BYTES >> 3];
-		uint32_t u32[TASK_BYTES >> 2];
-		uint16_t u16[TASK_BYTES >> 1];
-		uint8_t  u8[TASK_BYTES];
-	};
-} __attribute__((packed,gcc_struct,aligned(TASK_BYTES)));
+	//! Read state
+	struct {
+		sem_t         q; //!< Read queue semaphore
+		atomic_size_t p; //!< Non-masked read offset
+	} r;
 
-typedef void (*task_func) (task_t *ctx);
-
-extern task_t task_buf[TASK_BUF_TASKS] __attribute__((aligned(TASK_BYTES)));
-extern sem_t task_write_sem, task_read_sem;
-extern volatile atomic_size_t task_write_ptr, task_read_ptr;
+	const size_t    task_u64; //!< Size of task entry as number of 64-bit blocks
+	const size_t    buf_mask; //!< Bitmask for task buffer offset
+	const uint64_t *buf;      //!< Pointer to task buffer
+} __attribute__((packed,gcc_struct));
 
 __attribute__((always_inline))
-static inline void
-task_buf_init (void)
+static inline bool
+task_sched_init (task_sched_t *s,
+                 const size_t  task_u64,
+                 const size_t  buf_log2)
 {
-	if (sem_init (&task_write_sem, 0, TASK_BUF_TASKS)
-	    || sem_init (&task_read_sem, 0, 0)) {
-		fprintf (stderr, "%s: sem_init failed: %s\n",
+	const size_t buf_size = (const size_t)1 << buf_log2;
+	const size_t buf_bytes = task_u64 << (buf_log2 + 3);
+	printf ("%s: buf_size=%zu, buf_bytes=%zu\n", __func__, buf_size, buf_bytes);
+	if ((s->buf = aligned_alloc (buf_bytes, buf_bytes))) {
+		*(size_t *)&s->buf_mask = buf_size - 1;
+		*(size_t *)&s->task_u64 = task_u64;
+		atomic_init (&s->r.p, 0);
+		if (sem_init (&s->r.q, 0, 0) == 0) {
+			atomic_init (&s->w.p, 0);
+			if (sem_init (&s->w.q, 0, buf_size) == 0) {
+				return true;
+			}
+			fprintf (stderr, "%s: sem_init: %s\n",
+			                 __func__, strerror (errno));
+			(void) sem_destroy (&s->r.q);
+		} else {
+			fprintf (stderr, "%s: sem_init: %s\n",
+			                 __func__, strerror (errno));
+		}
+		free ((void *) s->buf);
+		s->buf = NULL;
+	} else {
+		fprintf (stderr, "%s: aligned_alloc: %s\n",
 		                 __func__, strerror (errno));
-		abort ();
 	}
-	task_write_ptr = task_read_ptr = 0;
-	memset ((void *) task_buf, 0, TASK_BUF_BYTES);
+	return false;
 }
 
 __attribute__((always_inline))
 static inline void
-task_buf_fini (void)
+task_sched_fini (task_sched_t *s)
 {
-	(void) sem_destroy (&task_write_sem);
-	(void) sem_destroy (&task_read_sem);
+	atomic_init (&s->w.p, 0);
+	(void) sem_destroy (&s->w.q);
+	atomic_init (&s->r.p, 0);
+	(void) sem_destroy (&s->r.q);
+	*(size_t *)&s->task_u64 = 0;
+	*(size_t *)&s->buf_mask = 0;
+	free ((void *) s->buf);
+	s->buf = NULL;
 }
 
 __attribute__((always_inline))
-static inline size_t
-task_ptr_advance (volatile atomic_size_t *ptr)
+static inline void
+_task_put (task_sched_t *s,
+           uint64_t     *t)
 {
-	atomic_size_t cur;
-	do {
-		cur = atomic_load (ptr);
-	} while (!atomic_compare_exchange_weak (ptr, &cur, cur + 1));
-	return (cur & TASK_PTR_MASK);
+	// get pointer to next writable task
+	size_t p = atomic_fetch_add (&s->w.p, 1);
+	uint64_t *_t = (uint64_t *) s->buf + ((p & s->buf_mask) * s->task_u64);
+	printf ("%s: task entry %zu (%p)\n", __func__, p, (uint8_t *)_t);
+
+	// copy task entry to task buffer
+	for (size_t i = 0; i < s->task_u64; ++i) {
+		_t[i] = t[i];
+	}
+
+	// wake up reader
+	if (sem_post (&s->r.q)) {
+		fprintf (stderr, "%s: sem_post: %s\n",
+		                 __func__, strerror (errno));
+	}
 }
 
 __attribute__((always_inline))
 static inline bool
-task_wait (sem_t *task_sem)
+task_put (task_sched_t *s,
+          uint64_t     *t)
 {
-	for (;;) {
-		if (!sem_wait (task_sem)) {
+	do {
+		// wait until a task can be added
+		printf ("%s: queuing for write\n", __func__);
+		if (sem_wait (&s->w.q) == 0) {
+			_task_put (s, t);
 			return true;
-		} else if (errno != EINTR) {
-			fprintf (stderr, "%s: sem_wait failed: %s\n",
-			                 __func__, strerror (errno));
+		}
+	} while (EINTR == errno); // retry after signal interrupt
+	fprintf (stderr, "%s: sem_wait: %s\n",
+	                 __func__, strerror (errno));
+	return false;
+}
+
+__attribute__((always_inline))
+static inline bool
+task_put_nb (task_sched_t *s,
+             uint64_t     *t)
+{
+	do {
+		// test if a task can be added
+		printf ("%s: queuing for write\n", __func__);
+		if (sem_trywait (&s->w.q) == 0) {
+			_task_put (s, t);
+			return true;
+		}
+		if (EAGAIN == errno) {
+			printf ("%s: queue would block\n", __func__);
 			return false;
 		}
+	} while (EINTR == errno); // retry after signal interrupt
+	fprintf (stderr, "%s: sem_trywait: %s\n",
+	                 __func__, strerror (errno));
+	return false;
+}
+
+__attribute__((always_inline))
+static inline void
+_task_get (task_sched_t *s,
+           uint64_t     *t)
+{
+	// get pointer to next available queued task
+	size_t p = atomic_fetch_add (&s->r.p, 1);
+	uint64_t *_t = (uint64_t *) s->buf + ((p & s->buf_mask) * s->task_u64);
+	printf ("%s: task entry %zu (%p)\n", __func__, p, (uint8_t *)_t);
+
+	// copy task entry from task buffer
+	for (size_t i = 0; i < s->task_u64; ++i) {
+		t[i] = _t[i];
 	}
-}
 
-__attribute__((always_inline))
-static inline task_t *
-task_wait_write (void)
-{
-	return (task_wait (&task_write_sem))
-	       ? &task_buf[task_ptr_advance (&task_write_ptr)]
-	       : NULL;
-}
-
-__attribute__((always_inline))
-static inline task_t *
-task_wait_read (void)
-{
-	return (task_wait (&task_read_sem))
-	       ? &task_buf[task_ptr_advance (&task_read_ptr)]
-	       : NULL;
+	// release task entry for rewriting
+	if (sem_post (&s->w.q)) {
+		fprintf (stderr, "%s: sem_post: %s\n",
+		                 __func__, strerror (errno));
+	}
 }
 
 __attribute__((always_inline))
 static inline bool
-task_post (sem_t *task_sem)
+task_get (task_sched_t *s,
+          uint64_t     *t)
 {
-	if (sem_post (task_sem)) {
-		fprintf (stderr, "%s: sem_post failed: %s\n",
-		                 __func__, strerror (errno));
-		return false;
-	}
-	return true;
+	do {
+		// wait until a task is available
+		printf ("%s: queuing for read\n", __func__);
+		if (sem_wait (&s->r.q) == 0) {
+			_task_get (s, t);
+			return true;
+		}
+	} while (EINTR == errno); // retry after signal interrupt
+	fprintf (stderr, "%s: sem_wait: %s\n",
+	                 __func__, strerror (errno));
+	return false;
 }
 
 __attribute__((always_inline))
-static inline void
-task_post_write (void)
+static inline bool
+task_get_nb (task_sched_t *s,
+             uint64_t     *t)
 {
-	(void) task_post (&task_write_sem);
-}
-
-__attribute__((always_inline))
-static inline void
-task_post_read (void)
-{
-	(void) task_post (&task_read_sem);
+	do {
+		// test if a task can be acquired
+		printf ("%s: queuing for read\n", __func__);
+		if (sem_trywait (&s->r.q) == 0) {
+			_task_get (s, t);
+			return true;
+		}
+		if (EAGAIN == errno) {
+			printf ("%s: queue would block\n", __func__);
+			return false;
+		}
+	} while (EINTR == errno); // retry after signal interrupt
+	fprintf (stderr, "%s: sem_wait: %s\n",
+	                 __func__, strerror (errno));
+	return false;
 }
 
 #ifdef __cplusplus
