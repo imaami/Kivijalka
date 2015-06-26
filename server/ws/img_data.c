@@ -44,8 +44,8 @@ img_data_free (img_data_t *imd)
 }
 
 img_data_t *
-img_data_new_from_buffer (size_t  size,
-                          char   *data)
+img_data_new_from_buffer (size_t      size,
+                          const char *data)
 {
 	if (data) {
 		img_data_t *imd;

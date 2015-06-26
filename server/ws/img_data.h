@@ -41,8 +41,8 @@ img_data_free (img_data_t *imd);
  * Read the contents of a buffer into a newly allocated img_data_t object.
  */
 extern img_data_t *
-img_data_new_from_buffer (size_t  size,
-                          char   *data);
+img_data_new_from_buffer (size_t      size,
+                          const char *data);
 
 /**
  * Read a file into a newly allocated img_data_t object.
