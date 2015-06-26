@@ -92,7 +92,7 @@ fread_file (FILE *stream, size_t *length, size_t dest_off)
 
 			/* Shrink the allocated memory if possible.  */
 			if (size < alloc - 1) {
-				char *smaller_buf = realloc (buf, size + 1);
+				char *smaller_buf;
 				if ((smaller_buf = realloc (buf, dest_off + size + 1))) {
 					buf = smaller_buf;
 				}
