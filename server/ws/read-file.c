@@ -43,9 +43,9 @@ fread_file (FILE *stream, size_t *length, size_t dest_off)
 	char *buf = NULL;
 	size_t alloc, alloc_total;
 
-  /* For a regular file, allocate a buffer that has exactly the right
-     size.  This avoids the need to do dynamic reallocations later.  */
-    struct stat st;
+	/* For a regular file, allocate a buffer that has exactly the right
+	   size.  This avoids the need to do dynamic reallocations later.  */
+	struct stat st;
 
 	if (fstat (fileno (stream), &st) >= 0 && S_ISREG (st.st_mode)) {
 		off_t pos = ftello (stream);
@@ -78,8 +78,8 @@ fread_file (FILE *stream, size_t *length, size_t dest_off)
 	int save_errno;
 
 	for (;;) {
-        /* This reads 1 more than the size of a regular file
-           so that we get eof immediately.  */
+		/* This reads 1 more than the size of a regular file
+		   so that we get eof immediately.  */
 		size_t requested = alloc - size;
 		size_t count = fread (buf + dest_off + size, 1, requested, stream);
 		size += count;
@@ -90,7 +90,7 @@ fread_file (FILE *stream, size_t *length, size_t dest_off)
 				break;
 			}
 
-            /* Shrink the allocated memory if possible.  */
+			/* Shrink the allocated memory if possible.  */
 			if (size < alloc - 1) {
 				char *smaller_buf = realloc (buf, size + 1);
 				if ((smaller_buf = realloc (buf, dest_off + size + 1))) {
@@ -134,29 +134,28 @@ fread_file (FILE *stream, size_t *length, size_t dest_off)
 static char *
 internal_read_file (const char *filename, size_t *length, const char *mode, size_t dest_off)
 {
-  FILE *stream = fopen (filename, mode);
-  char *out;
-  int save_errno;
+	FILE *stream = fopen (filename, mode);
+	char *out;
+	int save_errno;
 
-  if (!stream)
-    return NULL;
+	if (!stream) {
+		return NULL;
+	}
 
-  out = fread_file (stream, length, dest_off);
+	out = fread_file (stream, length, dest_off);
 
-  save_errno = errno;
+	save_errno = errno;
 
-  if (fclose (stream) != 0)
-    {
-      if (out)
-        {
-          save_errno = errno;
-          free (out);
-        }
-      errno = save_errno;
-      return NULL;
-    }
+	if (fclose (stream) != 0) {
+		if (out) {
+			save_errno = errno;
+			free (out);
+		}
+		errno = save_errno;
+		return NULL;
+	}
 
-  return out;
+	return out;
 }
 
 /* Open and read the contents of FILENAME, and return a newly
@@ -168,7 +167,7 @@ internal_read_file (const char *filename, size_t *length, const char *mode, size
 char *
 read_file (const char *filename, size_t *length, size_t dest_off)
 {
-  return internal_read_file (filename, length, "r", dest_off);
+	return internal_read_file (filename, length, "r", dest_off);
 }
 
 /* Open (on non-POSIX systems, in binary mode) and read the contents
@@ -181,5 +180,5 @@ read_file (const char *filename, size_t *length, size_t dest_off)
 char *
 read_binary_file (const char *filename, size_t *length, size_t dest_off)
 {
-  return internal_read_file (filename, length, "rb", dest_off);
+	return internal_read_file (filename, length, "rb", dest_off);
 }
