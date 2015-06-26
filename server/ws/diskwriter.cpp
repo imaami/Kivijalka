@@ -7,7 +7,7 @@
 #include <cstdio>
 
 DiskWriter::DiskWriter(QObject *parent) :
-	QThread(parent)
+	QObject(parent)
 {
 }
 
@@ -15,7 +15,7 @@ DiskWriter::~DiskWriter()
 {
 }
 
-void DiskWriter::run()
+void DiskWriter::process()
 {
 	for (;;) {
 		if (img_file_wait (&output_file)) {

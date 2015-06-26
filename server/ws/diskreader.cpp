@@ -9,7 +9,7 @@
 
 DiskReader::DiskReader(watcher_t *watcher,
                        QObject   *parent) :
-	QThread(parent)
+	QObject(parent)
 {
 	this->watcher = watcher;
 }
@@ -18,7 +18,7 @@ DiskReader::~DiskReader()
 {
 }
 
-void DiskReader::run()
+void DiskReader::process()
 {
 	for (;;) {
 		if (watcher_wait (watcher)) {

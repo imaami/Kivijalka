@@ -1,10 +1,10 @@
 #ifndef DISKREADER_H
 #define DISKREADER_H
 
-#include <QtCore/QThread>
+#include <QtCore/QObject>
 #include "watcher.h"
 
-class DiskReader : public QThread
+class DiskReader : public QObject
 {
     Q_OBJECT
 
@@ -13,8 +13,8 @@ public:
 	           QObject   *parent = 0);
 	~DiskReader();
 
-protected:
-	void run() Q_DECL_OVERRIDE;
+public slots:
+	void process();
 
 private:
 	watcher_t *watcher;

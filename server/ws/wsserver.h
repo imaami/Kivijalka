@@ -9,10 +9,6 @@
 
 QT_FORWARD_DECLARE_CLASS(QWebSocketServer)
 QT_FORWARD_DECLARE_CLASS(QWebSocket)
-QT_FORWARD_DECLARE_CLASS(WatcherThread)
-QT_FORWARD_DECLARE_CLASS(DiskReader)
-QT_FORWARD_DECLARE_CLASS(ImgThread)
-QT_FORWARD_DECLARE_CLASS(DiskWriter)
 
 class WSServer : public QObject
 {
@@ -22,8 +18,6 @@ public:
 	                  quint16 displayWidth, quint16 displayHeight,
 	                  quint16 thumbWidth, quint16 thumbHeight,
 	                  quint16 bannerX, quint16 bannerY,
-	                  const QString &captureFile,
-	                  const QString &outputFile,
 	                  const QString &bannerDir,
 	                  QObject *parent = Q_NULLPTR);
 	~WSServer();
@@ -47,10 +41,6 @@ private:
 	quint16 displayWidth, displayHeight;
 	quint16 thumbWidth, thumbHeight;
 	quint16 bannerX, bannerY;
-	WatcherThread *watcherThread;
-	DiskReader *diskReader;
-	ImgThread *imgThread;
-	DiskWriter *diskWriter;
 	BannerCache bannerCache;
 };
 

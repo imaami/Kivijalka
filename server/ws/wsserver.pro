@@ -14,9 +14,8 @@ SOURCES += \
     banner.cpp \
     bannercache.cpp \
     wsserver.cpp \
-    watcherthread.cpp \
     diskreader.cpp \
-    imgthread.cpp \
+    imgworker.cpp \
     diskwriter.cpp \
     read-file.c \
     watcher.c \
@@ -30,9 +29,8 @@ HEADERS += \
     banner.h \
     bannercache.h \
     wsserver.h \
-    watcherthread.h \
     diskreader.h \
-    imgthread.h \
+    imgworker.h \
     diskwriter.h \
     read-file.h \
     watcher.h \

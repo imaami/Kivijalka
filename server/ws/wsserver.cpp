@@ -1,8 +1,4 @@
 #include "wsserver.h"
-#include "watcherthread.h"
-#include "diskreader.h"
-#include "imgthread.h"
-#include "diskwriter.h"
 #include "global.h"
 
 #include <cstring>
@@ -17,8 +13,6 @@ WSServer::WSServer(quint16 port,
                    quint16 displayWidth, quint16 displayHeight,
                    quint16 thumbWidth, quint16 thumbHeight,
                    quint16 bannerX, quint16 bannerY,
-                   const QString &captureFile,
-                   const QString &outputFile,
                    const QString &bannerDir,
                    QObject *parent) :
 	QObject(parent),
@@ -27,11 +21,6 @@ WSServer::WSServer(quint16 port,
 	clients(),
 	bannerCache(bannerDir, this)
 {
-	global_init(bannerX, bannerY, thumbWidth, thumbHeight);
-
-	(void) img_file_set_path (&capture_file, captureFile.toUtf8().data());
-	(void) img_file_set_path (&output_file, outputFile.toUtf8().data());
-
 	this->displayWidth = displayWidth;
 	this->displayHeight = displayHeight;
 	this->thumbWidth = thumbWidth;
@@ -45,16 +34,6 @@ WSServer::WSServer(quint16 port,
 		        this, &WSServer::onNewConnection);
 		connect(m_pWebSocketServer, &QWebSocketServer::closed,
 		        this, &WSServer::closed);
-
-		if ((watcherThread = new WatcherThread(this))
-		    && (diskReader = new DiskReader(this))
-		    && (imgThread = new ImgThread(this))
-		    && (diskWriter = new DiskWriter(this))) {
-			diskWriter->start();
-			imgThread->start();
-			diskReader->start();
-			watcherThread->start();
-		}
 	}
 }
 
@@ -62,7 +41,6 @@ WSServer::~WSServer()
 {
 	m_pWebSocketServer->close();
 	qDeleteAll(clients.begin(), clients.end());
-	global_fini();
 }
 
 void WSServer::onNewConnection()

@@ -1,9 +1,9 @@
 #ifndef DISKWRITER_H
 #define DISKWRITER_H
 
-#include <QtCore/QThread>
+#include <QtCore/QObject>
 
-class DiskWriter : public QThread
+class DiskWriter : public QObject
 {
     Q_OBJECT
 
@@ -11,8 +11,8 @@ public:
 	DiskWriter(QObject *parent = 0);
 	~DiskWriter();
 
-protected:
-	void run() Q_DECL_OVERRIDE;
+public slots:
+	void process();
 };
 
 #endif // DISKWRITER_H
