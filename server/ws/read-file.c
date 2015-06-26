@@ -41,7 +41,7 @@ char *
 fread_file (FILE *stream, size_t *length, size_t dest_off)
 {
 	char *buf = NULL;
-	size_t alloc, alloc_total;
+	size_t alloc = BUFSIZ;
 
 	/* For a regular file, allocate a buffer that has exactly the right
 	   size.  This avoids the need to do dynamic reallocations later.  */
@@ -60,17 +60,10 @@ fread_file (FILE *stream, size_t *length, size_t dest_off)
 			}
 
 			alloc = alloc_off + 1;
-		} else {
-			goto unknown_file_size;
 		}
-	} else {
-	unknown_file_size:
-		alloc = BUFSIZ;
 	}
 
-	alloc_total = alloc + dest_off;
-
-	if (!(buf = malloc (alloc_total))) {
+	if (!(buf = malloc (dest_off + alloc))) {
 		return NULL; /* errno is ENOMEM.  */
 	}
 
@@ -105,20 +98,18 @@ fread_file (FILE *stream, size_t *length, size_t dest_off)
 
 		char *new_buf;
 
-		if (alloc_total == SIZE_MAX) {
+		if (alloc == (SIZE_MAX - dest_off)) {
 			save_errno = ENOMEM;
 			break;
 		}
 
-		if (alloc_total < SIZE_MAX - alloc_total / 2) {
-			alloc_total = alloc_total + alloc_total / 2;
+		if (alloc < (SIZE_MAX - dest_off) - alloc / 2) {
+			alloc = alloc + alloc / 2;
 		} else {
-			alloc_total = SIZE_MAX;
+			alloc = (SIZE_MAX - dest_off);
 		}
 
-		alloc = alloc_total - dest_off;
-
-		if (!(new_buf = realloc (buf, alloc_total))) {
+		if (!(new_buf = realloc (buf, dest_off + alloc))) {
 			save_errno = errno;
 			break;
 		}
