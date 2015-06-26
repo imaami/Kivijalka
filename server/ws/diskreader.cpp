@@ -7,9 +7,11 @@
 #include <cerrno>
 #include <cstring>
 
-DiskReader::DiskReader(QObject *parent) :
+DiskReader::DiskReader(watcher_t *watcher,
+                       QObject   *parent) :
 	QThread(parent)
 {
+	this->watcher = watcher;
 }
 
 DiskReader::~DiskReader()
@@ -19,7 +21,7 @@ DiskReader::~DiskReader()
 void DiskReader::run()
 {
 	for (;;) {
-		if (img_file_wait (&capture_file)) {
+		if (watcher_wait (watcher)) {
 //			std::printf ("disk reader triggered\n");
 			if (!img_file_update (&capture_file)) {
 				std::fprintf (stderr, "%s: img_file_update failed\n", __func__);

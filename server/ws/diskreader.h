@@ -2,17 +2,22 @@
 #define DISKREADER_H
 
 #include <QtCore/QThread>
+#include "watcher.h"
 
 class DiskReader : public QThread
 {
     Q_OBJECT
 
 public:
-	DiskReader(QObject *parent = 0);
+	DiskReader(watcher_t *watcher,
+	           QObject   *parent = 0);
 	~DiskReader();
 
 protected:
 	void run() Q_DECL_OVERRIDE;
+
+private:
+	watcher_t *watcher;
 };
 
 #endif // DISKREADER_H
