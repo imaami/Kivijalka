@@ -22,6 +22,7 @@ SOURCES += \
     watcher.c \
     global.c \
     path.c \
+    file.c \
     img_file.c \
     img_data.c
 
@@ -37,5 +38,6 @@ HEADERS += \
     watcher.h \
     global.h \
     path.h \
+    file.h \
     img_file.h \
     img_data.h
