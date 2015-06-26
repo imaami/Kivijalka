@@ -54,7 +54,7 @@ fread_file (FILE *stream, size_t *length, size_t dest_off)
 			size_t alloc_off = st.st_size - pos;
 
 			/* '1' below, accounts for the trailing NUL.  */
-			if (SIZE_MAX - (dest_off + 1) < alloc_off) {
+			if ((SIZE_MAX - dest_off) - 1 < alloc_off) {
 				errno = ENOMEM;
 				return NULL;
 			}
