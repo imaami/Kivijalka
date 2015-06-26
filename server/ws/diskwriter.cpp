@@ -2,8 +2,8 @@
 #include "global.h"
 #include "img_data.h"
 #include "img_file.h"
+#include "file.h"
 
-#include <QtCore/QFile>
 #include <cstdio>
 
 DiskWriter::DiskWriter(QObject *parent) :
@@ -22,23 +22,9 @@ void DiskWriter::run()
 			img_data_t *imd;
 //			std::printf ("diskwriter triggered\n");
 			if ((imd = img_file_steal_data (&output_file))) {
-				QFile f(QString (output_file.path));
-				if (f.open (QIODevice::WriteOnly)) {
-					const char *p = (const char *) imd->data;
-					qint64 n = (qint64) imd->size, x;
-					while (n > 0) {
-						if ((x = f.write (p, n)) < 0) {
-							std::fprintf (stderr, "DiskWriter::%s: QFile::write failed\n", __func__);
-							break;
-						}
-						if (x == n) {
-//							std::printf ("DiskWriter::%s: wrote output data\n", __func__);
-							break;
-						}
-						n -= x;
-						p += x;
-					}
-					f.close ();
+				if (!file_write (output_file.path, imd->size,
+				                 (const uint8_t *) imd->data)) {
+					std::fprintf (stderr, "DiskWriter::%s: file_write failed\n", __func__);
 				}
 				img_data_free (imd);
 				imd = NULL;
