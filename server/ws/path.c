@@ -13,7 +13,7 @@ __attribute__((always_inline,pure))
 static inline size_t
 path_node_size (const size_t len)
 {
-	return sizeof (list_head_t) + sizeof (size_t) + len + 1;
+	return offsetof (struct path_node, name) + len + 1;
 }
 
 __attribute__((always_inline,malloc))

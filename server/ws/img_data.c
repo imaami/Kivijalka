@@ -16,14 +16,14 @@
 size_t
 img_data_size (img_data_t *imd)
 {
-	return (imd) ? sizeof (size_t) + imd->size : 0;
+	return (imd) ? offsetof (struct img_data, data) + imd->size : 0;
 }
 
 img_data_t *
 img_data_alloc (size_t size)
 {
 	img_data_t *data;
-	if ((data = malloc (sizeof (size_t) + size))) {
+	if ((data = malloc (offsetof (struct img_data, data) + size))) {
 		data->size = size;
 	} else {
 		fprintf (stderr, "%s: malloc failed: %s\n",
@@ -63,7 +63,7 @@ img_data_new_from_file (const char *path)
 	if (path) {
 		img_data_t *data;
 		size_t size;
-		if ((data = (img_data_t *) read_binary_file (path, &size, sizeof (size_t)))) {
+		if ((data = (img_data_t *) read_binary_file (path, &size, offsetof (struct img_data, data)))) {
 			data->size = size;
 //			printf ("%s: read %zu bytes\n", __func__, size);
 			size = 0;
