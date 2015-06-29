@@ -3,6 +3,94 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+__attribute__((always_inline))
+static inline bool
+file_size (FILE   *fp,
+           size_t *fs)
+{
+	int fd = fileno (fp);
+	if (fd >= 0) {
+		struct stat st;
+		if (!fstat (fd, &st)) {
+			if (S_ISREG (st.st_mode)) {
+				*fs = (st.st_size > 0)
+				      ? (size_t) st.st_size
+				      : 0;
+				return true;
+			} else {
+				fprintf (stderr, "%s: not a regular file\n",
+				         __func__);
+			}
+		} else {
+			fprintf (stderr, "%s: fstat: %s\n",
+			         __func__, strerror (errno));
+		}
+	} else {
+		fprintf (stderr, "%s: fileno: %s\n",
+		         __func__, strerror (errno));
+	}
+	return false;
+}
+
+bool
+file_read (const char *path,
+           size_t      size,
+           uint8_t    *data,
+           size_t     *count)
+{
+	bool r;
+	size_t fs;
+	FILE *fp;
+
+	if (!path || !data || !count) {
+		fprintf (stderr, "%s: invalid arguments\n", __func__);
+		return false;
+	}
+
+	r = false;
+	fs = 0;
+
+	if (!(fp = fopen (path, "rb"))) {
+		fprintf (stderr, "%s: fopen: %s\n",
+		         __func__, strerror (errno));
+	} else {
+		rewind (fp);
+
+		if (!file_size (fp, &fs)) {
+			fprintf (stderr, "%s: unknown file size\n",
+			         __func__);
+		} else {
+			printf ("%s: file size is %zu B\n", __func__, fs);
+
+			/*
+			 * if buffer is too small set *count to
+			 * total required size and return false
+			 */
+			if (++fs > size) {
+				fprintf (stderr, "%s: buffer too small\n",
+				         __func__);
+			} else {
+				// read file
+				r = true;
+			}
+		}
+
+		if (fclose (fp)) {
+			fprintf (stderr, "%s: fclose: %s\n",
+			         __func__, strerror (errno));
+			r = false;
+			fs = 0;
+		}
+		fp = NULL;
+	}
+
+	*count = fs;
+	return r;
+}
 
 bool
 file_write (const char    *path,

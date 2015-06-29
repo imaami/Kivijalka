@@ -15,6 +15,12 @@ extern "C" {
 #include <stdint.h>
 
 extern bool
+file_read (const char *path,
+           size_t      size,
+           uint8_t    *data,
+           size_t     *count);
+
+extern bool
 file_write (const char    *path,
             size_t         size,
             const uint8_t *data);
