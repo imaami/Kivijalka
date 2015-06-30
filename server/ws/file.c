@@ -36,6 +36,32 @@ file_size (FILE   *fp,
 	return false;
 }
 
+__attribute__((always_inline))
+static inline bool
+file_fread (FILE    *fp,
+            uint8_t *data,
+            size_t  *count)
+{
+	for (size_t bs_left = *count, bs_read = 0, bs;; bs_left -= bs) {
+		printf ("%s: trying to read %zu B to buffer offset %zu\n",
+		        __func__, bs_left, bs_read);
+		bs = fread ((void *) (data + bs_read), 1, bs_left, fp);
+		bs_read += bs;
+
+		if (bs != bs_left) {
+			if (ferror (fp)) {
+				break;
+			}
+
+			data[bs_read] = '\0';
+			*count = bs_read;
+			return true;
+		}
+	}
+
+	return false;
+}
+
 bool
 file_read (const char *path,
            size_t      size,
@@ -74,8 +100,7 @@ file_read (const char *path,
 				fprintf (stderr, "%s: buffer too small\n",
 				         __func__);
 			} else {
-				// read file
-				r = true;
+				r = file_fread (fp, data, &fs);
 			}
 		}
 

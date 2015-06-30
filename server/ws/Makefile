@@ -14,6 +14,9 @@ test-img: img.o test-img.o read-file.o
 test-task: task.o test-task.o
 	$(CC) $(CFLAGS) -std=gnu11 task.o test-task.o -lpthread -o test-task
 
+test-file: file.o test-file.o
+	$(CC) $(CFLAGS) -std=gnu11 file.o test-file.o -o test-file
+
 global.o: global.c
 	$(CC) $(CFLAGS) -std=gnu11 -c global.c -o global.o
 
@@ -35,6 +38,9 @@ img_data.o: img_data.c
 task.o: task.c
 	$(CC) $(CFLAGS) -std=gnu11 -c task.c -o task.o
 
+file.o: file.c
+	$(CC) $(CFLAGS) -std=gnu11 -c file.c -o file.o
+
 read-file.o: read-file.c
 	$(CC) $(CFLAGS) -std=gnu11 -c read-file.c -o read-file.o
 
@@ -50,12 +56,15 @@ test-img.o: test-img.c
 test-task.o: test-task.c
 	$(CC) $(CFLAGS) -std=gnu11 -c test-task.c -o test-task.o
 
+test-file.o: test-file.c
+	$(CC) $(CFLAGS) -std=gnu11 -c test-file.c -o test-file.o
+
 wsserver:
 	+./build.sh
 
 clean: clean-test clean-wsserver
 
-clean-test: clean-test-path clean-test-watcher clean-test-img clean-test-task
+clean-test: clean-test-path clean-test-watcher clean-test-img clean-test-task clean-test-file
 
 clean-test-path:
 	rm -f test-path test-path.o path.o
@@ -68,6 +77,9 @@ clean-test-img:
 
 clean-test-task:
 	rm -f test-task test-task.o task.o
+
+clean-test-file:
+	rm -f test-file test-file.o file.o
 
 clean-wsserver:
 	rm -f *.o
