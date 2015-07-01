@@ -1,0 +1,5 @@
+*.o
+moc_*.cpp
+Makefile.qt
+wsserver
+.qiv-select/
