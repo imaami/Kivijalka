@@ -17,6 +17,9 @@ test-task: task.o test-task.o
 test-file: file.o test-file.o
 	$(CC) $(CFLAGS) -std=gnu11 file.o test-file.o -o test-file
 
+test-display: display.o test-display.o
+	$(CC) $(CFLAGS) -std=gnu11 display.o test-display.o -o test-display
+
 global.o: global.c
 	$(CC) $(CFLAGS) -std=gnu11 -c global.c -o global.o
 
@@ -41,6 +44,9 @@ task.o: task.c
 file.o: file.c
 	$(CC) $(CFLAGS) -std=gnu11 -c file.c -o file.o
 
+display.o: display.c
+	$(CC) $(CFLAGS) -std=gnu11 -c display.c -o display.o
+
 read-file.o: read-file.c
 	$(CC) $(CFLAGS) -std=gnu11 -c read-file.c -o read-file.o
 
@@ -59,12 +65,15 @@ test-task.o: test-task.c
 test-file.o: test-file.c
 	$(CC) $(CFLAGS) -std=gnu11 -c test-file.c -o test-file.o
 
+test-display.o: test-display.c
+	$(CC) $(CFLAGS) -std=gnu11 -c test-display.c -o test-display.o
+
 wsserver:
 	+./build.sh
 
 clean: clean-test clean-wsserver
 
-clean-test: clean-test-path clean-test-watcher clean-test-img clean-test-task clean-test-file
+clean-test: clean-test-path clean-test-watcher clean-test-img clean-test-task clean-test-file clean-test-display
 
 clean-test-path:
 	rm -f test-path test-path.o path.o
@@ -80,6 +89,9 @@ clean-test-task:
 
 clean-test-file:
 	rm -f test-file test-file.o file.o
+
+clean-test-display:
+	rm -f test-display test-display.o display.o
 
 clean-wsserver:
 	rm -f *.o
