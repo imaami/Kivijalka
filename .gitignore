@@ -1,5 +1,8 @@
 *.o
-moc_*.cpp
 Makefile.qt
 wsserver
 .qiv-select/
+test-*
+!*.[ch]
+!*.cpp
+moc_*.cpp
