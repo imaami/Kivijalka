@@ -2,6 +2,9 @@ all: test wsserver
 
 test: test-path test-watcher test-img
 
+test-buf: buf.h test-buf.c
+	$(CC) $(CFLAGS) -std=gnu11 test-buf.c -o test-buf
+
 test-path: path.o test-path.o
 	$(CC) $(CFLAGS) -std=gnu11 path.o test-path.o -o test-path
 
@@ -74,7 +77,10 @@ wsserver:
 
 clean: clean-test clean-wsserver
 
-clean-test: clean-test-path clean-test-watcher clean-test-img clean-test-task clean-test-file clean-test-display
+clean-test: clean-test-buf clean-test-path clean-test-watcher clean-test-img clean-test-task clean-test-file clean-test-display
+
+clean-test-buf:
+	rm -f test-buf
 
 clean-test-path:
 	rm -f test-path test-path.o path.o
