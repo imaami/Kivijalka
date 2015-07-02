@@ -1,0 +1,55 @@
+digraph G {
+	label = "Server process";
+	compound = true;
+
+	subgraph cluster_watcher {
+		label = "Filesystem watcher";
+		watcher_start -> watcher_stop;
+
+		watcher_start [label = "wait"];
+		watcher_stop [label = "thread exit"];
+	}
+
+	subgraph cluster_reader {
+		label = "Disk reader";
+		reader_start -> reader_stop;
+
+		reader_start [label = "wait"];
+		reader_stop [label = "thread exit"];
+	}
+
+	subgraph cluster_worker {
+		label = "Image worker";
+		worker_start -> worker_stop;
+
+		worker_start [label = "wait"];
+		worker_stop [label = "thread exit"];
+	}
+
+	subgraph cluster_writer {
+		label = "Disk writer";
+		writer_start -> writer_stop;
+
+		writer_start [label = "wait"];
+		writer_stop [label = "thread exit"];
+	}
+
+	main -> main_run;
+
+	main_run -> watcher_start [lhead = cluster_watcher];
+	main_run -> reader_start [lhead = cluster_reader];
+	main_run -> worker_start [lhead = cluster_worker];
+	main_run -> writer_start [lhead = cluster_writer];
+
+	watcher_stop -> main_join [ltail = cluster_watcher];
+	reader_stop -> main_join [ltail = cluster_reader];
+	worker_stop -> main_join [ltail = cluster_worker];
+	writer_stop -> main_join [ltail = cluster_writer];
+
+	main_join -> exit;
+
+	main [label = "main();"];
+	main_run [label = "start threads"];
+	main_join [label = "join threads"];
+	exit [label = "exit();"];
+}

@@ -1,11 +1,15 @@
-all: server
+all: server doc
 
-clean: clean-server
+clean: clean-server clean-doc
 
 .PHONY: server
 server:
 	@$(MAKE) -C server server
 
-.PHONY: clean-server
-clean-server:
-	@$(MAKE) -C server clean-server
+.PHONY: doc
+doc:
+	@$(MAKE) -C doc
+
+.PHONY: clean-doc
+clean-doc:
+	@$(MAKE) -C doc clean

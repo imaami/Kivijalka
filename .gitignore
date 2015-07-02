@@ -6,3 +6,4 @@ test-*
 !*.[ch]
 !*.cpp
 moc_*.cpp
+/doc/*.png
