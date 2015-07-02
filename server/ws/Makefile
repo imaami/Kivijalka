@@ -68,6 +68,7 @@ test-file.o: test-file.c
 test-display.o: test-display.c
 	$(CC) $(CFLAGS) -std=gnu11 -c test-display.c -o test-display.o
 
+.PHONY: wsserver
 wsserver:
 	+./build.sh
 
