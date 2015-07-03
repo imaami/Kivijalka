@@ -3,25 +3,47 @@
  * File read/write.
  */
 
-#ifndef __FILE_H__
-#define __FILE_H__
+#ifndef __KIVIJALKA_FILE_H__
+#define __KIVIJALKA_FILE_H__
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <stddef.h>
+#include <unistd.h>
 #include <stdbool.h>
 #include <stdint.h>
 
-extern bool
-file_read (const char *path,
-           size_t      size,
-           uint8_t    *data,
-           size_t     *count);
+typedef struct file file_t;
+
+extern file_t *
+file_create (const char *path);
+
+extern void
+file_destroy (file_t **f);
+
+extern const char *
+file_path (file_t *f);
 
 extern bool
-file_write (const char    *path,
+file_open (file_t     *f,
+           const char *mode);
+
+extern bool
+file_close (file_t *f);
+
+extern bool
+file_size (file_t *f,
+           size_t *size);
+
+extern bool
+file_read (file_t  *f,
+           size_t   size,
+           uint8_t *data,
+           size_t  *count);
+
+extern bool
+file_write (file_t        *f,
             size_t         size,
             const uint8_t *data);
 
@@ -29,4 +51,4 @@ file_write (const char    *path,
 }
 #endif
 
-#endif // __FILE_H__
+#endif // __KIVIJALKA_FILE_H__
