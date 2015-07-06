@@ -18,15 +18,11 @@ main (int    argc,
 		return EXIT_FAILURE;
 	}
 
-	buf_t *buf;
 	file_t *f;
-
-	if (!(buf = buf_create ((size_t) 1 << 24))) {
-		fprintf (stderr, "%s: buf_create failed\n", __func__);
-		return EXIT_FAILURE;
-	}
-
-	printf ("%s: allocated buffer of %zu B\n", __func__, buf->size);
+	size_t size;
+	buf_t *buf;
+	uint8_t *data;
+	size_t count;
 
 	if (!(f = file_create (argv[1]))) {
 		goto fail_file_create;
@@ -37,27 +33,54 @@ main (int    argc,
 
 	if (!file_open (f, "rb")) {
 		fprintf (stderr, "%s: file_open failed\n", __func__);
-	} else {
-		printf ("%s: opened '%s'\n"
-		        "%s: testing file_open by attempting to reopen "
-		        "the same file...\n",
-		        __func__, file_path (f), __func__);
+		goto fail_destroy_file;
+	}
 
-		if (!file_open (f, "rb")) {
-			printf ("%s: file_open failed; this is a good "
-			        "thing because that's what was supposed "
-			        "to happen here\n", __func__);
+	printf ("%s: opened '%s'\n", __func__, file_path (f));
+
+	if (!file_size (f, &size)) {
+		printf ("%s: file_size failed\n", __func__);
+		goto fail_close_destroy_file;
+	}
+
+	printf ("%s: file size is %zu B, trying to create buffer\n",
+	        __func__, size);
+
+	if (!(buf = buf_create (size + 1))) {
+		fprintf (stderr, "%s: buf_create failed\n", __func__);
+		goto fail_close_destroy_file;
+	}
+
+	printf ("%s: created buffer of %zu B, trying to reserve %zu B\n",
+	        __func__, buf->size, size + 1);
+
+	if (!(data = buf_alloc (buf, size + 1))) {
+		fprintf (stderr, "%s: buf_alloc failed\n", __func__);
+		goto fail_destroy_buf;
+	}
+
+	count = 0;
+	if (!file_read (f, size + 1, data, &count)) {
+		if (count > 0) {
+			fprintf (stderr, "%s: file_read failed: buffer "
+			         "needs to be at least %zu B\n",
+			         __func__, count);
+		} else {
+			fprintf (stderr, "%s: file_read failed\n", __func__);
 		}
+	fail_destroy_buf:
+		buf_destroy (&buf);
+	fail_close_destroy_file:
+		(void) file_close (f);
+	fail_destroy_file:
+		file_destroy (&f);
+		return EXIT_FAILURE;
+	}
 
-		bool r = file_read (f, buf->size - buf->used,
-		                    buf->data, &buf->used);
-		printf ("%s: file_read returned %s, buf->used==%zu\n",
-			__func__, r ? "true" : "false", buf->used);
+	printf ("%s: read %zu B\n", __func__, count);
 
-		if (!file_close (f)) {
-			fprintf (stderr, "%s: file_close failed\n",
-			         __func__);
-		}
+	if (!file_close (f)) {
+		fprintf (stderr, "%s: file_close failed\n", __func__);
 	}
 
 	file_destroy (&f);
@@ -77,7 +100,7 @@ main (int    argc,
 	} else {
 		printf ("%s: opened '%s'\n", __func__, file_path (f));
 
-		if (!file_write (f, buf->used, buf->data)) {
+		if (!file_write (f, count, data)) {
 			fprintf (stderr, "%s: file_write failed\n",
 			         __func__);
 		}
