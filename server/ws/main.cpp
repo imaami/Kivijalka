@@ -1,6 +1,7 @@
 #include <QtCore/QCoreApplication>
 #include <QtCore/QThread>
 #include "global.h"
+#include "display.h"
 #include "img_file.h"
 #include "watcher.h"
 #include "diskreader.h"
@@ -16,9 +17,16 @@ int main(int argc, char *argv[])
 	(void) img_file_set_path (&capture_file, "/dev/shm/kivijalka/cap-0510.png");
 	(void) img_file_set_path (&output_file, "/dev/shm/kivijalka/out-0510.png");
 
+	display_t *d;
+	if (!(d = display_create (1280, 1024))) {
+		return -1;
+	}
+
 	watcher_t *w;
 	if (!(w = watcher_create (capture_file.path))) {
 	fail:
+		display_destroy (d);
+		d = NULL;
 		global_fini ();
 		return -1;
 	}
@@ -60,9 +68,15 @@ int main(int argc, char *argv[])
 	QObject::connect(server, &WSServer::closed, &a, &QCoreApplication::quit);
 
 	int r = a.exec();
+
 	watcher_stop (w);
 	watcher_destroy (w);
 	w = NULL;
+
+	display_destroy (d);
+	d = NULL;
+
 	global_fini ();
+
 	return r;
 }

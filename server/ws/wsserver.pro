@@ -19,6 +19,7 @@ SOURCES += \
     diskwriter.cpp \
     read-file.c \
     watcher.c \
+    display.c \
     global.c \
     path.c \
     file.c \
@@ -34,6 +35,7 @@ HEADERS += \
     diskwriter.h \
     read-file.h \
     watcher.h \
+    display.h \
     global.h \
     path.h \
     file.h \
