@@ -14,6 +14,8 @@ extern "C" {
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "buf.h"
+
 typedef struct file file_t;
 
 extern file_t *
@@ -46,6 +48,11 @@ extern bool
 file_write (file_t        *f,
             size_t         size,
             const uint8_t *data);
+
+extern bool
+file_read_to_buf (file_t *f,
+                  buf_t  *buf,
+                  size_t *count);
 
 #ifdef __cplusplus
 }

@@ -9,6 +9,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "buf.h"
+#include "private/buf.h"
+
 struct file {
 	FILE        *fp;
 	int          fd;
@@ -257,5 +260,48 @@ file_write (struct file   *f,
 	if (f && data) {
 		return _file_write (f, size, data);
 	}
+	return false;
+}
+
+__attribute__((always_inline))
+static inline bool
+_file_read_to_buf (struct file *f,
+                   buf_t       *buf,
+                   size_t      *count)
+{
+	size_t fs;
+	uint8_t *data;
+
+	rewind (f->fp);
+
+	if (!_file_size (f, &fs)) {
+		fprintf (stderr, "%s: unknown file size\n", __func__);
+	} else if (!(data = buf_alloc (buf, ++fs))) {
+		/*
+		 * if buffer is too small set *count to
+		 * total required size and return false
+		 */
+		*count = fs;
+		fprintf (stderr, "%s: buffer too small\n", __func__);
+	} else if (!file_fread (f->fp, data, &fs)) {
+		fprintf (stderr, "%s: couldn't read file\n", __func__);
+	} else {
+		*count = fs;
+		return true;
+	}
+
+	return false;
+}
+
+
+bool
+file_read_to_buf (struct file *f,
+                  buf_t       *buf,
+                  size_t      *count)
+{
+	if (f && buf && count) {
+		return _file_read_to_buf (f, buf, count);
+	}
+	fprintf (stderr, "%s: invalid arguments\n", __func__);
 	return false;
 }
