@@ -1,4 +1,4 @@
-/** \buf buf.h
+/** \file buf.h
  *
  * Memory buffer.
  */
