@@ -1,4 +1,5 @@
 #include "file.h"
+#include "buf.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -16,18 +17,15 @@ main (int    argc,
 		return EXIT_FAILURE;
 	}
 
-	size_t size = (size_t) 1 << 24;
-	uint8_t *data = malloc (size);
+	buf_t *buf;
 	file_t *f;
-	size_t count;
 
-	if (!data) {
-		fprintf (stderr, "%s: malloc: %s\n",
-		         __func__, strerror (errno));
+	if (!(buf = buf_create ((size_t) 1 << 24))) {
+		fprintf (stderr, "%s: buf_create failed\n", __func__);
 		return EXIT_FAILURE;
 	}
 
-	printf ("%s: allocated buffer of %zu B\n", __func__, size);
+	printf ("%s: allocated buffer of %zu B\n", __func__, buf->size);
 
 	if (!(f = file_create (argv[1]))) {
 		goto fail_file_create;
@@ -50,9 +48,10 @@ main (int    argc,
 			        "to happen here\n", __func__);
 		}
 
-		bool r = file_read (f, size, data, &count);
-		printf ("%s: file_read returned %s, count==%zu\n",
-			__func__, r ? "true" : "false", count);
+		bool r = file_read (f, buf->size - buf->used,
+		                    buf->data, &buf->used);
+		printf ("%s: file_read returned %s, buf->used==%zu\n",
+			__func__, r ? "true" : "false", buf->used);
 
 		if (!file_close (f)) {
 			fprintf (stderr, "%s: file_close failed\n",
@@ -65,8 +64,7 @@ main (int    argc,
 	if (!(f = file_create (argv[2]))) {
 	fail_file_create:
 		fprintf (stderr, "%s: file_create failed\n", __func__);
-		free (data);
-		data = NULL;
+		buf_destroy (&buf);
 		return EXIT_FAILURE;
 	}
 
@@ -78,7 +76,7 @@ main (int    argc,
 	} else {
 		printf ("%s: opened '%s'\n", __func__, file_path (f));
 
-		if (!file_write (f, count, data)) {
+		if (!file_write (f, buf->used, buf->data)) {
 			fprintf (stderr, "%s: file_write failed\n",
 			         __func__);
 		}
@@ -90,9 +88,7 @@ main (int    argc,
 	}
 
 	file_destroy (&f);
-
-	free (data);
-	data = NULL;
+	buf_destroy (&buf);
 
 	return EXIT_SUCCESS;
 }
