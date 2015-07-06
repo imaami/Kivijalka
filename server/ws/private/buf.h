@@ -79,13 +79,13 @@ buf_destroy (struct buf **b)
  *         an allocated object.
  */
 __attribute__((always_inline))
-static inline char *
+static inline uint8_t *
 buf_alloc (struct buf *b,
            size_t      size)
 {
-	char *p;
+	uint8_t *p;
 	if (b->size - b->used >= size) {
-		p = (char *) &b->data[b->used];
+		p = b->data + b->used;
 		b->used += size;
 	} else {
 		p = NULL;

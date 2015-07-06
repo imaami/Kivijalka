@@ -16,7 +16,7 @@ main (int    argc,
 	        "%s: current pointer: %p\n",
 	        __func__, b->size, __func__, (char *) b->data);
 
-	char *p = buf_alloc (b, 1920*4);
+	uint8_t *p = buf_alloc (b, 1920*4);
 
 	printf ("%s: allocated %zu B\n"
 	        "%s: pointer is now %p\n",
@@ -24,7 +24,7 @@ main (int    argc,
 
 	p = buf_alloc (b, 1920*1080*4);
 	printf ("%s: purposefully attempted excessive allocation,"
-	        " returned pointer was %p\n", __func__, p);
+	        " returned pointer was %p\n", __func__, (char *) p);
 
 	buf_destroy (&b);
 	b = NULL;
