@@ -1,4 +1,5 @@
 #include "buf.h"
+#include "private/buf.h"
 
 int
 main (int    argc,

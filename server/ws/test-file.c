@@ -1,5 +1,6 @@
 #include "file.h"
 #include "buf.h"
+#include "private/buf.h"
 
 #include <stdio.h>
 #include <stdint.h>
