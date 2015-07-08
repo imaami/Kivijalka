@@ -31,6 +31,18 @@ buf_create (size_t size);
 extern void
 buf_destroy (buf_t **b);
 
+extern size_t
+buf_size (buf_t *b);
+
+extern size_t
+buf_used (buf_t *b);
+
+extern size_t
+buf_unused (buf_t *b);
+
+extern uint8_t *
+buf_ptr (buf_t *b);
+
 /**
  * @brief Allocate (reserve) space within an existing buffer object.
  * @param b Pointer to the buffer pointer.

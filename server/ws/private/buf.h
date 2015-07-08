@@ -59,13 +59,41 @@ _buf_destroy (struct buf **b)
 }
 
 __attribute__((always_inline))
+static inline size_t
+_buf_size (struct buf *b)
+{
+	return b->size;
+}
+
+__attribute__((always_inline))
+static inline size_t
+_buf_used (struct buf *b)
+{
+	return b->used;
+}
+
+__attribute__((always_inline))
+static inline size_t
+_buf_unused (struct buf *b)
+{
+	return b->size - b->used;
+}
+
+__attribute__((always_inline))
+static inline uint8_t *
+_buf_ptr (struct buf *b)
+{
+	return b->data + b->used;
+}
+
+__attribute__((always_inline))
 static inline uint8_t *
 _buf_alloc (struct buf *b,
             size_t      size)
 {
 	uint8_t *p;
-	if (b->size - b->used >= size) {
-		p = b->data + b->used;
+	if (_buf_unused (b) >= size) {
+		p = _buf_ptr (b);
 		b->used += size;
 	} else {
 		p = NULL;

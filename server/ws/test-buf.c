@@ -1,5 +1,7 @@
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "buf.h"
-#include "private/buf.h"
 
 int
 main (int    argc,
@@ -14,13 +16,13 @@ main (int    argc,
 
 	printf ("%s: created buffer; %zu B free space\n"
 	        "%s: current pointer: %p\n",
-	        __func__, b->size, __func__, (char *) b->data);
+	        __func__, buf_size (b), __func__, (char *) buf_ptr (b));
 
 	uint8_t *p = buf_alloc (b, 1920*4);
 
 	printf ("%s: allocated %zu B\n"
 	        "%s: pointer is now %p\n",
-	        __func__, b->used, __func__, (char *) (b->data + b->used));
+	        __func__, buf_used (b), __func__, (char *) buf_ptr (b));
 
 	p = buf_alloc (b, 1920*1080*4);
 	printf ("%s: purposefully attempted excessive allocation,"
