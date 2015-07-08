@@ -24,15 +24,9 @@ struct buf {
 	uint8_t data[]; //!< Buffer contents
 } __attribute__((packed,gcc_struct));
 
-/**
- * @brief Create (allocate) a new data buffer.
- * @param size Number of bytes the buffer should have available.
- * @return Pointer to newly allocated buffer object if the operation
- *         succeeded, NULL otherwise.
- */
 __attribute__((always_inline))
 static inline struct buf *
-buf_create (size_t size)
+_buf_create (size_t size)
 {
 	if (SIZE_MAX - offsetof (struct buf, data) >= size) {
 		struct buf *b;
@@ -51,13 +45,9 @@ buf_create (size_t size)
 	return NULL;
 }
 
-/**
- * @brief Destroy a buffer object.
- * @param b Pointer to the buffer pointer.
- */
 __attribute__((always_inline))
 static inline void
-buf_destroy (struct buf **b)
+_buf_destroy (struct buf **b)
 {
 	struct buf *_b = *b;
 	if (_b) {
@@ -68,20 +58,10 @@ buf_destroy (struct buf **b)
 	}
 }
 
-/**
- * @brief Allocate (reserve) space within an existing buffer object.
- * @param b Pointer to the buffer pointer.
- * @param size Number of bytes to allocate.
- * @return Pointer to the first byte of the allocated space
- *         if the operation succeeded, NULL otherwise. Do not
- *         free() the returned pointer - it is just a pointer
- *         into the buffer object's internal data array, not
- *         an allocated object.
- */
 __attribute__((always_inline))
 static inline uint8_t *
-buf_alloc (struct buf *b,
-           size_t      size)
+_buf_alloc (struct buf *b,
+            size_t      size)
 {
 	uint8_t *p;
 	if (b->size - b->used >= size) {
@@ -93,17 +73,9 @@ buf_alloc (struct buf *b,
 	return p;
 }
 
-/**
- * @brief Reset a buffer's used bytes counter. No data is zeroed out,
- *        but the next call to \a buf_alloc will return a pointer
- *        which points the beginning of the data array, and writing to
- *        it will therefore overwrite previously written bytes.
- * @param b Pointer to the buffer pointer.
- * @return Pointer to the first byte of the buffer's data array.
- */
 __attribute__((always_inline))
 static inline char *
-buf_reset (struct buf *b)
+_buf_reset (struct buf *b)
 {
 	b->used = 0;
 	return (char *) b->data;

@@ -1,19 +1,9 @@
-/** \file buf.h
+/** \file buf.c
  *
- * Memory buffer.
+ * Memory buffer object.
  */
 
-#ifndef __KIVIJALKA_BUF_H__
-#define __KIVIJALKA_BUF_H__
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#include <stddef.h>
-#include <stdint.h>
-
-typedef struct buf buf_t;
+#include "private/buf.h"
 
 /**
  * @brief Create (allocate) a new data buffer.
@@ -21,15 +11,23 @@ typedef struct buf buf_t;
  * @return Pointer to newly allocated buffer object if the operation
  *         succeeded, NULL otherwise.
  */
-extern buf_t *
-buf_create (size_t size);
+struct buf *
+buf_create (size_t size)
+{
+	return _buf_create (size);
+}
 
 /**
  * @brief Destroy a buffer object.
  * @param b Pointer to the buffer pointer.
  */
-extern void
-buf_destroy (buf_t **b);
+void
+buf_destroy (struct buf **b)
+{
+	if (b) {
+		_buf_destroy (b);
+	}
+}
 
 /**
  * @brief Allocate (reserve) space within an existing buffer object.
@@ -41,9 +39,12 @@ buf_destroy (buf_t **b);
  *         into the buffer object's internal data array, not
  *         an allocated object.
  */
-extern uint8_t *
-buf_alloc (buf_t  *b,
-           size_t  size);
+uint8_t *
+buf_alloc (struct buf *b,
+           size_t      size)
+{
+	return (b) ? _buf_alloc (b, size) : NULL;
+}
 
 /**
  * @brief Reset a buffer's used bytes counter. No data is zeroed out,
@@ -53,11 +54,8 @@ buf_alloc (buf_t  *b,
  * @param b Pointer to the buffer pointer.
  * @return Pointer to the first byte of the buffer's data array.
  */
-extern char *
-buf_reset (buf_t *b);
-
-#ifdef __cplusplus
+char *
+buf_reset (struct buf *b)
+{
+	return (b) ? _buf_reset (b) : NULL;
 }
-#endif
-
-#endif // __KIVIJALKA_BUF_H__

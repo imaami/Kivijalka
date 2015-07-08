@@ -2,8 +2,8 @@ all: test wsserver
 
 test: test-path test-watcher test-img
 
-test-buf: buf.h test-buf.c
-	$(CC) $(CFLAGS) -std=gnu11 test-buf.c -o test-buf
+test-buf: buf.o test-buf.o
+	$(CC) $(CFLAGS) -std=gnu11 buf.o test-buf.o -o test-buf
 
 test-path: path.o test-path.o
 	$(CC) $(CFLAGS) -std=gnu11 path.o test-path.o -o test-path
@@ -47,6 +47,9 @@ task.o: task.c
 file.o: file.c
 	$(CC) $(CFLAGS) -std=gnu11 -c file.c -o file.o
 
+buf.o: buf.c
+	$(CC) $(CFLAGS) -std=gnu11 -c buf.c -o buf.o
+
 display.o: display.c
 	$(CC) $(CFLAGS) -std=gnu11 -c display.c -o display.o
 
@@ -68,6 +71,9 @@ test-task.o: test-task.c
 test-file.o: test-file.c
 	$(CC) $(CFLAGS) -std=gnu11 -c test-file.c -o test-file.o
 
+test-buf.o: test-buf.c
+	$(CC) $(CFLAGS) -std=gnu11 -c test-buf.c -o test-buf.o
+
 test-display.o: test-display.c
 	$(CC) $(CFLAGS) -std=gnu11 -c test-display.c -o test-display.o
 
@@ -80,7 +86,7 @@ clean: clean-test clean-wsserver
 clean-test: clean-test-buf clean-test-path clean-test-watcher clean-test-img clean-test-task clean-test-file clean-test-display
 
 clean-test-buf:
-	rm -f test-buf
+	rm -f test-buf test-buf.o buf.o
 
 clean-test-path:
 	rm -f test-path test-path.o path.o
