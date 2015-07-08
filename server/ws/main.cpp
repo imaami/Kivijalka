@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
 	ImgWorker imgWorker;
 
 	QThread diskWriterThread;
-	DiskWriter diskWriter;
+	DiskWriter diskWriter(output_file.path);
 
 	if (!watcher_prepare (w)) {
 		watcher_destroy (w);
