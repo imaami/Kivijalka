@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
 	DiskReader diskReader (w);
 
 	QThread imgWorkerThread;
-	ImgWorker imgWorker;
+	ImgWorker imgWorker (d);
 
 	QThread diskWriterThread;
 	DiskWriter diskWriter(output_file.path);
