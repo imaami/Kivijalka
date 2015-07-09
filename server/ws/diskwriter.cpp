@@ -20,7 +20,7 @@ DiskWriter::~DiskWriter()
 void DiskWriter::process()
 {
 	if (!display_file) {
-		std::fprintf (stderr, "DiskWriter::%s: file_create failed,"
+		std::fprintf (stderr, "DiskWriter::%s: file_create failed, "
 		              "can't run thread\n", __func__);
 		return;
 	}
