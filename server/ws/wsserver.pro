@@ -23,6 +23,7 @@ SOURCES += \
     global.c \
     path.c \
     file.c \
+    buf.c \
     img_file.c \
     img_data.c
 
@@ -39,5 +40,6 @@ HEADERS += \
     global.h \
     path.h \
     file.h \
+    buf.h \
     img_file.h \
     img_data.h
