@@ -185,6 +185,17 @@ update_banner (QImage              *banner,
 	b = QImage();
 }
 
+__attribute__((always_inline))
+static inline void
+render_display (QImage *output,
+                QImage *capture,
+                QImage *banner,
+                int     bx,
+                int     by)
+{
+	QPainter pr(output);
+}
+
 void ImgWorker::process()
 {
 	if (!display) {
@@ -206,7 +217,7 @@ void ImgWorker::process()
 	QColor bgcolor(0, 0, 0, 255);
 	enum QImage::Format fmt = QImage::Format_ARGB32_Premultiplied;
 	QImage capture(dw, dh, fmt);
-	QImage banner;
+	QImage banner, output;
 	capture.fill (bgcolor);
 	QPainter pr(&capture);
 
@@ -223,18 +234,18 @@ void ImgWorker::process()
 
 			if (bd) {
 				goto have_banner;
-			} else {
-				goto do_render;
 			}
+
 		} else if (bd) {
 		have_banner:
 			update_banner (&banner, bd, fmt);
 
-		do_render:
-			std::printf ("render\n");
 		} else {
 			continue;
 		}
+
+		render_display (&output, &capture, &banner,
+		                (int) banner_x, (int) banner_y);
 
 /*
 		QByteArray bar;
