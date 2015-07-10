@@ -91,6 +91,100 @@ fmtstr (enum QImage::Format fmt)
 	return "unknown";
 }
 
+__attribute__((always_inline))
+static inline void
+update_capture (QImage     *capture,
+                img_data_t *img,
+                int         dw,
+                int         dh,
+                QColor     &bgcolor,
+                QPainter   *pr)
+{
+	QImage c;
+
+	if (c.loadFromData ((const uchar *) img->data, (int) img->size)) {
+		int cw = c.width();
+		int ch = c.height();
+
+		if (cw < 1 || ch < 1) {
+			goto capture_load_failed;
+		}
+
+		std::printf ("ImgWorker::%s: loaded new capture: "
+		             "w=%d h=%d fmt=%s\n", __func__,
+		             c.width(), c.height(), fmtstr (c.format()));
+
+		if (cw != dw || ch != dh) {
+			c = c.scaled (dw, dh,
+			              Qt::KeepAspectRatio,
+			              Qt::SmoothTransformation);
+			cw = c.width();
+			ch = c.height();
+			if (cw < 1 || ch < 1) {
+				goto capture_load_failed;
+			}
+			std::printf ("ImgWorker::%s: scaled capture to %dx%d\n",
+			             __func__, cw, ch);
+		}
+
+		int dx = (cw < dw) ? ((dw - cw) & ~1) >> 1 : 0;
+		int dy = (ch < dh) ? ((dh - ch) & ~1) >> 1 : 0;
+
+		if (dx > 0) {
+			pr->setCompositionMode (QPainter::CompositionMode_Source);
+			pr->fillRect (0, 0, dx, dh, bgcolor);
+			pr->fillRect (dx + cw, 0, dw - (dx + cw), dh, bgcolor);
+			if (dy > 0) {
+				goto draw_horiz_border;
+			}
+		} else if (dy > 0) {
+			pr->setCompositionMode (QPainter::CompositionMode_Source);
+		draw_horiz_border:
+			pr->fillRect (0, 0, dw, dy, bgcolor);
+			pr->fillRect (0, dy + ch, dw, dh - (dy + ch), bgcolor);
+		}
+
+		pr->setCompositionMode (QPainter::CompositionMode_SourceOver);
+		pr->drawImage (dx, dy, c);
+	} else {
+	capture_load_failed:
+		capture->fill (bgcolor);
+		std::fprintf (stderr, "ImgWorker::%s: couldn't load capture "
+		              "image, filled with background color instead\n",
+		              __func__);
+	}
+
+	c = QImage();
+}
+
+__attribute__((always_inline))
+static inline void
+update_banner (QImage              *banner,
+               img_data_t          *img,
+               enum QImage::Format  fmt)
+{
+	QImage b;
+
+	if (b.loadFromData ((const uchar *) img->data, (int) img->size)) {
+		std::printf ("ImgWorker::%s: loaded new banner: "
+		             "w=%d h=%d fmt=%s\n", __func__,
+		             b.width(), b.height(), fmtstr (b.format()));
+
+		if (b.format() == fmt) {
+			*banner = b.copy();
+		} else {
+			std::printf ("ImgWorker::%s: converting banner format to %s\n",
+			             __func__, fmtstr (fmt));
+			*banner = b.convertToFormat (fmt);
+		}
+	} else {
+		std::fprintf (stderr, "ImgWorker::%s: couldn't load banner, "
+		              "keeping old one\n", __func__);
+	}
+
+	b = QImage();
+}
+
 void ImgWorker::process()
 {
 	if (!display) {
@@ -109,14 +203,12 @@ void ImgWorker::process()
 		return;
 	}
 
-	int dx = 0, dy = 0,
-	    bw = 0, bh = 0,
-	    bx = 0, by = 0;
+	QColor bgcolor(0, 0, 0, 255);
 	enum QImage::Format fmt = QImage::Format_ARGB32_Premultiplied;
 	QImage capture(dw, dh, fmt);
 	QImage banner;
-
-	capture.fill (QColor (0, 0, 0, 255));
+	capture.fill (bgcolor);
+	QPainter pr(&capture);
 
 	for (;;) {
 		if (sem_wait (&process_sem)) {
@@ -127,43 +219,7 @@ void ImgWorker::process()
 		img_data_t *bd = img_file_steal_data (&banner_file);
 
 		if (cd) {
-			QImage c;
-			if (c.loadFromData ((const uchar *) cd->data,
-			                    (int) cd->size)) {
-				int cw = c.width(), ch = c.height();
-				if (cw < 1 || ch < 1) {
-					goto capture_load_failed;
-				}
-				if (cw != dw || ch != dh) {
-					c = c.scaled (dw, dh,
-					              Qt::KeepAspectRatio,
-					              Qt::SmoothTransformation);
-					cw = c.width();
-					ch = c.height();
-					if (cw < 1 || ch < 1) {
-						goto capture_load_failed;
-					}
-					std::printf ("ImgWorker::%s: scaled capture image\n", __func__);
-				}
-				dx = (cw < dw) ? ((dw - cw) & ~1) >> 1 : 0;
-				dy = (ch < dh) ? ((dh - ch) & ~1) >> 1 : 0;
-				c.setOffset (QPoint (dx, dy));
-				QPainter pr(&capture);
-//				pr.drawImage();
-			} else {
-			capture_load_failed:
-				c = QImage();
-				std::fprintf (stderr, "ImgWorker::%s: can't "
-				              "load captured image, filling "
-				              "with empty pixels instead\n",
-				              __func__);
-			fill_capture:
-				capture.fill (QColor (0, 0, 0, 255));
-			}
-
-			std::printf ("ImgWorker::%s: capture width=%d height=%d depth=%d format=%s\n",
-			             __func__, capture.width(), capture.height(),
-			             capture.depth(), fmtstr (capture.format()));
+			update_capture (&capture, cd, dw, dh, bgcolor, &pr);
 
 			if (bd) {
 				goto have_banner;
@@ -172,14 +228,8 @@ void ImgWorker::process()
 			}
 		} else if (bd) {
 		have_banner:
-			if (banner.loadFromData ((const uchar *) bd->data,
-			                         (int) bd->size)) {
-				if (banner.format() != QImage::Format_ARGB32) {
-					std::printf ("ImgWorker::%s: converting banner format from %s to %s\n",
-					             __func__, fmtstr (banner.format()), fmtstr (QImage::Format_ARGB32));
-					banner = banner.convertToFormat (QImage::Format_ARGB32);
-				}
-			}
+			update_banner (&banner, bd, fmt);
+
 		do_render:
 			std::printf ("render\n");
 		} else {
