@@ -4,6 +4,8 @@
 #include <QtCore/QDir>
 #include <QtCore/QDirIterator>
 
+#include "global.h"
+
 QT_USE_NAMESPACE
 
 BannerCache::BannerCache(const QString &dirPath,
@@ -26,6 +28,16 @@ BannerCache::BannerCache(const QString &dirPath,
 		std::printf("%s: %d x %d\n",
 		            b->file.toUtf8().data(),
 		            b->img.width(), b->img.height());
+	}
+
+	if (this->list.size() > 0) {
+		const Banner *b = this->list.at(0);
+		if (b) {
+			img_data_t *imd = img_data_new_from_file (b->file.toUtf8().data());
+			if (imd) {
+				img_file_replace_data (&banner_file, imd);
+			}
+		}
 	}
 }
 
