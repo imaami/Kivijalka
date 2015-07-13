@@ -49,6 +49,14 @@ extern uint32_t
 display_height (display_t *d);
 
 /**
+ * @brief Get display's pixel buffer.
+ * @param d Pointer to display object.
+ * @return Pointer to display's pixel buffer.
+ */
+extern uint32_t *
+display_pixbuf (display_t *d);
+
+/**
  * @brief Write a rectangle of pixels to display.
  * @param d Pointer to display object.
  * @param dst_x Horizontal offset of the rectangle's
@@ -70,6 +78,26 @@ display_write (display_t *d,
                uint32_t   src_y,
                uint32_t   rect_w,
                uint32_t   rect_h);
+
+/**
+ * @brief Render display pixels.
+ * @param d Pointer to display object.
+ * @param bg_data Pointer to the background image's pixel data. The background
+ *                image is assumed to be the same size as the display itself.
+ * @param ol_data Pointer to the overlay image's pixel data.
+ * @param ol_w Overlay image width.
+ * @param ol_h Overlay image height.
+ * @param ol_x Overlay horizontal offset from left side of display.
+ * @param ol_y Overlay vertical offset from top of display.
+ */
+extern bool
+display_render (display_t *d,
+                uint32_t  *bg_data,
+                uint32_t  *ol_data,
+                uint32_t   ol_w,
+                uint32_t   ol_h,
+                uint32_t   ol_x,
+                uint32_t   ol_y);
 
 #ifdef __cplusplus
 }

@@ -105,6 +105,13 @@ display_height (struct display *d)
 	return (d) ? d->height : 0;
 }
 
+uint32_t *
+display_pixbuf (struct display *d)
+{
+	return (d) ? d->pixbuf : NULL;
+}
+
+
 __attribute__((always_inline))
 static inline bool
 _display_write (uint32_t *dst,
@@ -167,6 +174,91 @@ display_write (struct display *d,
 	if (d && _display_write (d->pixbuf, d->width, d->height,
 	                         dst_x, dst_y, src, src_w, src_h,
 	                         src_x, src_y, rect_w, rect_h)) {
+		return true;
+	}
+	fprintf (stderr, "%s: invalid arguments\n", __func__);
+	return false;
+}
+
+typedef union {
+	uint32_t u32;
+	struct {
+		uint8_t b: 8;
+		uint8_t g: 8;
+		uint8_t r: 8;
+		uint8_t a: 8;
+	} __attribute__((gcc_struct,packed));
+} argb_t;
+
+__attribute__((always_inline))
+static inline void
+_display_render (uint32_t *dst,
+                 uint32_t  w,
+                 uint32_t  h,
+                 uint32_t *bg_data,
+                 uint32_t *ol_data,
+                 uint32_t  ol_w,
+                 uint32_t  ol_h,
+                 uint32_t  ol_x,
+                 uint32_t  ol_y)
+{
+	size_t x, y, ow = ol_x + ol_w, oh = ol_y + ol_h;
+
+	// vertical section above overlay
+	for (y = 0; y < ol_y; ++y) {
+		for (x = 0; x < w; ++x) {
+			dst[y * w + x] = bg_data[y * w + x];
+		}
+	}
+
+	// vertical section containing overlay
+	for (uint32_t *_o = ol_data; y < oh; ++y) {
+		// horizontal section at left side of overlay
+		for (x = 0; x < ol_x; ++x) {
+			dst[y * w + x] = bg_data[y * w + x];
+		}
+
+		// overlay
+		for (; x < ow; ++x, ++_o) {
+			// A over B premultiplied pixel sum
+			argb_t a = { .u32 = *_o },
+			       b = { .u32 = bg_data[y * w + x] };
+			float f = 1.0f - (a.a / 255.0f);
+			argb_t c = {
+				.a = 255,
+				.r = a.r + (uint8_t) (b.r * f),
+				.g = a.g + (uint8_t) (b.g * f),
+				.b = a.b + (uint8_t) (b.b * f)
+			};
+			dst[y * w + x] = c.u32;
+		}
+
+		// horizontal section at right side of overlay
+		for (; x < w; ++x) {
+			dst[y * w + x] = bg_data[y * w + x];
+		}
+	}
+
+	// vertical section below overlay
+	for (; y < h; ++y) {
+		for (x = 0; x < w; ++x) {
+			dst[y * w + x] = bg_data[y * w + x];
+		}
+	}
+}
+
+bool
+display_render (struct display *d,
+                uint32_t       *bg_data,
+                uint32_t       *ol_data,
+                uint32_t        ol_w,
+                uint32_t        ol_h,
+                uint32_t        ol_x,
+                uint32_t        ol_y)
+{
+	if (d && bg_data && ol_data) {
+		_display_render (d->pixbuf, d->width, d->height, bg_data,
+		                 ol_data, ol_w, ol_h, ol_x, ol_y);
 		return true;
 	}
 	fprintf (stderr, "%s: invalid arguments\n", __func__);
