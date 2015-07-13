@@ -8,6 +8,7 @@
 #include "imgworker.h"
 #include "diskwriter.h"
 #include "wsserver.h"
+#include "bannercache.h"
 
 int main(int argc, char *argv[])
 {
@@ -16,6 +17,8 @@ int main(int argc, char *argv[])
 	global_init (1024, 768, 640, 512);
 	(void) img_file_set_path (&capture_file, "/dev/shm/kivijalka/cap-0510.png");
 	(void) img_file_set_path (&output_file, "/dev/shm/kivijalka/out-0510.png");
+
+	BannerCache bannerCache("/usr/share/kivijalka/banners");
 
 	display_t *d;
 	if (!(d = display_create (1280, 1024))) {
@@ -63,8 +66,7 @@ int main(int argc, char *argv[])
 	diskReaderThread.start ();
 	watcher_start (w);
 
-	WSServer *server = new WSServer(8001, 1280, 1024, 640, 512, 1024, 768,
-	                                QString("/usr/share/kivijalka/banners"));
+	WSServer *server = new WSServer(8001, 1280, 1024, 640, 512, 1024, 768);
 	QObject::connect(server, &WSServer::closed, &a, &QCoreApplication::quit);
 
 	int r = a.exec();
