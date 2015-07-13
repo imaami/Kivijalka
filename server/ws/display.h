@@ -99,6 +99,16 @@ display_render (display_t *d,
                 uint32_t   ol_x,
                 uint32_t   ol_y);
 
+/**
+ * @brief Render display background pixels.
+ * @param d Pointer to display object.
+ * @param bg_data Pointer to the background image's pixel data. The background
+ *                image is assumed to be the same size as the display itself.
+ */
+extern bool
+display_render_bg (display_t *d,
+                   uint32_t  *bg_data);
+
 #ifdef __cplusplus
 }
 #endif

@@ -180,6 +180,32 @@ display_write (struct display *d,
 	return false;
 }
 
+__attribute__((always_inline))
+static inline void
+_display_render_bg (uint32_t *dst,
+                    uint32_t  w,
+                    uint32_t  h,
+                    uint32_t *bg_data)
+{
+	size_t n = w * h;
+	uint32_t *d = dst, *b = bg_data;
+	for (size_t i = 0; i < n; ++i) {
+		*d++ = *b++;
+	}
+}
+
+bool
+display_render_bg (struct display *d,
+                   uint32_t       *bg_data)
+{
+	if (d && bg_data) {
+		_display_render_bg (d->pixbuf, d->width, d->height, bg_data);
+		return true;
+	}
+	fprintf (stderr, "%s: invalid arguments\n", __func__);
+	return false;
+}
+
 typedef union {
 	uint32_t u32;
 	struct {
