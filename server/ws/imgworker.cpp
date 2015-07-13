@@ -187,13 +187,40 @@ update_banner (QImage              *banner,
 
 __attribute__((always_inline))
 static inline void
-render_display (QImage *output,
-                QImage *capture,
-                QImage *banner,
-                int     bx,
-                int     by)
+update_display (QImage              &capture,
+                QImage              &banner,
+                display_t           *d,
+                int                  dw,
+                int                  dh,
+                enum QImage::Format  fmt)
 {
-	QPainter pr(output);
+	bool r;
+	uint32_t *c = (uint32_t *) capture.constBits();
+	if (!banner.isNull()) {
+		uint32_t *b = (uint32_t *) banner.constBits();
+		uint32_t bw = (uint32_t) banner.width();
+		uint32_t bh = (uint32_t) banner.height();
+		uint32_t bx = capture.width() - bw;
+		uint32_t by = capture.height() - bh;
+		r = display_render (d, c, b, bw, bh, bx, by);
+	} else {
+		r = display_render_bg (d, c);
+	}
+	if (r) {
+		QImage img((const uchar *) display_pixbuf (d), dw, dh, fmt);
+		QByteArray bar;
+		QBuffer buf(&bar);
+		if (buf.open (QIODevice::WriteOnly)) {
+			if (img.save (&buf, "PNG")) {
+				img_data_t *imd;
+				if ((imd = img_data_new_from_buffer ((size_t) bar.size(), bar.constData()))) {
+					img_file_replace_data (&output_file, imd);
+					(void) img_file_post (&output_file);
+				}
+			}
+			buf.close();
+		}
+	}
 }
 
 void ImgWorker::process()
@@ -217,7 +244,7 @@ void ImgWorker::process()
 	QColor bgcolor(0, 0, 0, 255);
 	enum QImage::Format fmt = QImage::Format_ARGB32_Premultiplied;
 	QImage capture(dw, dh, fmt);
-	QImage banner, output;
+	QImage banner;
 	capture.fill (bgcolor);
 	QPainter pr(&capture);
 
@@ -244,24 +271,7 @@ void ImgWorker::process()
 			continue;
 		}
 
-		render_display (&output, &capture, &banner,
-		                (int) banner_x, (int) banner_y);
-
-/*
-		QByteArray bar;
-		QBuffer buf(&bar);
-			if (buf.open (QIODevice::WriteOnly)) {
-				if (img.save (&buf, "PNG")) {
-					
-				}
-		}
-*/
-
-
-
-
-//			img_file_replace_data (&output_file, imd);
-//			(void) img_file_post (&output_file);
+		update_display (capture, banner, display, dw, dh, fmt);
 
 		if (cd) {
 			img_data_free (cd);
