@@ -15,10 +15,21 @@ extern "C" {
 
 typedef struct list_head list_head_t;
 
-__attribute__((gcc_struct,packed))
 struct list_head {
 	struct list_head *next, *prev;
-};
+} __attribute__((gcc_struct,packed));
+
+__attribute__((always_inline))
+static inline void
+list_init (list_head_t *list)
+{
+	list->next = list;
+	list->prev = list;
+}
+
+#ifdef __cplusplus
+}
+#else
 
 /**
  * container_of - cast a member of a structure out to the containing structure
@@ -45,14 +56,6 @@ struct list_head {
 
 #define LIST_HEAD(name) \
 	struct list_head name = LIST_HEAD_INIT(name)
-
-__attribute__((always_inline))
-static inline void
-list_init (list_head_t *list)
-{
-	list->next = list;
-	list->prev = list;
-}
 
 /*
  * Insert a new entry between two known consecutive entries.
@@ -631,8 +634,6 @@ list_splice_tail_init(struct list_head *list,
 #define list_safe_reset_next(pos, n, member)				\
 	n = list_next_entry(pos, member)
 
-#ifdef __cplusplus
-}
-#endif
+#endif // !__cplusplus
 
 #endif // __LIST_H__
