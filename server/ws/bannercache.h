@@ -3,8 +3,9 @@
 
 #include <QtCore/QObject>
 #include <QtCore/QString>
-#include <QtCore/QList>
+
 #include "banner.h"
+#include "list.h"
 
 class BannerCache : public QObject
 {
@@ -14,18 +15,9 @@ public:
 	                     QObject *parent = Q_NULLPTR);
 	~BannerCache();
 
-	bool add(Banner &b);
-	bool del(Banner &b);
-	Banner *get (const QString &filePath);
-
-signals:
-	void bannerAdded(Banner *);
-	void bannerRemoved(const QString &);
-	void bannerModified(Banner *);
-
 private:
 	QString path;
-	QList<Banner *> list;
+	list_head_t list;
 };
 
 #endif // BANNERCACHE_H

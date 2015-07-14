@@ -11,7 +11,6 @@ QMAKE_CXXFLAGS += -march=native -O3 -std=gnu++11
 
 SOURCES += \
     main.cpp \
-    banner.cpp \
     bannercache.cpp \
     wsserver.cpp \
     diskreader.cpp \
@@ -20,6 +19,7 @@ SOURCES += \
     read-file.c \
     watcher.c \
     display.c \
+    banner.c \
     global.c \
     path.c \
     file.c \
@@ -28,7 +28,6 @@ SOURCES += \
     img_data.c
 
 HEADERS += \
-    banner.h \
     bannercache.h \
     wsserver.h \
     diskreader.h \
@@ -37,6 +36,7 @@ HEADERS += \
     read-file.h \
     watcher.h \
     display.h \
+    banner.h \
     global.h \
     path.h \
     file.h \

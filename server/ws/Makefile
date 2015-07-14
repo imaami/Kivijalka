@@ -23,6 +23,9 @@ test-file: file.o test-file.o
 test-display: display.o test-display.o
 	$(CC) $(CFLAGS) -std=gnu11 display.o test-display.o -o test-display
 
+test-banner: banner.o test-banner.o
+	$(CC) $(CFLAGS) -std=gnu11 banner.o test-banner.o -o test-banner
+
 global.o: global.c
 	$(CC) $(CFLAGS) -std=gnu11 -c global.c -o global.o
 
@@ -53,6 +56,9 @@ buf.o: buf.c
 display.o: display.c
 	$(CC) $(CFLAGS) -std=gnu11 -c display.c -o display.o
 
+banner.o: banner.c
+	$(CC) $(CFLAGS) -std=gnu11 -c banner.c -o banner.o
+
 read-file.o: read-file.c
 	$(CC) $(CFLAGS) -std=gnu11 -c read-file.c -o read-file.o
 
@@ -77,13 +83,16 @@ test-buf.o: test-buf.c
 test-display.o: test-display.c
 	$(CC) $(CFLAGS) -std=gnu11 -c test-display.c -o test-display.o
 
+test-banner.o: test-banner.c
+	$(CC) $(CFLAGS) -std=gnu11 -c test-banner.c -o test-banner.o
+
 .PHONY: wsserver
 wsserver:
 	+./build.sh
 
 clean: clean-test clean-wsserver
 
-clean-test: clean-test-buf clean-test-path clean-test-watcher clean-test-img clean-test-task clean-test-file clean-test-display
+clean-test: clean-test-buf clean-test-path clean-test-watcher clean-test-img clean-test-task clean-test-file clean-test-display clean-test-banner
 
 clean-test-buf:
 	rm -f test-buf test-buf.o buf.o
@@ -105,6 +114,9 @@ clean-test-file:
 
 clean-test-display:
 	rm -f test-display test-display.o display.o
+
+clean-test-banner:
+	rm -f test-banner test-banner.o banner.o
 
 clean-wsserver:
 	rm -f *.o

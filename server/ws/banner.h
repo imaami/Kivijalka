@@ -1,30 +1,59 @@
-#ifndef BANNER_H
-#define BANNER_H
+#ifndef __KIVIJALKA_BANNER_H__
+#define __KIVIJALKA_BANNER_H__
 
-#include <QtCore/QObject>
-#include <QtCore/QString>
-#include <QImage>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-class Banner : public QObject
-{
-	Q_OBJECT
-public:
-	explicit Banner(const QString &imageFile,
-	                QObject *parent = Q_NULLPTR);
-	~Banner();
+#include <stdint.h>
+#include <stdbool.h>
 
-	QString metadata();
-	QString file;
-	QImage img;
+#include "point.h"
+#include "sha1.h"
+#include "list.h"
 
-signals:
-	void placementChanged();
+typedef struct banner banner_t;
 
-private:
-	void constructMetadata();
-	void setPlacement(quint16 x, quint16 y);
-	struct { quint16 x, y; } placement;
-	QString json;
-};
+extern banner_t *
+banner_create (void);
 
-#endif // BANNER_H
+extern banner_t *
+banner_create_from_path (const char *path);
+
+extern void
+banner_destroy (banner_t **b);
+
+extern bool
+banner_set_name (banner_t   *b,
+                 const char *name);
+
+extern const char *
+banner_name (banner_t *b);
+
+extern void
+banner_set_offset (banner_t *b,
+                   point_t   offset);
+
+extern void
+banner_set_hash (banner_t *b,
+                 sha1_t    hash);
+
+extern void
+banner_print_hash (banner_t *b);
+
+extern banner_t *
+banner_next_in_list (banner_t    *b,
+                     list_head_t *list);
+
+extern void
+banner_add_to_list (banner_t    *b,
+                    list_head_t *list);
+
+extern void
+banner_del_from_list (banner_t *b);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // __KIVIJALKA_BANNER_H__
