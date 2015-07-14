@@ -19,7 +19,6 @@ public slots:
 
 private:
 	display_t *display;
-//	inline bool do_stuff();
 };
 
 #endif // IMGWORKER_H

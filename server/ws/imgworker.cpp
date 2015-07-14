@@ -24,16 +24,6 @@ ImgWorker::~ImgWorker()
 	this->display = NULL;
 }
 
-/*
-inline bool ImgWorker::img_save(QImage  &img,
-                                uint8_t *buf,
-                                size_t  *size)
-{
-	std::printf ("ImgWorker::%s\n", __func__);
-	return true;
-}
-*/
-
 __attribute__((always_inline))
 static inline const char *
 fmtstr (enum QImage::Format fmt)
