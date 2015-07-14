@@ -57,29 +57,6 @@ extern uint32_t *
 display_pixbuf (display_t *d);
 
 /**
- * @brief Write a rectangle of pixels to display.
- * @param d Pointer to display object.
- * @param dst_x Horizontal offset of the rectangle's
- *              top left corner on the display.
- * @param dst_y Vertical offset of the rectangle's
- *              top left corner on the display.
- * @param src Pointer to buffer containing the pixels to write.
- * @param src_w Total width of the source pixel buffer.
- * @param src_h Total height of the source pixel buffer.
- */
-extern bool
-display_write (display_t *d,
-               uint32_t   dst_x,
-               uint32_t   dst_y,
-               uint32_t  *src,
-               uint32_t   src_w,
-               uint32_t   src_h,
-               uint32_t   src_x,
-               uint32_t   src_y,
-               uint32_t   rect_w,
-               uint32_t   rect_h);
-
-/**
  * @brief Render display pixels.
  * @param d Pointer to display object.
  * @param bg_data Pointer to the background image's pixel data. The background
