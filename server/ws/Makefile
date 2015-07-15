@@ -23,8 +23,8 @@ test-file: buf.o file.o test-file.o
 test-display: display.o test-display.o
 	$(CC) $(CFLAGS) -std=gnu11 display.o test-display.o -o test-display
 
-test-banner: sha1.o banner.o test-banner.o
-	$(CC) $(CFLAGS) -std=gnu11 sha1.o banner.o test-banner.o -lssl -lcrypto -o test-banner
+test-banner: read-file.o img_data.o banner.o test-banner.o
+	$(CC) $(CFLAGS) -std=gnu11 read-file.o img_data.o banner.o test-banner.o -lssl -lcrypto -o test-banner
 
 test-sha1: file.o sha1.o test-sha1.o
 	$(CC) $(CFLAGS) -std=gnu11 file.o sha1.o test-sha1.o -lssl -lcrypto -o test-sha1
@@ -125,7 +125,7 @@ clean-test-display:
 	rm -f test-display test-display.o display.o
 
 clean-test-banner:
-	rm -f test-banner test-banner.o banner.o
+	rm -f test-banner test-banner.o banner.o img_data.o read-file.o
 
 clean-test-sha1:
 	rm -f test-sha1 test-sha1.o sha1.o

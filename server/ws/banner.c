@@ -52,15 +52,6 @@ banner_set_offset (struct banner *b,
 }
 
 void
-banner_set_hash (struct banner *b,
-                 sha1_t         hash)
-{
-	if (b) {
-		_banner_set_hash (b, hash);
-	}
-}
-
-void
 banner_print_hash (struct banner *b)
 {
 	if (b) {

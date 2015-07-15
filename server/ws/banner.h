@@ -35,10 +35,6 @@ banner_set_offset (banner_t *b,
                    point_t   offset);
 
 extern void
-banner_set_hash (banner_t *b,
-                 sha1_t    hash);
-
-extern void
 banner_print_hash (banner_t *b);
 
 extern banner_t *

@@ -7,6 +7,7 @@
 
 #include "../banner.h"
 #include "../list.h"
+#include "../img_data.h"
 #include "sha1.h"
 
 #include <stdio.h>
@@ -19,6 +20,7 @@ struct banner {
 	char        *name;
 	point_t      offset;
 	sha1_t       hash;
+	img_data_t  *data;
 };
 
 __attribute__((always_inline))
@@ -34,6 +36,7 @@ _banner_create (void)
 		b->name = NULL;
 		b->offset.u64 = 0;
 		_sha1_init (&b->hash);
+		b->data = NULL;
 	}
 
 	return b;
@@ -45,16 +48,26 @@ _banner_create_from_path (const char *path)
 {
 	struct banner *b;
 
-	if (!(b = aligned_alloc (64, sizeof (struct banner)))) {
-		fprintf (stderr, "%s: aligned_alloc failed\n", __func__);
-	} else {
-		list_init (&b->hook);
-		if (!(b->name = strdup (path))) {
-			fprintf (stderr, "%s: strdup failed: %s\n", __func__,
-			         strerror (errno));
+	if ((b = aligned_alloc (64, sizeof (struct banner)))) {
+		if ((b->data = img_data_new_from_file (path))) {
+			if ((b->name = strdup (path))) {
+				_sha1_gen (&b->hash, b->data->size,
+				           (uint8_t *) b->data->data);
+				b->offset.u64 = 0;
+				list_init (&b->hook);
+			} else {
+				fprintf (stderr, "%s: strdup failed: %s\n", __func__,
+				         strerror (errno));
+				free (b->data);
+				b->data = NULL;
+			}
+		} else {
+			fprintf (stderr, "%s: image loading failed\n", __func__);
+			free (b);
+			b = NULL;
 		}
-		b->offset.u64 = 0;
-		_sha1_init (&b->hash);
+	} else {
+		fprintf (stderr, "%s: aligned_alloc failed\n", __func__);
 	}
 
 	return b;
@@ -72,6 +85,10 @@ _banner_destroy (struct banner *b)
 	}
 	b->offset.u64 = 0;
 	_sha1_init (&b->hash);
+	if (b->data) {
+		free (b->data);
+		b->data = NULL;
+	}
 	free (b);
 }
 
@@ -97,18 +114,6 @@ _banner_set_offset (struct banner *b,
                     point_t        offset)
 {
 	b->offset.u64 = offset.u64;
-}
-
-__attribute__((always_inline))
-static inline void
-_banner_set_hash (struct banner *b,
-                  sha1_t         hash)
-{
-	b->hash.u32[0] = hash.u32[0];
-	b->hash.u32[1] = hash.u32[1];
-	b->hash.u32[2] = hash.u32[2];
-	b->hash.u32[3] = hash.u32[3];
-	b->hash.u32[4] = hash.u32[4];
 }
 
 __attribute__((always_inline))
