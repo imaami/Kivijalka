@@ -17,8 +17,8 @@ test-img: img.o test-img.o read-file.o
 test-task: task.o test-task.o
 	$(CC) $(CFLAGS) -std=gnu11 task.o test-task.o -lpthread -o test-task
 
-test-file: file.o test-file.o
-	$(CC) $(CFLAGS) -std=gnu11 file.o test-file.o -o test-file
+test-file: buf.o file.o test-file.o
+	$(CC) $(CFLAGS) -std=gnu11 buf.o file.o test-file.o -o test-file
 
 test-display: display.o test-display.o
 	$(CC) $(CFLAGS) -std=gnu11 display.o test-display.o -o test-display
@@ -110,7 +110,7 @@ clean-test-task:
 	rm -f test-task test-task.o task.o
 
 clean-test-file:
-	rm -f test-file test-file.o file.o
+	rm -f test-file test-file.o file.o buf.o
 
 clean-test-display:
 	rm -f test-display test-display.o display.o
