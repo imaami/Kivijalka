@@ -9,7 +9,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "buf.h"
 #include "private/buf.h"
 
 struct file {
@@ -266,7 +265,7 @@ file_write (struct file   *f,
 __attribute__((always_inline))
 static inline bool
 _file_read_to_buf (struct file *f,
-                   buf_t       *buf,
+                   struct buf  *buf,
                    size_t      *count)
 {
 	size_t fs;
@@ -276,7 +275,7 @@ _file_read_to_buf (struct file *f,
 
 	if (!_file_size (f, &fs)) {
 		fprintf (stderr, "%s: unknown file size\n", __func__);
-	} else if (!(data = buf_alloc (buf, ++fs))) {
+	} else if (!(data = _buf_alloc (buf, ++fs))) {
 		/*
 		 * if buffer is too small set *count to
 		 * total required size and return false
@@ -296,7 +295,7 @@ _file_read_to_buf (struct file *f,
 
 bool
 file_read_to_buf (struct file *f,
-                  buf_t       *buf,
+                  struct buf  *buf,
                   size_t      *count)
 {
 	if (f && buf && count) {
