@@ -32,11 +32,7 @@ _banner_create (void)
 		list_init (&b->hook);
 		b->name = NULL;
 		b->offset.u64 = 0;
-		b->hash.u32[0] = 0;
-		b->hash.u32[1] = 0;
-		b->hash.u32[2] = 0;
-		b->hash.u32[3] = 0;
-		b->hash.u32[4] = 0;
+		sha1_init (&b->hash);
 	}
 
 	return b;
@@ -57,11 +53,7 @@ _banner_create_from_path (const char *path)
 			         strerror (errno));
 		}
 		b->offset.u64 = 0;
-		b->hash.u32[0] = 0;
-		b->hash.u32[1] = 0;
-		b->hash.u32[2] = 0;
-		b->hash.u32[3] = 0;
-		b->hash.u32[4] = 0;
+		sha1_init (&b->hash);
 	}
 
 	return b;
@@ -78,11 +70,7 @@ _banner_destroy (struct banner *b)
 		b->name = NULL;
 	}
 	b->offset.u64 = 0;
-	b->hash.u32[0] = 0;
-	b->hash.u32[1] = 0;
-	b->hash.u32[2] = 0;
-	b->hash.u32[3] = 0;
-	b->hash.u32[4] = 0;
+	sha1_init (&b->hash);
 	free (b);
 }
 
