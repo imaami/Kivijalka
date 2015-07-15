@@ -1,6 +1,5 @@
 #include "file.h"
 #include "buf.h"
-#include "private/buf.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -52,7 +51,7 @@ main (int    argc,
 	}
 
 	printf ("%s: created buffer of %zu B, trying to reserve %zu B\n",
-	        __func__, buf->size, size + 1);
+	        __func__, buf_size (buf), size + 1);
 
 	if (!(data = buf_alloc (buf, size + 1))) {
 		fprintf (stderr, "%s: buf_alloc failed\n", __func__);
