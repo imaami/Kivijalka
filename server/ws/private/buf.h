@@ -17,6 +17,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../buf.h"
+
 /** Data buffer object. */
 struct buf {
 	size_t  size;   //!< Size in bytes of \a data array
