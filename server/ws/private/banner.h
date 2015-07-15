@@ -7,6 +7,7 @@
 
 #include "../banner.h"
 #include "../list.h"
+#include "sha1.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,7 +33,7 @@ _banner_create (void)
 		list_init (&b->hook);
 		b->name = NULL;
 		b->offset.u64 = 0;
-		sha1_init (&b->hash);
+		_sha1_init (&b->hash);
 	}
 
 	return b;
@@ -53,7 +54,7 @@ _banner_create_from_path (const char *path)
 			         strerror (errno));
 		}
 		b->offset.u64 = 0;
-		sha1_init (&b->hash);
+		_sha1_init (&b->hash);
 	}
 
 	return b;
@@ -70,7 +71,7 @@ _banner_destroy (struct banner *b)
 		b->name = NULL;
 	}
 	b->offset.u64 = 0;
-	sha1_init (&b->hash);
+	_sha1_init (&b->hash);
 	free (b);
 }
 
@@ -114,18 +115,9 @@ __attribute__((always_inline))
 static inline void
 _banner_print_hash (struct banner *b)
 {
-	static const char hex[16] = {
-		'0', '1', '2', '3',
-		'4', '5', '6', '7',
-		'8', '9', 'a', 'b',
-		'c', 'd', 'e', 'f'
-	};
-	for (unsigned int i = 0; i < 20; ++i) {
-		uint8_t x = b->hash.u8[i];
-		putchar (hex[x & 15]);
-		putchar (hex[x >> 4]);
-	}
-	puts ("");
+	char str[41];
+	_sha1_str (&b->hash, str);
+	puts (str);
 }
 
 __attribute__((always_inline))

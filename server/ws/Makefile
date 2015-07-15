@@ -23,8 +23,11 @@ test-file: buf.o file.o test-file.o
 test-display: display.o test-display.o
 	$(CC) $(CFLAGS) -std=gnu11 display.o test-display.o -o test-display
 
-test-banner: banner.o test-banner.o
-	$(CC) $(CFLAGS) -std=gnu11 banner.o test-banner.o -o test-banner
+test-banner: sha1.o banner.o test-banner.o
+	$(CC) $(CFLAGS) -std=gnu11 sha1.o banner.o test-banner.o -lssl -lcrypto -o test-banner
+
+test-sha1: file.o sha1.o test-sha1.o
+	$(CC) $(CFLAGS) -std=gnu11 file.o sha1.o test-sha1.o -lssl -lcrypto -o test-sha1
 
 global.o: global.c
 	$(CC) $(CFLAGS) -std=gnu11 -c global.c -o global.o
@@ -59,6 +62,9 @@ display.o: display.c
 banner.o: banner.c
 	$(CC) $(CFLAGS) -std=gnu11 -c banner.c -o banner.o
 
+sha1.o: sha1.c
+	$(CC) $(CFLAGS) -std=gnu11 -c sha1.c -o sha1.o
+
 read-file.o: read-file.c
 	$(CC) $(CFLAGS) -std=gnu11 -c read-file.c -o read-file.o
 
@@ -85,6 +91,9 @@ test-display.o: test-display.c
 
 test-banner.o: test-banner.c
 	$(CC) $(CFLAGS) -std=gnu11 -c test-banner.c -o test-banner.o
+
+test-sha1.o: test-sha1.c
+	$(CC) $(CFLAGS) -std=gnu11 -c test-sha1.c -o test-sha1.o
 
 .PHONY: wsserver
 wsserver:
@@ -117,6 +126,9 @@ clean-test-display:
 
 clean-test-banner:
 	rm -f test-banner test-banner.o banner.o
+
+clean-test-sha1:
+	rm -f test-sha1 test-sha1.o sha1.o
 
 clean-wsserver:
 	rm -f *.o

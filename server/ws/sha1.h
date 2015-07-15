@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 #include <stdint.h>
+#include <stddef.h>
 
 typedef union {
 	uint32_t u32[5];
@@ -15,16 +16,17 @@ typedef union {
 
 #define SHA1_INITIALIZER {.u32 = {0, 0, 0, 0, 0}}
 
-__attribute__((always_inline))
-static inline void
-sha1_init (sha1_t *hash)
-{
-	hash->u32[0] = 0;
-	hash->u32[1] = 0;
-	hash->u32[2] = 0;
-	hash->u32[3] = 0;
-	hash->u32[4] = 0;
-}
+extern void
+sha1_init (sha1_t *hash);
+
+extern void
+sha1_gen (sha1_t  *hash,
+          size_t   size,
+          uint8_t *data);
+
+extern void
+sha1_str (sha1_t *hash,
+          char   *dest);
 
 #ifdef __cplusplus
 }
