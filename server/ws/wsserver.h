@@ -5,6 +5,7 @@
 #include <QtCore/QList>
 #include <QtCore/QString>
 #include <QtCore/QByteArray>
+#include <QtNetwork/QHostAddress>
 
 #include "img_data.h"
 
@@ -15,15 +16,19 @@ class WSServer : public QObject
 {
 	Q_OBJECT
 public:
-	explicit WSServer(quint16 port,
+	explicit WSServer(const QString &addr, quint16 port,
 	                  quint16 displayWidth, quint16 displayHeight,
 	                  quint16 thumbWidth, quint16 thumbHeight,
 	                  quint16 bannerX, quint16 bannerY,
 	                  QObject *parent = Q_NULLPTR);
 	~WSServer();
+	bool listen();
 
 signals:
 	void closed();
+
+public slots:
+	void thumbnailUpdated();
 
 private slots:
 	void onNewConnection();
@@ -31,16 +36,20 @@ private slots:
 	void respondToHS(QWebSocket *dest);
 	void recvBanner(QByteArray message);
 	void socketDisconnected();
-//	void captureUpdated();
+
+private:
+	bool tryUpdateThumbnail(img_data_t **old);
 	void pushThumbnail(QWebSocket *dest);
 	void pushThumbnails();
 
-private:
 	QWebSocketServer *m_pWebSocketServer;
 	QList<QWebSocket *> clients;
+	QHostAddress serverAddr;
+	quint16 serverPort;
 	quint16 displayWidth, displayHeight;
 	quint16 thumbWidth, thumbHeight;
 	quint16 bannerX, bannerY;
+	QByteArray thumbNail;
 	img_data_t *thumbnail;
 };
 

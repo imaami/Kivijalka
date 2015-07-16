@@ -5,7 +5,6 @@
 #include "img_data.h"
 #include "img_file.h"
 
-#include <QtGui/QImage>
 #include <QtGui/QColor>
 #include <QtGui/QPainter>
 #include <QtCore/QPoint>
@@ -175,14 +174,12 @@ update_banner (QImage              *banner,
 	b = QImage();
 }
 
-__attribute__((always_inline))
-static inline void
-update_display (QImage              &capture,
-                QImage              &banner,
-                display_t           *d,
-                int                  dw,
-                int                  dh,
-                enum QImage::Format  fmt)
+inline void
+ImgWorker::update_display (QImage              &capture,
+                           QImage              &banner,
+                           int                  dw,
+                           int                  dh,
+                           enum QImage::Format  fmt)
 {
 	bool r;
 	uint32_t *c = (uint32_t *) capture.constBits();
@@ -192,12 +189,12 @@ update_display (QImage              &capture,
 		uint32_t bh = (uint32_t) banner.height();
 		uint32_t bx = capture.width() - bw;
 		uint32_t by = capture.height() - bh;
-		r = display_render (d, c, b, bw, bh, bx, by);
+		r = display_render (display, c, b, bw, bh, bx, by);
 	} else {
-		r = display_render_bg (d, c);
+		r = display_render_bg (display, c);
 	}
 	if (r) {
-		QImage img((const uchar *) display_pixbuf (d), dw, dh, fmt);
+		QImage img((const uchar *) display_pixbuf (display), dw, dh, fmt);
 		QByteArray bar;
 		QBuffer buf(&bar);
 		if (buf.open (QIODevice::WriteOnly)) {
@@ -217,6 +214,7 @@ update_display (QImage              &capture,
 				if (img.save (&buf, "PNG")) {
 					if ((imd = img_data_new_from_buffer ((size_t) bar.size(), bar.constData()))) {
 						img_file_replace_data (&thumb_file, imd);
+						emit thumbnailUpdated();
 					}
 				}
 			}
@@ -273,7 +271,7 @@ void ImgWorker::process()
 			continue;
 		}
 
-		update_display (capture, banner, display, dw, dh, fmt);
+		update_display (capture, banner, dw, dh, fmt);
 
 		if (cd) {
 			img_data_free (cd);

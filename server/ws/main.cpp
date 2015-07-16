@@ -61,15 +61,19 @@ int main(int argc, char *argv[])
 	QObject::connect (&diskWriterThread, &QThread::started,
 	                  &diskWriter, &DiskWriter::process);
 
+	WSServer *server = new WSServer("127.0.0.1", 8001,
+	                                1280, 1024, 640, 512, 1024, 768);
+	QObject::connect (&imgWorker, &ImgWorker::thumbnailUpdated,
+	                  server, &WSServer::thumbnailUpdated,
+	                  Qt::QueuedConnection);
+	QObject::connect(server, &WSServer::closed, &a, &QCoreApplication::quit);
+
 	diskWriterThread.start ();
 	imgWorkerThread.start ();
 	diskReaderThread.start ();
 	watcher_start (w);
 
-	WSServer *server = new WSServer(8001, 1280, 1024, 640, 512, 1024, 768);
-	QObject::connect(server, &WSServer::closed, &a, &QCoreApplication::quit);
-
-	int r = a.exec();
+	int r = (server->listen()) ? a.exec() : -1;
 
 	watcher_stop (w);
 	watcher_destroy (w);

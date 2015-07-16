@@ -1,4 +1,4 @@
-QT       += core websockets gui
+QT       += core network websockets gui
 
 TARGET = wsserver
 CONFIG   += console c++11 link_pkgconfig

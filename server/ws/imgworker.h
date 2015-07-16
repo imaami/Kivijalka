@@ -2,6 +2,7 @@
 #define IMGWORKER_H
 
 #include <QtCore/QObject>
+#include <QtGui/QImage>
 
 #include "display.h"
 
@@ -14,11 +15,19 @@ public:
 	          QObject   *parent = 0);
 	~ImgWorker();
 
+signals:
+	void thumbnailUpdated();
+
 public slots:
 	void process();
 
 private:
 	display_t *display;
+	inline void update_display(QImage              &capture,
+                                  QImage              &banner,
+                                  int                  dw,
+                                  int                  dh,
+                                  enum QImage::Format  fmt);
 };
 
 #endif // IMGWORKER_H

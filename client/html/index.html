@@ -404,7 +404,7 @@ var enqueue_file = function(file) {
 /**
  * Return Git-type SHA1 digest of Uint8array input data.
  */
-var git_hash = function(data) {
+/*var git_hash = function(data) {
 	var dataLen = data.length;
 	var dLenStr = dataLen.toString();
 	var lStrLen = dLenStr.length;
@@ -422,6 +422,13 @@ var git_hash = function(data) {
 	tmp.set(new Uint8Array(data), headLen);
 
 	return (new Rusha()).digestFromBuffer(tmp);
+};*/
+
+/**
+ * Return SHA1 digest of Uint8array input data.
+ */
+var sha1_hash = function(data) {
+	return (new Rusha()).digestFromBuffer(data);
 };
 
 var drag_file = function(file) {
@@ -435,8 +442,8 @@ var drag_file = function(file) {
 
 			reader.onload = function (e) {
 				dragArray = new Uint8Array(e.target.result);
-				console.log('drag_file.reader.onload: git_hash: '
-				            + git_hash(dragArray));
+				console.log('drag_file.reader.onload: SHA1: '
+				            + sha1_hash(dragArray));
 				var blob = new Blob([dragArray], {type: "image/png"});
 				drag_img.src = urlCreator.createObjectURL(blob);
 			};

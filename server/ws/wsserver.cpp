@@ -9,7 +9,7 @@
 
 QT_USE_NAMESPACE
 
-WSServer::WSServer(quint16 port,
+WSServer::WSServer(const QString &addr, quint16 port,
                    quint16 displayWidth, quint16 displayHeight,
                    quint16 thumbWidth, quint16 thumbHeight,
                    quint16 bannerX, quint16 bannerY,
@@ -17,8 +17,11 @@ WSServer::WSServer(quint16 port,
 	QObject(parent),
 	m_pWebSocketServer(new QWebSocketServer(QStringLiteral("Websocket Server"),
 	                                        QWebSocketServer::NonSecureMode, this)),
-	clients()
+	clients(),
+	serverAddr(addr),
+	thumbNail()
 {
+	this->serverPort = port;
 	this->displayWidth = displayWidth;
 	this->displayHeight = displayHeight;
 	this->thumbWidth = thumbWidth;
@@ -26,20 +29,50 @@ WSServer::WSServer(quint16 port,
 	this->bannerX = bannerX;
 	this->bannerY = bannerY;
 	thumbnail = NULL;
-
-	if (m_pWebSocketServer->listen(QHostAddress::LocalHost, port)) {
-		qDebug() << "Websocket server listening on port" << port;
-		connect(m_pWebSocketServer, &QWebSocketServer::newConnection,
-		        this, &WSServer::onNewConnection);
-		connect(m_pWebSocketServer, &QWebSocketServer::closed,
-		        this, &WSServer::closed);
-	}
 }
 
 WSServer::~WSServer()
 {
 	m_pWebSocketServer->close();
 	qDeleteAll(clients.begin(), clients.end());
+	if (thumbnail) {
+		img_data_free (thumbnail);
+		thumbnail = NULL;
+	}
+}
+
+bool WSServer::listen()
+{
+	if (!m_pWebSocketServer) {
+		std::fprintf (stderr, "WSServer::%s: null server object\n",
+		              __func__);
+	} else if (!m_pWebSocketServer->listen (serverAddr, serverPort)) {
+		std::fprintf (stderr, "WSServer::%s: failed to start server\n",
+		              __func__);
+	} else {
+		connect(m_pWebSocketServer, &QWebSocketServer::newConnection,
+		        this, &WSServer::onNewConnection);
+		connect(m_pWebSocketServer, &QWebSocketServer::closed,
+		        this, &WSServer::closed);
+		std::printf ("WSServer::%s: running on %u\n", __func__, serverPort);
+		return true;
+	}
+	return false;
+}
+
+void WSServer::thumbnailUpdated()
+{
+	printf ("WSServer::%s: triggered\n", __func__);
+	img_data_t *old;
+	if (tryUpdateThumbnail (&old)) {
+		if (!thumbNail.isEmpty()) {
+			pushThumbnails();
+		}
+		if (old) {
+			img_data_free (old);
+			old = NULL;
+		}
+	}
 }
 
 void WSServer::onNewConnection()
@@ -76,7 +109,9 @@ void WSServer::processTextMessage(QString message)
 	if (pClient) {
 		if (message == "71bf2d31e9e4e15c") {
 			respondToHS(pClient);
-			pushThumbnail(pClient);
+			if (!thumbNail.isEmpty()) {
+				pushThumbnail (pClient);
+			}
 		}
 	}
 }
@@ -88,7 +123,8 @@ void WSServer::recvBanner(QByteArray message)
 		return;
 	}
 
-	printf ("received banner\n");
+	printf ("WSServer::%s: received banner from %s\n", __func__,
+	        pClient->peerAddress().toString().toUtf8().data());
 
 	img_data_t *imd;
 
@@ -113,28 +149,26 @@ void WSServer::socketDisconnected()
     }
 }
 
-void WSServer::pushThumbnail(QWebSocket *dest)
+bool WSServer::tryUpdateThumbnail(img_data_t **old)
 {
 	img_data_t *imd = img_file_steal_data (&thumb_file);
 	if (imd) {
-		printf ("WSServer::%s: have new thumbnail\n", __func__);
-		if (thumbnail) {
-			img_data_free (thumbnail);
-		}
+		*old = thumbnail;
 		thumbnail = imd;
+		thumbNail = QByteArray::fromRawData ((const char *) imd->data,
+		                                     (int) imd->size);
 		imd = NULL;
+		printf ("WSServer::%s: have new thumbnail\n", __func__);
+		return true;
 	}
-	if (thumbnail) {
-		int s = (int) thumbnail->size;
-		const char *d = (const char *) thumbnail->data;
-		QByteArray data = QByteArray::fromRawData (d, s);
-		if (!data.isEmpty()) {
-			dest->sendBinaryMessage(data);
-			printf ("WSServer::%s: sent thumbnail\n", __func__);
-		}
-	} else {
-		printf ("WSServer::%s: nothing to send\n", __func__);
-	}
+	return false;
+}
+
+void WSServer::pushThumbnail(QWebSocket *dest)
+{
+	dest->sendBinaryMessage (thumbNail);
+	printf ("WSServer::%s: sent thumbnail to %s\n", __func__,
+	        dest->peerAddress().toString().toUtf8().data());
 }
 
 void WSServer::pushThumbnails()
