@@ -201,11 +201,23 @@ update_display (QImage              &capture,
 		QByteArray bar;
 		QBuffer buf(&bar);
 		if (buf.open (QIODevice::WriteOnly)) {
+			img_data_t *imd;
 			if (img.save (&buf, "PNG")) {
-				img_data_t *imd;
 				if ((imd = img_data_new_from_buffer ((size_t) bar.size(), bar.constData()))) {
 					img_file_replace_data (&output_file, imd);
 					(void) img_file_post (&output_file);
+				}
+			}
+			img = img.scaled (thumb_w, thumb_h,
+			                  Qt::KeepAspectRatio,
+			                  Qt::SmoothTransformation);
+			if (img.width() == thumb_w
+			    && img.height() == thumb_h) {
+				buf.seek (0);
+				if (img.save (&buf, "PNG")) {
+					if ((imd = img_data_new_from_buffer ((size_t) bar.size(), bar.constData()))) {
+						img_file_replace_data (&thumb_file, imd);
+					}
 				}
 			}
 			buf.close();

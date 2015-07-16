@@ -25,6 +25,7 @@ WSServer::WSServer(quint16 port,
 	this->thumbHeight = thumbHeight;
 	this->bannerX = bannerX;
 	this->bannerY = bannerY;
+	thumbnail = NULL;
 
 	if (m_pWebSocketServer->listen(QHostAddress::LocalHost, port)) {
 		qDebug() << "Websocket server listening on port" << port;
@@ -114,18 +115,31 @@ void WSServer::socketDisconnected()
 
 void WSServer::pushThumbnail(QWebSocket *dest)
 {
-	QByteArray thumbData(thumb_file.data->data);
-	if (!thumbData.isEmpty()) {
-		dest->sendBinaryMessage(thumbData);
+	img_data_t *imd = img_file_steal_data (&thumb_file);
+	if (imd) {
+		printf ("WSServer::%s: have new thumbnail\n", __func__);
+		if (thumbnail) {
+			img_data_free (thumbnail);
+		}
+		thumbnail = imd;
+		imd = NULL;
+	}
+	if (thumbnail) {
+		int s = (int) thumbnail->size;
+		const char *d = (const char *) thumbnail->data;
+		QByteArray data = QByteArray::fromRawData (d, s);
+		if (!data.isEmpty()) {
+			dest->sendBinaryMessage(data);
+			printf ("WSServer::%s: sent thumbnail\n", __func__);
+		}
+	} else {
+		printf ("WSServer::%s: nothing to send\n", __func__);
 	}
 }
 
 void WSServer::pushThumbnails()
 {
-	QByteArray thumbData(thumb_file.data->data);
-	if (!thumbData.isEmpty()) {
-		for (int i = 0; i < clients.size(); ++i) {
-			clients.at(i)->sendBinaryMessage(thumbData);
-		}
+	for (int i = 0; i < clients.size(); ++i) {
+		pushThumbnail (clients.at(i));
 	}
 }

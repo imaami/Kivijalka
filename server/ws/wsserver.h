@@ -6,6 +6,8 @@
 #include <QtCore/QString>
 #include <QtCore/QByteArray>
 
+#include "img_data.h"
+
 QT_FORWARD_DECLARE_CLASS(QWebSocketServer)
 QT_FORWARD_DECLARE_CLASS(QWebSocket)
 
@@ -39,6 +41,7 @@ private:
 	quint16 displayWidth, displayHeight;
 	quint16 thumbWidth, thumbHeight;
 	quint16 bannerX, bannerY;
+	img_data_t *thumbnail;
 };
 
 #endif //WSSERVER_H
