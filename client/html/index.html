@@ -457,6 +457,58 @@ var drag_file = function(file) {
 	}
 };
 
+var banner_upload_packet = function(data) {
+	console.log('banner_upload_packet');
+
+	var TWOPOW32 = Math.pow(2, 32);
+	var time = Date.now();
+	var size = data.byteLength;
+	var buffer = new ArrayBuffer(48 + size);
+	var header = new DataView(buffer, 0, 48);
+	var payload = new Uint8Array(data);
+	var packet = new Uint8Array(buffer);
+
+	// packet type (4)
+	header.setUint32(0, 1, true);
+
+	// timestamp (8)
+	var lo = time % TWOPOW32;
+	var hi = (time - lo) / TWOPOW32;
+	header.setUint32(4, lo, true);
+	header.setUint32(8, hi, true);
+
+	// banner coordinates (8)
+	header.setInt32(12, drag_img_x, true);
+	header.setInt32(16, drag_img_y, true);
+
+	// SHA1 digest (20)
+	var hash = (new Rusha()).rawDigest(data);
+	header.setInt32(20, hash[0], true);
+	header.setInt32(24, hash[1], true);
+	header.setInt32(28, hash[2], true);
+	header.setInt32(32, hash[3], true);
+	header.setInt32(36, hash[4], true);
+	var arr = new Uint8Array(buffer, 20, 20);
+	var str = "";
+	for (var i = 0; i < 20; i++) {
+		var x = arr[i];
+		str += Number(x >> 4 & 15).toString(16);
+		str += Number(x & 15).toString(16);
+	}
+	console.log(str);
+
+	// payload size (8)
+	lo = size % TWOPOW32;
+	hi = (size - lo) / TWOPOW32;
+	header.setUint32(40, lo, true);
+	header.setUint32(44, hi, true);
+
+	// payload
+	packet.set(payload, 48);
+
+	return buffer;
+};
+
 var upload_file = function(file) {
 	console.log('upload_file');
 
@@ -466,8 +518,8 @@ var upload_file = function(file) {
 
 		reader.onload = function (e) {
 			console.log('upload_file.reader.onload');
-			bytearray = new Uint8Array(e.target.result);
-			socket.send(bytearray.buffer);
+			packet = banner_upload_packet(e.target.result);
+			socket.send(packet);
 		};
 
 		reader.readAsArrayBuffer(file);

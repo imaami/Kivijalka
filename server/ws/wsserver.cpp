@@ -1,5 +1,6 @@
 #include "wsserver.h"
 #include "global.h"
+#include "banner.h"
 
 #include <cstring>
 #include <QtWebSockets/QWebSocketServer>
@@ -126,10 +127,19 @@ void WSServer::recvBanner(QByteArray message)
 	printf ("WSServer::%s: received banner from %s\n", __func__,
 	        pClient->peerAddress().toString().toUtf8().data());
 
+	banner_t *b;
+
+	if (!(b = banner_create_from_packet ((banner_packet_t *) message.constData()))) {
+		std::fprintf (stderr, "%s: packet error\n", __func__);
+		return;
+	}
+
 	img_data_t *imd;
 
-	if ((imd = img_data_new_from_buffer ((size_t) message.size(),
-	                                     message.constData()))) {
+	imd = banner_remove_data (b);
+	banner_destroy (&b);
+
+	if (imd) {
 		img_file_replace_data (&banner_file, imd);
 		if (sem_post (&process_sem)) {
 			std::fprintf (stderr, "%s: sem_post failed: %s\n",
