@@ -108,6 +108,8 @@ var drag_img_width = 0;
 var drag_img_height = 0;
 var drag_img_scaled_width = 0;
 var drag_img_scaled_height = 0;
+var drag_img_x = 0;
+var drag_img_y = 0;
 var drag_img_scaled_x = 0;
 var drag_img_scaled_y = 0;
 var drag_img_x_offset = 0;
@@ -231,6 +233,8 @@ var drag_img_dropped = function () {
 var drag_img_set_coords = function(x, y) {
 	drag_img_scaled_x = x + drag_img_x_offset;
 	drag_img_scaled_y = y + drag_img_y_offset;
+	drag_img_x = drag_img_scaled_x / thumb_scaling;
+	drag_img_y = drag_img_scaled_y / thumb_scaling;
 };
 
 drag_img.onload = function(e) {
@@ -521,7 +525,7 @@ var thumb_mousemove = function (e) {
 	var x = e.clientX - rect.left;
 	var y = e.clientY - rect.top;
 	drag_img_draw(x, y);
-	dbg.innerHTML = '&nbsp;&nbsp;{ ' + x + ', ' + y + ' }';
+	dbg.innerHTML = '&nbsp;&nbsp;{ ' + drag_img_x + ', ' + drag_img_y + ' }';
 };
 
 var thumb_mouseout = function() {
