@@ -8,6 +8,7 @@
 #include "../banner.h"
 #include "../list.h"
 #include "../img_data.h"
+#include "../point.h"
 #include "sha1.h"
 
 #include <stdio.h>
@@ -22,6 +23,15 @@ struct banner {
 	sha1_t       hash;
 	img_data_t  *data;
 };
+
+struct banner_packet {
+	uint32_t type;
+	uint64_t time;
+	point_t  offs;
+	sha1_t   hash;
+	uint64_t size;
+	uint8_t  data[];
+} __attribute__((gcc_struct,packed));
 
 __attribute__((always_inline))
 static inline struct banner *
@@ -65,6 +75,35 @@ _banner_create_from_path (const char *path)
 			fprintf (stderr, "%s: image loading failed\n", __func__);
 			free (b);
 			b = NULL;
+		}
+	} else {
+		fprintf (stderr, "%s: aligned_alloc failed\n", __func__);
+	}
+
+	return b;
+}
+
+__attribute__((always_inline))
+static inline struct banner *
+_banner_create_from_packet (struct banner_packet *pkt)
+{
+	struct banner *b;
+
+	if ((b = aligned_alloc (64, sizeof (struct banner)))) {
+		_sha1_gen (&b->hash, (size_t) pkt->size, pkt->data);
+		if (!_sha1_cmp (&b->hash, &pkt->hash)) {
+			fprintf (stderr, "%s: hash sum mismatch\n", __func__);
+			goto fail;
+		} else if (!(b->data = img_data_new_from_buffer ((size_t) pkt->size, (const char *) pkt->data))) {
+			fprintf (stderr, "%s: data copy failed\n", __func__);
+		fail:
+			_sha1_init (&b->hash);
+			free (b);
+			b = NULL;
+		} else {
+			b->name = NULL;
+			b->offset.u64 = pkt->offs.u64;
+			list_init (&b->hook);
 		}
 	} else {
 		fprintf (stderr, "%s: aligned_alloc failed\n", __func__);

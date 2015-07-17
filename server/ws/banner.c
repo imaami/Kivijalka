@@ -17,6 +17,12 @@ banner_create_from_path (const char *path)
 	return (path) ? _banner_create_from_path (path) : NULL;
 }
 
+struct banner *
+banner_create_from_packet (struct banner_packet *pkt)
+{
+	return (pkt) ? _banner_create_from_packet (pkt) : NULL;
+}
+
 void
 banner_destroy (struct banner **b)
 {
