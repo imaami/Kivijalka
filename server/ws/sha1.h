@@ -7,6 +7,7 @@ extern "C" {
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 typedef union {
 	uint32_t u32[5];
@@ -23,6 +24,10 @@ extern void
 sha1_gen (sha1_t  *hash,
           size_t   size,
           uint8_t *data);
+
+extern bool
+sha1_cmp (sha1_t *h1,
+          sha1_t *h2);
 
 extern void
 sha1_str (sha1_t *hash,

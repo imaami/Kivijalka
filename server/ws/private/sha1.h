@@ -31,6 +31,20 @@ _sha1_gen (sha1_t  *hash,
 }
 
 __attribute__((always_inline))
+static inline bool
+_sha1_cmp (sha1_t *h1,
+           sha1_t *h2)
+{
+	return (
+		h1->u32[0] == h2->u32[0] &&
+		h1->u32[1] == h2->u32[1] &&
+		h1->u32[2] == h2->u32[2] &&
+		h1->u32[3] == h2->u32[3] &&
+		h1->u32[4] == h2->u32[4]
+	);
+}
+
+__attribute__((always_inline))
 static inline void
 _sha1_str (sha1_t *hash,
            char   *dest)

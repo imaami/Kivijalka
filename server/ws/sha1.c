@@ -18,6 +18,13 @@ sha1_gen (sha1_t  *hash,
 	}
 }
 
+bool
+sha1_cmp (sha1_t *h1,
+          sha1_t *h2)
+{
+	return (h1 && h2) ? _sha1_cmp (h1, h2) : false;
+}
+
 void
 sha1_str (sha1_t *hash,
           char   *dest)
