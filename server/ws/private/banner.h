@@ -89,8 +89,7 @@ _banner_create_from_packet (struct banner_packet *pkt)
 	char str[41];
 	_sha1_str (&pkt->hash, str);
 	printf ("type: %u\ntime: %lu\nxpos: %d\nypos: %d\nhash: %s\nsize: %lu\n",
-	        pkt->type, pkt->time, (int32_t) pkt->offs.x,
-	        (int32_t) pkt->offs.y, str, pkt->size);
+	        pkt->type, pkt->time, pkt->offs.x, pkt->offs.y, str, pkt->size);
 
 	struct banner *b;
 
