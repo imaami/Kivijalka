@@ -7,7 +7,6 @@
 
 #include "../banner.h"
 #include "../list.h"
-#include "../img_data.h"
 #include "../point.h"
 #include "sha1.h"
 
@@ -177,6 +176,16 @@ static inline void
 _banner_del_from_list (struct banner *b)
 {
 	__list_del_entry (&b->hook);
+}
+
+__attribute__((always_inline))
+static inline img_data_t *
+_banner_remove_data (struct banner *b)
+{
+	img_data_t *imd = b->data;
+	b->data = NULL;
+	_sha1_init (&b->hash);
+	return imd;
 }
 
 #endif // __KIVIJALKA_PRIVATE_BANNER_H__

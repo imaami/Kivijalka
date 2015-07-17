@@ -10,6 +10,7 @@ extern "C" {
 
 #include "point.h"
 #include "list.h"
+#include "img_data.h"
 
 typedef struct banner banner_t;
 typedef struct banner_packet banner_packet_t;
@@ -50,6 +51,9 @@ banner_add_to_list (banner_t    *b,
 
 extern void
 banner_del_from_list (banner_t *b);
+
+extern img_data_t *
+banner_remove_data (banner_t *b);
 
 #ifdef __cplusplus
 }

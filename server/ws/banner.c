@@ -97,3 +97,9 @@ banner_del_from_list (struct banner *b)
 		_banner_del_from_list (b);
 	}
 }
+
+img_data_t *
+banner_remove_data (struct banner *b)
+{
+	return (b) ? _banner_remove_data (b) : NULL;
+}
