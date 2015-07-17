@@ -86,10 +86,18 @@ __attribute__((always_inline))
 static inline struct banner *
 _banner_create_from_packet (struct banner_packet *pkt)
 {
+	char str[41];
+	_sha1_str (&pkt->hash, str);
+	printf ("type: %u\ntime: %lu\nxpos: %d\nypos: %d\nhash: %s\nsize: %lu\n",
+	        pkt->type, pkt->time, (int32_t) pkt->offs.x,
+	        (int32_t) pkt->offs.y, str, pkt->size);
+
 	struct banner *b;
 
 	if ((b = aligned_alloc (64, sizeof (struct banner)))) {
 		_sha1_gen (&b->hash, (size_t) pkt->size, pkt->data);
+		_sha1_str (&b->hash, str);
+		printf ("payload hash: %s\n", str);
 		if (!_sha1_cmp (&b->hash, &pkt->hash)) {
 			fprintf (stderr, "%s: hash sum mismatch\n", __func__);
 			goto fail;
