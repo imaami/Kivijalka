@@ -94,6 +94,13 @@ _banner_cache_destroy (struct banner_cache *bc)
 }
 
 __attribute__((always_inline))
+static inline const char *
+_banner_cache_path (struct banner_cache *bc)
+{
+	return (const char *) bc->root_path;
+}
+
+__attribute__((always_inline))
 static inline struct banner *
 _banner_cache_find_banner (struct banner_cache *bc,
                            sha1_t              *hash)
@@ -126,6 +133,20 @@ _banner_cache_add_banner (struct banner_cache *bc,
 		list_add (&bkt->hook, &bc->in_use);
 	}
 	return true;
+}
+
+__attribute__((always_inline))
+static inline struct banner *
+_banner_cache_most_recent (struct banner_cache *bc)
+{
+	list_head_t *h;
+	if ((h = bc->in_use.next) != &bc->in_use) {
+		struct bucket *bkt = list_entry (h, struct bucket, hook);
+		if ((h = bkt->list.next) != &bkt->list) {
+			return list_entry (h, struct banner, hook);
+		}
+	}
+	return NULL;
 }
 
 #endif // __KIVIJALKA_PRIVATE_BANNER_CACHE_H__

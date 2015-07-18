@@ -12,7 +12,7 @@ main (int    argc,
       char **argv)
 {
 	banner_cache_t *bc;
-	banner_t *b;
+	banner_t *b, *b2;
 	sha1_t hash;
 
 	if (argc < 2 || !argv[1]) {
@@ -36,7 +36,15 @@ main (int    argc,
 		puts ("added banner to cache");
 		banner_hash_cpy (b, &hash);
 		b = NULL;
-		banner_t *b2 = banner_cache_find_banner (bc, &hash);
+		puts ("testing whether the most recent banner is the correct one...");
+		b2 = banner_cache_most_recent (bc);
+		if (b2 && banner_hash_cmp (b2, &hash)) {
+			puts ("yes it is, the hashes appear to match");
+		} else {
+			fprintf (stderr, "failed to retrieve most recently added banner\n");
+		}
+		puts ("testing whether banner_cache_find_banner() works...");
+		b2 = banner_cache_find_banner (bc, &hash);
 		if (!b2) {
 			fprintf (stderr, "failed to find banner\n");
 		} else {

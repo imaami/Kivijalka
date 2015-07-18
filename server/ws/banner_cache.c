@@ -20,6 +20,12 @@ banner_cache_destroy (struct banner_cache **bc)
 	}
 }
 
+const char *
+banner_cache_path (struct banner_cache *bc)
+{
+	return (bc) ? _banner_cache_path (bc) : NULL;
+}
+
 struct banner *
 banner_cache_find_banner (struct banner_cache *bc,
                           sha1_t              *hash)
@@ -32,4 +38,10 @@ banner_cache_add_banner (struct banner_cache *bc,
                          struct banner       *banner)
 {
 	return (bc && banner) ? _banner_cache_add_banner (bc, banner) : false;
+}
+
+struct banner *
+banner_cache_most_recent (struct banner_cache *bc)
+{
+	return (bc) ? _banner_cache_most_recent (bc) : NULL;
 }

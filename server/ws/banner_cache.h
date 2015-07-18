@@ -18,6 +18,9 @@ banner_cache_create (const char *path);
 extern void
 banner_cache_destroy (banner_cache_t **bc);
 
+extern const char *
+banner_cache_path (banner_cache_t *bc);
+
 extern banner_t *
 banner_cache_find_banner (banner_cache_t *bc,
                           sha1_t         *hash);
@@ -25,6 +28,9 @@ banner_cache_find_banner (banner_cache_t *bc,
 extern bool
 banner_cache_add_banner (banner_cache_t *bc,
                          banner_t       *banner);
+
+extern banner_t *
+banner_cache_most_recent (banner_cache_t *bc);
 
 #ifdef __cplusplus
 }
