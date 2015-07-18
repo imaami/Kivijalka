@@ -9,6 +9,7 @@
 #include "diskwriter.h"
 #include "wsserver.h"
 #include "bannercache.h"
+#include "banner_cache.h"
 
 int main(int argc, char *argv[])
 {
@@ -18,20 +19,27 @@ int main(int argc, char *argv[])
 	(void) img_file_set_path (&capture_file, "/dev/shm/kivijalka/cap-0510.png");
 	(void) img_file_set_path (&output_file, "/dev/shm/kivijalka/out-0510.png");
 
-	BannerCache bannerCache("/usr/share/kivijalka/banners");
+	banner_cache_t *bc;
+	if (!(bc = banner_cache_create ("/usr/share/kivijalka/banners"))) {
+		global_fini ();
+		return -7;
+	}
+	BannerCache bannerCache(bc);
 
 	display_t *d;
 	if (!(d = display_create (1280, 1024))) {
-		return -1;
+		banner_cache_destroy (&bc);
+		global_fini ();
+		return -6;
 	}
 
 	watcher_t *w;
 	if (!(w = watcher_create (capture_file.path))) {
-	fail:
 		display_destroy (d);
 		d = NULL;
+		banner_cache_destroy (&bc);
 		global_fini ();
-		return -1;
+		return -5;
 	}
 
 	QThread diskReaderThread;
@@ -46,7 +54,11 @@ int main(int argc, char *argv[])
 	if (!watcher_prepare (w)) {
 		watcher_destroy (w);
 		w = NULL;
-		goto fail;
+		display_destroy (d);
+		d = NULL;
+		banner_cache_destroy (&bc);
+		global_fini ();
+		return -4;
 	}
 
 	diskReader.moveToThread (&diskReaderThread);
@@ -63,6 +75,16 @@ int main(int argc, char *argv[])
 
 	WSServer *server = new WSServer("127.0.0.1", 8001,
 	                                1280, 1024, 640, 512, 1024, 768);
+	if (!server) {
+		watcher_destroy (w);
+		w = NULL;
+		display_destroy (d);
+		d = NULL;
+		banner_cache_destroy (&bc);
+		global_fini ();
+		return -3;
+	}
+
 	QObject::connect (&imgWorker, &ImgWorker::thumbnailUpdated,
 	                  server, &WSServer::thumbnailUpdated,
 	                  Qt::QueuedConnection);
@@ -73,14 +95,20 @@ int main(int argc, char *argv[])
 	diskReaderThread.start ();
 	watcher_start (w);
 
-	int r = (server->listen()) ? a.exec() : -1;
+	int r = (server->listen())
+	        ? (a.exec() == 0) ? 0 : -1
+	        : -2;
 
 	watcher_stop (w);
+	delete (server);
+	server = NULL;
 	watcher_destroy (w);
 	w = NULL;
 
 	display_destroy (d);
 	d = NULL;
+
+	banner_cache_destroy (&bc);
 
 	global_fini ();
 

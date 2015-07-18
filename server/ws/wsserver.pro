@@ -21,6 +21,7 @@ SOURCES += \
     watcher.c \
     display.c \
     banner.c \
+    banner_cache.c \
     global.c \
     path.c \
     file.c \
@@ -38,6 +39,7 @@ HEADERS += \
     watcher.h \
     display.h \
     banner.h \
+    banner_cache.h \
     global.h \
     path.h \
     file.h \

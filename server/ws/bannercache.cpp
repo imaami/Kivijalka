@@ -1,5 +1,7 @@
 #include "bannercache.h"
+#include "banner.h"
 #include <cstdio>
+#include <QtCore/QString>
 #include <QtCore/QStringList>
 #include <QtCore/QDir>
 #include <QtCore/QDirIterator>
@@ -8,44 +10,41 @@
 
 QT_USE_NAMESPACE
 
-BannerCache::BannerCache(const QString &dirPath,
+BannerCache::BannerCache(banner_cache_t *bc,
                          QObject *parent) :
 	QObject(parent)
 {
-	list_init (&list);
+	if (!bc) {
+		return;
+	}
 
+	this->bc = bc;
+
+	QString path(banner_cache_path (bc));
 	banner_t *b;
 
-	if (QDir(dirPath).isReadable()) {
-		path = QDir(dirPath).absolutePath();
+	if (QDir(path).isReadable()) {
+		path = QDir(path).absolutePath();
 		QDirIterator di(path,
 		                {"*.png", "*.jpg", "*.jpeg", "*.gif"},
 		                QDir::Files|QDir::Readable);
 		while (di.hasNext()) {
 			if ((b = banner_create_from_path (di.next().toUtf8().data()))) {
-				banner_add_to_list (b, &list);
+				banner_cache_add_banner (bc, b);
 			}
 		}
 	}
 
-	for (b = NULL; (b = banner_next_in_list (b, &list));) {
-		std::printf ("BannerCache::%s: %s\n", __func__, banner_name (b));
-	}
-
-	if ((b = banner_next_in_list (b, &list))) {
+	if ((b = banner_cache_most_recent (bc))) {
 		img_data_t *imd = img_data_new_from_file (banner_name (b));
 		if (imd) {
 			img_file_replace_data (&banner_file, imd);
+			imd = NULL;
 		}
+		b = NULL;
 	}
 }
 
 BannerCache::~BannerCache()
 {
-	for (banner_t *b = banner_next_in_list (NULL, &list); b;) {
-		banner *next = banner_next_in_list (b, &list);
-		banner_del_from_list (b);
-		banner_destroy (&b);
-		b = next;
-	}
 }
