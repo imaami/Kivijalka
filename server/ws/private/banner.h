@@ -162,6 +162,22 @@ _banner_set_offset (struct banner *b,
 }
 
 __attribute__((always_inline))
+static inline bool
+_banner_hash_cmp (struct banner *b,
+                  sha1_t        *hash)
+{
+	return _sha1_cmp (&b->hash, hash);
+}
+
+__attribute__((always_inline))
+static inline void
+_banner_hash_cpy (struct banner *b,
+                  sha1_t        *dest)
+{
+	_sha1_cpy (&b->hash, dest);
+}
+
+__attribute__((always_inline))
 static inline void
 _banner_print_hash (struct banner *b)
 {

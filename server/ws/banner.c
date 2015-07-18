@@ -57,6 +57,24 @@ banner_set_offset (struct banner *b,
 	}
 }
 
+bool
+banner_hash_cmp (struct banner *b,
+                 sha1_t        *hash)
+{
+	return (b && hash) ? _banner_hash_cmp (b, hash) : false;
+}
+
+bool
+banner_hash_cpy (struct banner *b,
+                 sha1_t        *dest)
+{
+	if (b && dest) {
+		_banner_hash_cpy (b, dest);
+		return true;
+	}
+	return false;
+}
+
 void
 banner_print_hash (struct banner *b)
 {

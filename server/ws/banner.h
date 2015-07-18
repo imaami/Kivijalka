@@ -9,6 +9,7 @@ extern "C" {
 #include <stdbool.h>
 
 #include "point.h"
+#include "sha1.h"
 #include "list.h"
 #include "img_data.h"
 
@@ -37,6 +38,14 @@ banner_name (banner_t *b);
 extern void
 banner_set_offset (banner_t *b,
                    point_t   offset);
+
+extern bool
+banner_hash_cmp (banner_t *b,
+                 sha1_t   *hash);
+
+extern bool
+banner_hash_cpy (banner_t *b,
+                 sha1_t   *dest);
 
 extern void
 banner_print_hash (banner_t *b);
