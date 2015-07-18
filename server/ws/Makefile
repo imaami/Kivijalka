@@ -26,6 +26,9 @@ test-display: display.o test-display.o
 test-banner: read-file.o img_data.o banner.o test-banner.o
 	$(CC) $(CFLAGS) -std=gnu11 read-file.o img_data.o banner.o test-banner.o -lssl -lcrypto -o test-banner
 
+test-banner_cache: read-file.o img_data.o banner.o banner_cache.o test-banner_cache.o
+	$(CC) $(CFLAGS) -std=gnu11 read-file.o img_data.o banner.o banner_cache.o test-banner_cache.o -lssl -lcrypto -o test-banner_cache
+
 test-sha1: file.o sha1.o test-sha1.o
 	$(CC) $(CFLAGS) -std=gnu11 file.o sha1.o test-sha1.o -lssl -lcrypto -o test-sha1
 
@@ -62,6 +65,9 @@ display.o: display.c
 banner.o: banner.c
 	$(CC) $(CFLAGS) -std=gnu11 -c banner.c -o banner.o
 
+banner_cache.o: banner_cache.c
+	$(CC) $(CFLAGS) -std=gnu11 -c banner_cache.c -o banner_cache.o
+
 sha1.o: sha1.c
 	$(CC) $(CFLAGS) -std=gnu11 -c sha1.c -o sha1.o
 
@@ -92,6 +98,9 @@ test-display.o: test-display.c
 test-banner.o: test-banner.c
 	$(CC) $(CFLAGS) -std=gnu11 -c test-banner.c -o test-banner.o
 
+test-banner_cache.o: test-banner_cache.c
+	$(CC) $(CFLAGS) -std=gnu11 -c test-banner_cache.c -o test-banner_cache.o
+
 test-sha1.o: test-sha1.c
 	$(CC) $(CFLAGS) -std=gnu11 -c test-sha1.c -o test-sha1.o
 
@@ -101,7 +110,7 @@ wsserver:
 
 clean: clean-test clean-wsserver
 
-clean-test: clean-test-buf clean-test-path clean-test-watcher clean-test-img clean-test-task clean-test-file clean-test-display clean-test-banner
+clean-test: clean-test-buf clean-test-path clean-test-watcher clean-test-img clean-test-task clean-test-file clean-test-display clean-test-banner clean-test-banner_cache
 
 clean-test-buf:
 	rm -f test-buf test-buf.o buf.o
@@ -126,6 +135,9 @@ clean-test-display:
 
 clean-test-banner:
 	rm -f test-banner test-banner.o banner.o img_data.o read-file.o
+
+clean-test-banner_cache:
+	rm -f test-banner_cache test-banner_cache.o banner_cache.o banner.o img_data.o read-file.o
 
 clean-test-sha1:
 	rm -f test-sha1 test-sha1.o sha1.o
