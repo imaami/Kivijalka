@@ -26,6 +26,15 @@ sha1_cmp (sha1_t *h1,
 }
 
 void
+sha1_cpy (sha1_t *src,
+          sha1_t *dest)
+{
+	if (src && dest) {
+		_sha1_cpy (src, dest);
+	}
+}
+
+void
 sha1_str (sha1_t *hash,
           char   *dest)
 {

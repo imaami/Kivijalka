@@ -30,6 +30,10 @@ sha1_cmp (sha1_t *h1,
           sha1_t *h2);
 
 extern void
+sha1_cpy (sha1_t *src,
+          sha1_t *dest);
+
+extern void
 sha1_str (sha1_t *hash,
           char   *dest);
 

@@ -46,6 +46,18 @@ _sha1_cmp (sha1_t *h1,
 
 __attribute__((always_inline))
 static inline void
+_sha1_cpy (sha1_t *src,
+           sha1_t *dest)
+{
+	dest->u32[0] = src->u32[0];
+	dest->u32[1] = src->u32[1];
+	dest->u32[2] = src->u32[2];
+	dest->u32[3] = src->u32[3];
+	dest->u32[4] = src->u32[4];
+}
+
+__attribute__((always_inline))
+static inline void
 _sha1_str (sha1_t *hash,
            char   *dest)
 {
