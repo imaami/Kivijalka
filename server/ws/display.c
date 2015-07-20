@@ -3,22 +3,12 @@
  * Graphical display.
  */
 
+#include "private/display.h"
+
 #include <stdbool.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-
-/**
- * @class display
- * @author Juuso Alasuutari
- * @brief Graphical display.
- */
-struct display {
-	uint32_t  width;  //! Display width
-	uint32_t  height; //! Display height
-	uint32_t *pixbuf; //! Pixels
-} __attribute__((packed,gcc_struct));
 
 __attribute__((always_inline))
 static inline bool
