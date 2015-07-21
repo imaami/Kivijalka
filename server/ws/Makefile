@@ -32,6 +32,9 @@ test-banner_cache: read-file.o img_data.o banner.o banner_cache.o test-banner_ca
 test-sha1: file.o sha1.o test-sha1.o
 	$(CC) $(CFLAGS) -std=gnu11 file.o sha1.o test-sha1.o -lssl -lcrypto -o test-sha1
 
+test-geo2d: geo2d.o test-geo2d.o
+	$(CC) $(CFLAGS) -std=gnu11 geo2d.o test-geo2d.o -o test-geo2d
+
 global.o: global.c
 	$(CC) $(CFLAGS) -std=gnu11 -c global.c -o global.o
 
@@ -71,6 +74,9 @@ banner_cache.o: banner_cache.c
 sha1.o: sha1.c
 	$(CC) $(CFLAGS) -std=gnu11 -c sha1.c -o sha1.o
 
+geo2d.o: geo2d.c
+	$(CC) $(CFLAGS) -std=gnu11 -c geo2d.c -o geo2d.o
+
 read-file.o: read-file.c
 	$(CC) $(CFLAGS) -std=gnu11 -c read-file.c -o read-file.o
 
@@ -103,6 +109,9 @@ test-banner_cache.o: test-banner_cache.c
 
 test-sha1.o: test-sha1.c
 	$(CC) $(CFLAGS) -std=gnu11 -c test-sha1.c -o test-sha1.o
+
+test-geo2d.o: test-geo2d.c
+	$(CC) $(CFLAGS) -std=gnu11 -c test-geo2d.c -o test-geo2d.o
 
 .PHONY: wsserver
 wsserver:
@@ -141,6 +150,9 @@ clean-test-banner_cache:
 
 clean-test-sha1:
 	rm -f test-sha1 test-sha1.o sha1.o
+
+clean-test-geo2d:
+	rm -f test-geo2d test-geo2d.o geo2d.o
 
 clean-wsserver:
 	rm -f *.o
