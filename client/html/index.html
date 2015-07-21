@@ -67,7 +67,6 @@ html, body {
     </div>
     <div id="bannerQueue">
 <!--  <img src="/usr/share/kivijalka/banners/banner.png" alt="banner" />-->
-      <p id="debug">&Ouml;&ouml;h tuota</p>
     </div>
   </section>
 
@@ -96,7 +95,6 @@ var screen_width = 0;
 var screen_height = 0;
 
 var bq = document.getElementById('bannerQueue');
-var dbg = document.getElementById('debug');
 
 var dragging = false;
 var dragArray;
@@ -121,6 +119,7 @@ var drag_img_y_offset = 0;
 var drag_img_is_drawable = false;
 var drag_img_ants = false;
 var drag_img_ants_timeout = null;
+var drag_img_name = '';
 
 var drag_img_ants_draw = function (t, o, l, d) {
 	ctx2.strokeStyle = "#ff0000";
@@ -234,6 +233,23 @@ var drag_img_dropped = function () {
 	fadeout_dropped(0.618034, 0.03, 100);
 };
 
+var drag_img_begin = function (file) {
+	drag_img_name = file.name;
+	var name_input = document.createElement('input');
+	name_input.type = 'text';
+	name_input.name = 'name';
+	name_input.defaultValue = drag_img_name;
+	bq.appendChild(document.createTextNode('Name: '));
+	bq.appendChild(name_input);
+};
+
+var drag_img_end = function () {
+	drag_img_name = '';
+	while (bq.hasChildNodes()) {
+		bq.removeChild(bq.lastChild);
+	}
+};
+
 var drag_img_set_coords = function(x, y) {
 	drag_img_scaled_x = x + drag_img_x_offset;
 	drag_img_scaled_y = y + drag_img_y_offset;
@@ -291,13 +307,12 @@ var drag_img_draw = function(x, y) {
 
 var thumb_resize = function(w, h) {
 	if (thumb_width != w || thumb_height != h) {
-	        thumb_width = w;
+		thumb_width = w;
 		thumb_height = h;
 		thumb_scaling = w / screen_width;
 		var ws = w + "px", hs = h + "px";
 		thumb.style.width=ws;
 		thumb.style.height=hs;
-		bq.style.width="200px"
 		bq.style.height=hs;
 		cvs0.width = w;
 		cvs0.height = h;
@@ -454,6 +469,7 @@ var drag_file = function(file) {
 		console.log('drag_file');
 
 		if (file.type === 'image/png') {
+			drag_img_begin(file);
 			var reader = new FileReader();
 
 			reader.onload = function (e) {
@@ -472,12 +488,14 @@ var drag_file = function(file) {
 var banner_upload_packet = function(data) {
 	console.log('banner_upload_packet');
 
-	const header_size = 56;
+	const header_size = 60;
 	var TWOPOW32 = Math.pow(2, 32);
 	var time = Date.now();
 	var size = data.byteLength;
-	var buffer = new ArrayBuffer(header_size + size);
+	var name_size = drag_img_name.length;
+	var buffer = new ArrayBuffer(header_size + name_size + size);
 	var header = new DataView(buffer, 0, header_size);
+	var name = new DataView(buffer, header_size, name_size);
 	var payload = new Uint8Array(data);
 	var packet = new Uint8Array(buffer);
 
@@ -514,14 +532,26 @@ var banner_upload_packet = function(data) {
 	}
 	console.log(str);
 
+	// name size (4)
+	header.setUint32(48, name_size, true);
+
 	// payload size (8)
 	lo = size % TWOPOW32;
 	hi = (size - lo) / TWOPOW32;
-	header.setUint32(48, lo, true);
-	header.setUint32(52, hi, true);
+	header.setUint32(52, lo, true);
+	header.setUint32(56, hi, true);
+
+	// name
+	for (var i = 0; i < name_size; i++) {
+		var c = drag_img_name.charCodeAt(i);
+		if (c > 0x7f) {
+			c = 0x3f;
+		}
+		name.setUint8(i, c, true);
+	}
 
 	// payload
-	packet.set(payload, header_size);
+	packet.set(payload, header_size + name_size);
 
 	return buffer;
 };
@@ -531,7 +561,6 @@ var upload_file = function(file) {
 
 	if (file !== undefined && file.type === 'image/png') {
 		var reader = new FileReader();
-		var bytearray;
 
 		reader.onload = function (e) {
 			console.log('upload_file.reader.onload');
@@ -594,11 +623,6 @@ var thumb_mousemove = function (e) {
 	var x = e.clientX - rect.left;
 	var y = e.clientY - rect.top;
 	drag_img_draw(x, y);
-	dbg.innerHTML = '&nbsp;&nbsp;{ ' + drag_img_x + ', ' + drag_img_y + ' }';
-};
-
-var thumb_mouseout = function() {
-	dbg.innerHTML = "";
 };
 
 thumb.ondragenter = function (e) {
@@ -626,7 +650,7 @@ thumb.ondragleave = function () {
 	drag_img_canvas.width = 0;
 	drag_img_canvas.height = 0;
 	drag_img_is_drawable = false;
-	thumb_mouseout();
+	drag_img_end();
 	return false;
 };
 

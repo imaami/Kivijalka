@@ -31,6 +31,7 @@ struct banner_packet {
 	point_t      offs;
 	struct geo2d dims;
 	sha1_t       hash;
+	uint32_t     nsiz;
 	uint64_t     size;
 	uint8_t      data[];
 } __attribute__((gcc_struct,packed));
@@ -100,24 +101,32 @@ _banner_create_from_packet (struct banner_packet *pkt)
 	struct banner *b;
 
 	if ((b = aligned_alloc (64, sizeof (struct banner)))) {
-		_sha1_gen (&b->hash, (size_t) pkt->size, pkt->data);
+		_sha1_gen (&b->hash, (size_t) pkt->size,
+		           pkt->data + (size_t) pkt->nsiz);
 		_sha1_str (&b->hash, str);
 		printf ("payload hash: %s\n", str);
 		if (!_sha1_cmp (&b->hash, &pkt->hash)) {
 			fprintf (stderr, "%s: hash sum mismatch\n", __func__);
 			goto fail;
-		} else if (!(b->data = img_data_new_from_buffer ((size_t) pkt->size, (const char *) pkt->data))) {
+		} else if (!(b->name = strndup ((const char *) pkt->data,
+		                                (size_t) pkt->nsiz))) {
+			fprintf (stderr, "%s: strndup: %s\n", __func__, strerror (errno));
+			goto fail2;
+		} else if (!(b->data = img_data_new_from_buffer ((size_t) pkt->size, (const char *) pkt->data + (size_t) pkt->nsiz))) {
 			fprintf (stderr, "%s: data copy failed\n", __func__);
+			free (b->name);
 		fail:
+			b->name = NULL;
+		fail2:
 			_geo2d_init (&b->dims);
 			_sha1_init (&b->hash);
 			free (b);
 			b = NULL;
 		} else {
-			b->name = NULL;
 			b->offset.u64 = pkt->offs.u64;
 			_geo2d_cpy (&pkt->dims, &b->dims);
 			list_init (&b->hook);
+			printf ("name: \"%s\"\n", b->name);
 		}
 	} else {
 		fprintf (stderr, "%s: aligned_alloc failed\n", __func__);
