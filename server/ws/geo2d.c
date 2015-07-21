@@ -1,7 +1,7 @@
 #include "private/geo2d.h"
 
 void
-geo2d_init (geo2d_t *g)
+geo2d_init (struct geo2d *g)
 {
 	if (g) {
 		_geo2d_init (g);
@@ -9,8 +9,8 @@ geo2d_init (geo2d_t *g)
 }
 
 void
-geo2d_set_width (geo2d_t  *g,
-                 uint32_t  width)
+geo2d_set_width (struct geo2d  *g,
+                 uint32_t       width)
 {
 	if (g) {
 		_geo2d_set_width (g, width);
@@ -18,8 +18,8 @@ geo2d_set_width (geo2d_t  *g,
 }
 
 void
-geo2d_set_height (geo2d_t  *g,
-                  uint32_t  height)
+geo2d_set_height (struct geo2d  *g,
+                  uint32_t       height)
 {
 	if (g) {
 		_geo2d_set_height (g, height);
@@ -27,9 +27,9 @@ geo2d_set_height (geo2d_t  *g,
 }
 
 void
-geo2d_set (geo2d_t  *g,
-           uint32_t  width,
-           uint32_t  height)
+geo2d_set (struct geo2d  *g,
+           uint32_t       width,
+           uint32_t       height)
 {
 	if (g) {
 		_geo2d_set (g, width, height);
@@ -37,13 +37,13 @@ geo2d_set (geo2d_t  *g,
 }
 
 uint32_t
-geo2d_width (geo2d_t *g)
+geo2d_width (struct geo2d *g)
 {
 	return (g) ? _geo2d_width (g) : 0;
 }
 
 uint32_t
-geo2d_height (geo2d_t *g)
+geo2d_height (struct geo2d *g)
 {
 	return (g) ? _geo2d_height (g) : 0;
 }
