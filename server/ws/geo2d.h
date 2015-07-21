@@ -31,6 +31,10 @@ geo2d_width (geo2d_t *g);
 extern uint32_t
 geo2d_height (geo2d_t *g);
 
+extern void
+geo2d_cpy (geo2d_t *g,
+           geo2d_t *dest);
+
 #ifdef __cplusplus
 }
 #endif

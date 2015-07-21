@@ -64,4 +64,12 @@ _geo2d_height (struct geo2d *g)
 	return g->h;
 }
 
+__attribute__((always_inline))
+static inline void
+_geo2d_cpy (struct geo2d *g,
+            struct geo2d *dest)
+{
+	dest->u64 = g->u64;
+}
+
 #endif // __KIVIJALKA_PRIVATE_GEO2D_H__

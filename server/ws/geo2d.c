@@ -47,3 +47,12 @@ geo2d_height (struct geo2d *g)
 {
 	return (g) ? _geo2d_height (g) : 0;
 }
+
+void
+geo2d_cpy (struct geo2d *g,
+           struct geo2d *dest)
+{
+	if (g && dest) {
+		_geo2d_cpy (g, dest);
+	}
+}
