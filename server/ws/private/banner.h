@@ -8,6 +8,7 @@
 #include "../banner.h"
 #include "../list.h"
 #include "../point.h"
+#include "geo2d.h"
 #include "sha1.h"
 
 #include <stdio.h>
@@ -16,20 +17,22 @@
 #include <errno.h>
 
 struct banner {
-	list_head_t  hook;
-	char        *name;
-	point_t      offset;
-	sha1_t       hash;
-	img_data_t  *data;
+	list_head_t   hook;
+	char         *name;
+	point_t       offset;
+	struct geo2d  dims;
+	sha1_t        hash;
+	img_data_t   *data;
 };
 
 struct banner_packet {
-	uint32_t type;
-	uint64_t time;
-	point_t  offs;
-	sha1_t   hash;
-	uint64_t size;
-	uint8_t  data[];
+	uint32_t     type;
+	uint64_t     time;
+	point_t      offs;
+	struct geo2d dims;
+	sha1_t       hash;
+	uint64_t     size;
+	uint8_t      data[];
 } __attribute__((gcc_struct,packed));
 
 __attribute__((always_inline))
@@ -44,6 +47,7 @@ _banner_create (void)
 		list_init (&b->hook);
 		b->name = NULL;
 		b->offset.u64 = 0;
+		_geo2d_init (&b->dims);
 		_sha1_init (&b->hash);
 		b->data = NULL;
 	}
@@ -63,6 +67,7 @@ _banner_create_from_path (const char *path)
 				_sha1_gen (&b->hash, b->data->size,
 				           (uint8_t *) b->data->data);
 				b->offset.u64 = 0;
+				_geo2d_init (&b->dims);
 				list_init (&b->hook);
 			} else {
 				fprintf (stderr, "%s: strdup failed: %s\n", __func__,
@@ -88,8 +93,9 @@ _banner_create_from_packet (struct banner_packet *pkt)
 {
 	char str[41];
 	_sha1_str (&pkt->hash, str);
-	printf ("type: %u\ntime: %lu\nxpos: %d\nypos: %d\nhash: %s\nsize: %lu\n",
-	        pkt->type, pkt->time, pkt->offs.x, pkt->offs.y, str, pkt->size);
+	printf ("type: %u\ntime: %lu\nxpos: %d\nypos: %d\nwidth: %d\nheight: %d\nhash: %s\nsize: %lu\n",
+	        pkt->type, pkt->time, pkt->offs.x, pkt->offs.y,
+		_geo2d_width (&pkt->dims), _geo2d_height (&pkt->dims), str, pkt->size);
 
 	struct banner *b;
 
@@ -103,12 +109,14 @@ _banner_create_from_packet (struct banner_packet *pkt)
 		} else if (!(b->data = img_data_new_from_buffer ((size_t) pkt->size, (const char *) pkt->data))) {
 			fprintf (stderr, "%s: data copy failed\n", __func__);
 		fail:
+			_geo2d_init (&b->dims);
 			_sha1_init (&b->hash);
 			free (b);
 			b = NULL;
 		} else {
 			b->name = NULL;
 			b->offset.u64 = pkt->offs.u64;
+			_geo2d_cpy (&pkt->dims, &b->dims);
 			list_init (&b->hook);
 		}
 	} else {

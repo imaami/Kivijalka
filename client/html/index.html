@@ -106,6 +106,10 @@ var drag_img_ctx = drag_img_canvas.getContext("2d");
 var drag_img = new Image();
 var drag_img_width = 0;
 var drag_img_height = 0;
+var drag_img_force_scaling_w = 1.0;
+var drag_img_force_scaling_h = 1.0;
+var drag_img_forced_width = 0;
+var drag_img_forced_height = 0;
 var drag_img_scaled_width = 0;
 var drag_img_scaled_height = 0;
 var drag_img_x = 0;
@@ -237,9 +241,17 @@ var drag_img_set_coords = function(x, y) {
 	drag_img_y = drag_img_scaled_y / thumb_scaling;
 };
 
+var drag_img_reset_forced_scaling = function() {
+	drag_img_force_scaling_w = 1.0;
+	drag_img_force_scaling_h = 1.0;
+	drag_img_forced_width = drag_img_width;
+	drag_img_forced_height = drag_img_height;
+};
+
 drag_img.onload = function(e) {
 	drag_img_width = this.width;
 	drag_img_height = this.height;
+	drag_img_reset_forced_scaling();
 	drag_img_scaled_width = drag_img_width * thumb_scaling;
 	drag_img_scaled_height = drag_img_height * thumb_scaling;
 	drag_img_x_offset = -Math.round(drag_img_scaled_width / 2.0);
@@ -460,11 +472,12 @@ var drag_file = function(file) {
 var banner_upload_packet = function(data) {
 	console.log('banner_upload_packet');
 
+	const header_size = 56;
 	var TWOPOW32 = Math.pow(2, 32);
 	var time = Date.now();
 	var size = data.byteLength;
-	var buffer = new ArrayBuffer(48 + size);
-	var header = new DataView(buffer, 0, 48);
+	var buffer = new ArrayBuffer(header_size + size);
+	var header = new DataView(buffer, 0, header_size);
 	var payload = new Uint8Array(data);
 	var packet = new Uint8Array(buffer);
 
@@ -481,14 +494,18 @@ var banner_upload_packet = function(data) {
 	header.setInt32(12, drag_img_x, true);
 	header.setInt32(16, drag_img_y, true);
 
+	// banner forced scaling (8)
+	header.setUint32(20, drag_img_forced_width, true);
+	header.setUint32(24, drag_img_forced_height, true);
+
 	// SHA1 digest (20)
 	var hash = (new Rusha()).rawDigest(data);
-	header.setInt32(20, hash[0], true);
-	header.setInt32(24, hash[1], true);
-	header.setInt32(28, hash[2], true);
-	header.setInt32(32, hash[3], true);
-	header.setInt32(36, hash[4], true);
-	var arr = new Uint8Array(buffer, 20, 20);
+	header.setInt32(28, hash[0], true);
+	header.setInt32(32, hash[1], true);
+	header.setInt32(36, hash[2], true);
+	header.setInt32(40, hash[3], true);
+	header.setInt32(44, hash[4], true);
+	var arr = new Uint8Array(buffer, 28, 20);
 	var str = "";
 	for (var i = 0; i < 20; i++) {
 		var x = arr[i];
@@ -500,11 +517,11 @@ var banner_upload_packet = function(data) {
 	// payload size (8)
 	lo = size % TWOPOW32;
 	hi = (size - lo) / TWOPOW32;
-	header.setUint32(40, lo, true);
-	header.setUint32(44, hi, true);
+	header.setUint32(48, lo, true);
+	header.setUint32(52, hi, true);
 
 	// payload
-	packet.set(payload, 48);
+	packet.set(payload, header_size);
 
 	return buffer;
 };
