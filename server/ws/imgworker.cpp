@@ -208,8 +208,8 @@ ImgWorker::update_display (QImage              &capture,
 			img = img.scaled (thumb_w, thumb_h,
 			                  Qt::KeepAspectRatio,
 			                  Qt::SmoothTransformation);
-			if (img.width() == thumb_w
-			    && img.height() == thumb_h) {
+			if (img.width() == (int) thumb_w
+			    && img.height() == (int) thumb_h) {
 				buf.seek (0);
 				if (img.save (&buf, "PNG")) {
 					if ((imd = img_data_new_from_buffer ((size_t) bar.size(), bar.constData()))) {
