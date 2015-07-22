@@ -33,6 +33,17 @@ banner_destroy (struct banner **b)
 }
 
 bool
+banner_uuid_cpy (struct banner *b,
+                 uuid_t         dest)
+{
+	if (b) {
+		_banner_uuid_cpy (b, dest);
+		return true;
+	}
+	return false;
+}
+
+bool
 banner_set_name (struct banner *b,
                  const char    *name)
 {

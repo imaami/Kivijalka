@@ -7,6 +7,7 @@ extern "C" {
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <uuid/uuid.h>
 
 #include "point.h"
 #include "sha1.h"
@@ -26,6 +27,10 @@ banner_create_from_packet (banner_packet_t *pkt);
 
 extern void
 banner_destroy (banner_t **b);
+
+extern bool
+banner_uuid_cpy (banner_t *b,
+                 uuid_t    dest);
 
 extern bool
 banner_set_name (banner_t   *b,

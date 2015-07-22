@@ -3,7 +3,7 @@ QT       += core network websockets gui
 TARGET = wsserver
 CONFIG   += console c++11 link_pkgconfig
 CONFIG   -= app_bundle
-PKGCONFIG += openssl
+PKGCONFIG += openssl uuid
 
 TEMPLATE = app
 

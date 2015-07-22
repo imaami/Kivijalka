@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 #include <stdbool.h>
+#include <uuid/uuid.h>
 
 #include "banner.h"
 #include "sha1.h"
@@ -22,8 +23,12 @@ extern const char *
 banner_cache_path (banner_cache_t *bc);
 
 extern banner_t *
-banner_cache_find_banner (banner_cache_t *bc,
-                          sha1_t         *hash);
+banner_cache_find_by_hash (banner_cache_t *bc,
+                           sha1_t         *hash);
+
+extern banner_t *
+banner_cache_find_by_uuid (banner_cache_t *bc,
+                           uuid_t          uuid);
 
 extern bool
 banner_cache_add_banner (banner_cache_t *bc,

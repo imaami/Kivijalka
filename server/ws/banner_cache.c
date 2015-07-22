@@ -27,10 +27,17 @@ banner_cache_path (struct banner_cache *bc)
 }
 
 struct banner *
-banner_cache_find_banner (struct banner_cache *bc,
-                          sha1_t              *hash)
+banner_cache_find_by_hash (struct banner_cache *bc,
+                           sha1_t              *hash)
 {
-	return (bc && hash) ? _banner_cache_find_banner (bc, hash) : NULL;
+	return (bc && hash) ? _banner_cache_find_by_hash (bc, hash) : NULL;
+}
+
+struct banner *
+banner_cache_find_by_uuid (struct banner_cache *bc,
+                           uuid_t               uuid)
+{
+	return (bc && uuid) ? _banner_cache_find_by_uuid (bc, uuid) : NULL;
 }
 
 bool

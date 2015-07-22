@@ -17,7 +17,9 @@
 #include <errno.h>
 
 struct banner {
-	list_head_t   hook;
+	list_head_t   by_uuid;
+	list_head_t   by_hash;
+	uuid_t        uuid;
 	char         *name;
 	point_t       offset;
 	struct geo2d  dims;
@@ -45,7 +47,8 @@ _banner_create (void)
 	if (!(b = aligned_alloc (64, sizeof (struct banner)))) {
 		fprintf (stderr, "%s: aligned_alloc failed\n", __func__);
 	} else {
-		list_init (&b->hook);
+		list_init (&b->by_uuid);
+		list_init (&b->by_hash);
 		b->name = NULL;
 		b->offset.u64 = 0;
 		_geo2d_init (&b->dims);
@@ -69,7 +72,8 @@ _banner_create_from_path (const char *path)
 				           (uint8_t *) b->data->data);
 				b->offset.u64 = 0;
 				_geo2d_init (&b->dims);
-				list_init (&b->hook);
+				list_init (&b->by_uuid);
+				list_init (&b->by_hash);
 			} else {
 				fprintf (stderr, "%s: strdup failed: %s\n", __func__,
 				         strerror (errno));
@@ -125,7 +129,8 @@ _banner_create_from_packet (struct banner_packet *pkt)
 		} else {
 			b->offset.u64 = pkt->offs.u64;
 			_geo2d_cpy (&pkt->dims, &b->dims);
-			list_init (&b->hook);
+			list_init (&b->by_uuid);
+			list_init (&b->by_hash);
 			printf ("name: \"%s\"\n", b->name);
 		}
 	} else {
@@ -139,8 +144,12 @@ __attribute__((always_inline))
 static inline void
 _banner_destroy (struct banner *b)
 {
-	b->hook.next = NULL;
-	b->hook.prev = NULL;
+	if (b->by_uuid.next && b->by_uuid.prev) {
+		list_del (&b->by_uuid);
+	}
+	if (b->by_hash.next && b->by_hash.prev) {
+		list_del (&b->by_hash);
+	}
 	if (b->name) {
 		free (b->name);
 		b->name = NULL;
@@ -152,6 +161,14 @@ _banner_destroy (struct banner *b)
 		b->data = NULL;
 	}
 	free (b);
+}
+
+__attribute__((always_inline))
+static inline void
+_banner_uuid_cpy (struct banner *b,
+                  uuid_t         dest)
+{
+	uuid_copy (dest, b->uuid);
 }
 
 __attribute__((always_inline))

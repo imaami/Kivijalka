@@ -43,8 +43,8 @@ main (int    argc,
 		} else {
 			fprintf (stderr, "failed to retrieve most recently added banner\n");
 		}
-		puts ("testing whether banner_cache_find_banner() works...");
-		b2 = banner_cache_find_banner (bc, &hash);
+		puts ("testing whether banner_cache_find_by_hash() works...");
+		b2 = banner_cache_find_by_hash (bc, &hash);
 		if (!b2) {
 			fprintf (stderr, "failed to find banner\n");
 		} else {
