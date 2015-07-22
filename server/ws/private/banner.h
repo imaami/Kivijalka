@@ -213,11 +213,10 @@ _banner_hash_cpy (struct banner *b,
 
 __attribute__((always_inline))
 static inline void
-_banner_print_hash (struct banner *b)
+_banner_hash_unparse (struct banner *b,
+                      char          *str)
 {
-	char str[41];
 	_sha1_str (&b->hash, str);
-	puts (str);
 }
 
 __attribute__((always_inline))

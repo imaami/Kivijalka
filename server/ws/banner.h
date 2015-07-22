@@ -52,7 +52,8 @@ banner_hash_cpy (banner_t *b,
                  sha1_t   *dest);
 
 extern void
-banner_print_hash (banner_t *b);
+banner_hash_unparse (banner_t *b,
+                     char     *str);
 
 extern img_data_t *
 banner_remove_data (banner_t *b);

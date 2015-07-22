@@ -87,10 +87,11 @@ banner_hash_cpy (struct banner *b,
 }
 
 void
-banner_print_hash (struct banner *b)
+banner_hash_unparse (struct banner *b,
+                     char          *str)
 {
-	if (b) {
-		_banner_print_hash (b);
+	if (b && str) {
+		_banner_hash_unparse (b, str);
 	}
 }
 

@@ -22,8 +22,9 @@ main (int    argc,
 	point_t offset = POINT_INIT(100, 200);
 	banner_set_offset (b, offset);
 
-	printf ("banner name is '%s'\n", banner_name (b));
-	banner_print_hash (b);
+	char str[41];
+	banner_hash_unparse (b, str);
+	printf ("banner name='%s'\n       hash=%s\n", banner_name (b), str);
 
 	banner_destroy (&b);
 	return EXIT_SUCCESS;

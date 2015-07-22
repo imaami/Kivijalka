@@ -16,7 +16,7 @@ main (int    argc,
 	banner_t *b, *b2;
 	sha1_t hash;
 	uuid_t uuid;
-	char str[37];
+	char str[41];
 
 	if (argc < 2 || !argv[1]) {
 		return EXIT_FAILURE;
@@ -30,8 +30,8 @@ main (int    argc,
 		return EXIT_FAILURE;
 	}
 
-	fputs ("loaded banner: ", stdout);
-	banner_print_hash (b);
+	banner_hash_unparse (b, str);
+	printf ("created banner, SHA1=%s\n", str);
 
 	if (!banner_cache_add_banner (bc, b)) {
 		fprintf (stderr, "failed to add banner\n");
@@ -57,9 +57,8 @@ main (int    argc,
 		if (!b2) {
 			fprintf (stderr, "failed to find banner\n");
 		} else {
-			fputs ("found banner: ", stdout);
-			banner_print_hash (b2);
-			puts ("trying to incorrectly add duplicate banner...");
+			banner_hash_unparse (b2, str);
+			printf ("found banner, SHA1=%s\ntrying to incorrectly add duplicate banner...", str);
 			if (!banner_cache_add_banner (bc, b2)) {
 				puts ("banner_cache_add_banner() refused our stupid request, things seem to work");
 			} else {
@@ -70,6 +69,8 @@ main (int    argc,
 
 	for (unsigned int i = 2; i < argc; ++i) {
 		if ((b = banner_create_from_path (argv[i]))) {
+			banner_hash_unparse (b, str);
+			printf ("created banner, SHA1=%s\n", str);
 			if (!banner_cache_add_banner (bc, b)) {
 				fprintf (stderr, "failed to add banner\n");
 				banner_destroy (&b);
