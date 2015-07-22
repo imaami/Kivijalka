@@ -492,10 +492,10 @@ var banner_upload_packet = function(data) {
 	var TWOPOW32 = Math.pow(2, 32);
 	var time = Date.now();
 	var size = data.byteLength;
-	var name_size = drag_img_name.length;
+	var name = (new TextEncoder('utf-8')).encode(drag_img_name);
+	var name_size = name.byteLength;
 	var buffer = new ArrayBuffer(header_size + name_size + size);
 	var header = new DataView(buffer, 0, header_size);
-	var name = new DataView(buffer, header_size, name_size);
 	var payload = new Uint8Array(data);
 	var packet = new Uint8Array(buffer);
 
@@ -542,13 +542,7 @@ var banner_upload_packet = function(data) {
 	header.setUint32(56, hi, true);
 
 	// name
-	for (var i = 0; i < name_size; i++) {
-		var c = drag_img_name.charCodeAt(i);
-		if (c > 0x7f) {
-			c = 0x3f;
-		}
-		name.setUint8(i, c, true);
-	}
+	packet.set(name, header_size);
 
 	// payload
 	packet.set(payload, header_size + name_size);
