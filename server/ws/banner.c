@@ -83,39 +83,6 @@ banner_print_hash (struct banner *b)
 	}
 }
 
-struct banner *
-banner_next_in_list (struct banner *b,
-                     list_head_t   *list)
-{
-	if (list) {
-		if (b) {
-			if (b->hook.next && b->hook.next != list) {
-				return list_entry (b->hook.next, struct banner, hook);
-			}
-		} else if (list->next && list->next != list) {
-			return list_first_entry (list, struct banner, hook);
-		}
-	}
-	return NULL;
-}
-
-void
-banner_add_to_list (struct banner *b,
-                    list_head_t   *list)
-{
-	if (b && list) {
-		_banner_add_to_list (b, list);
-	}
-}
-
-void
-banner_del_from_list (struct banner *b)
-{
-	if (b) {
-		_banner_del_from_list (b);
-	}
-}
-
 img_data_t *
 banner_remove_data (struct banner *b)
 {

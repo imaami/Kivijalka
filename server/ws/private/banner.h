@@ -204,21 +204,6 @@ _banner_print_hash (struct banner *b)
 }
 
 __attribute__((always_inline))
-static inline void
-_banner_add_to_list (struct banner *b,
-                     list_head_t   *list)
-{
-	list_add_tail (&b->hook, list);
-}
-
-__attribute__((always_inline))
-static inline void
-_banner_del_from_list (struct banner *b)
-{
-	__list_del_entry (&b->hook);
-}
-
-__attribute__((always_inline))
 static inline img_data_t *
 _banner_remove_data (struct banner *b)
 {
