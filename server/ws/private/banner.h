@@ -74,22 +74,23 @@ _banner_create_from_path (const char *path)
 				_geo2d_init (&b->dims);
 				list_init (&b->by_uuid);
 				list_init (&b->by_hash);
+				return b;
 			} else {
 				fprintf (stderr, "%s: strdup failed: %s\n", __func__,
 				         strerror (errno));
-				free (b->data);
-				b->data = NULL;
 			}
+			free (b->data);
+			b->data = NULL;
 		} else {
 			fprintf (stderr, "%s: image loading failed\n", __func__);
-			free (b);
-			b = NULL;
 		}
+		free (b);
+		b = NULL;
 	} else {
 		fprintf (stderr, "%s: aligned_alloc failed\n", __func__);
 	}
 
-	return b;
+	return NULL;
 }
 
 __attribute__((always_inline))
