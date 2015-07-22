@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <uuid/uuid.h>
 
 int
 main (int    argc,
@@ -14,6 +15,8 @@ main (int    argc,
 	banner_cache_t *bc;
 	banner_t *b, *b2;
 	sha1_t hash;
+	uuid_t uuid;
+	char str[37];
 
 	if (argc < 2 || !argv[1]) {
 		return EXIT_FAILURE;
@@ -32,8 +35,11 @@ main (int    argc,
 
 	if (!banner_cache_add_banner (bc, b)) {
 		fprintf (stderr, "failed to add banner\n");
+		banner_destroy (&b);
 	} else {
-		puts ("added banner to cache");
+		banner_uuid_cpy (b, uuid);
+		uuid_unparse_lower (uuid, str);
+		printf ("added banner to cache, UUID=%s\n", str);
 		banner_hash_cpy (b, &hash);
 		b = NULL;
 		puts ("testing whether the most recent banner is the correct one...");
@@ -43,6 +49,9 @@ main (int    argc,
 		} else {
 			fprintf (stderr, "failed to retrieve most recently added banner\n");
 		}
+		puts ("testing whether banner_cache_find_by_uuid() works...");
+		b2 = banner_cache_find_by_uuid (bc, uuid);
+		printf (" it does%s", (b2) ? "\n" : "n't\n");
 		puts ("testing whether banner_cache_find_by_hash() works...");
 		b2 = banner_cache_find_by_hash (bc, &hash);
 		if (!b2) {
@@ -55,6 +64,19 @@ main (int    argc,
 				puts ("banner_cache_add_banner() refused our stupid request, things seem to work");
 			} else {
 				puts ("whoops! banner_cache_add_banner() seem to be broken");
+			}
+		}
+	}
+
+	for (unsigned int i = 2; i < argc; ++i) {
+		if ((b = banner_create_from_path (argv[i]))) {
+			if (!banner_cache_add_banner (bc, b)) {
+				fprintf (stderr, "failed to add banner\n");
+				banner_destroy (&b);
+			} else {
+				banner_uuid_cpy (b, uuid);
+				uuid_unparse_lower (uuid, str);
+				printf ("added banner to cache, UUID=%s\n", str);
 			}
 		}
 	}

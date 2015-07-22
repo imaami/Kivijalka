@@ -187,14 +187,32 @@ _banner_cache_add_banner (struct banner_cache *bc,
                           struct banner       *banner)
 {
 	struct bucket *bkt = _bucket_by_hash (bc, &banner->hash);
+
 	if (_banner_by_hash (&bkt->list, &banner->hash)) {
 		fprintf (stderr, "%s: hash collision!\n", __func__);
 		return false;
 	}
+
 	list_add (&banner->by_hash, &bkt->list);
+
 	if (bkt->hook.next == &bkt->hook) {
 		list_add (&bkt->hook, &bc->by_hash.in_use);
 	}
+
+	uuid_t uuid;
+
+	do {
+		uuid_generate (uuid);
+		bkt = _bucket_by_uuid (bc, uuid);
+	} while (_banner_by_uuid (&bkt->list, uuid));
+
+	uuid_copy (banner->uuid, uuid);
+	list_add (&banner->by_uuid, &bkt->list);
+
+	if (bkt->hook.next == &bkt->hook) {
+		list_add (&bkt->hook, &bc->by_uuid.in_use);
+	}
+
 	return true;
 }
 
