@@ -39,7 +39,7 @@ main (int    argc,
 	} else {
 		banner_uuid_cpy (b, uuid);
 		uuid_unparse_lower (uuid, str);
-		printf ("added banner to cache, UUID=%s\n", str);
+		printf ("cached banner, UUID=%s\n", str);
 		banner_hash_cpy (b, &hash);
 		b = NULL;
 		puts ("testing whether the most recent banner is the correct one...");
@@ -77,7 +77,7 @@ main (int    argc,
 			} else {
 				banner_uuid_cpy (b, uuid);
 				uuid_unparse_lower (uuid, str);
-				printf ("added banner to cache, UUID=%s\n", str);
+				printf ("cached banner, UUID=%s\n", str);
 			}
 		}
 	}

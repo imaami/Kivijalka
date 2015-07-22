@@ -187,9 +187,19 @@ _banner_cache_add_banner (struct banner_cache *bc,
                           struct banner       *banner)
 {
 	struct bucket *bkt = _bucket_by_hash (bc, &banner->hash);
+	struct banner *b;
 
-	if (_banner_by_hash (&bkt->list, &banner->hash)) {
-		fprintf (stderr, "%s: hash collision!\n", __func__);
+	if ((b = _banner_by_hash (&bkt->list, &banner->hash))) {
+		char str[41], str2[41];
+		_banner_hash_unparse (banner, str);
+		_banner_hash_unparse (b, str2);
+		fprintf (stderr,
+		         "hash collision: %p SHA1=%s\n"
+		         "                   name=%s\n"
+		         "            vs. %p SHA1=%s\n"
+		         "                   name=%s\n",
+		         banner, str, banner_name (banner),
+		         b, str2, banner_name (b));
 		return false;
 	}
 
