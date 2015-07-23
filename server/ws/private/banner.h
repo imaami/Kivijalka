@@ -238,4 +238,20 @@ _banner_remove_data (struct banner *b)
 	return imd;
 }
 
+__attribute__((always_inline))
+static inline size_t
+_banner_json_size (struct banner *b,
+                   size_t         name_len)
+{
+	size_t size = 36 + 40 + sizeof (
+		"{\"uuid\":\"\",\"hash\":\"\""
+		",\"w\":,\"h\":,\"x\":,\"y\":"
+		",\"name\":\"\"}");
+	char tmp[48];
+	snprintf (tmp, 48, "%u%u%d%d",
+	          (unsigned int) b->dims.w, (unsigned int) b->dims.h,
+	          (int) b->offset.x, (int) b->offset.y);
+	return size + strlen (tmp) + name_len;
+}
+
 #endif // __KIVIJALKA_PRIVATE_BANNER_H__

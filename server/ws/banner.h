@@ -5,6 +5,7 @@
 extern "C" {
 #endif
 
+#include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <uuid/uuid.h>
@@ -61,6 +62,9 @@ banner_hash_unparse (banner_t *b,
 
 extern img_data_t *
 banner_remove_data (banner_t *b);
+
+extern size_t
+banner_json_size (banner_t *b);
 
 #ifdef __cplusplus
 }
