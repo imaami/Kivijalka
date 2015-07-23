@@ -87,6 +87,15 @@ banner_hash_cpy (struct banner *b,
 }
 
 void
+banner_uuid_unparse (struct banner *b,
+                     char          *str)
+{
+	if (b && str) {
+		_banner_uuid_unparse (b, str);
+	}
+}
+
+void
 banner_hash_unparse (struct banner *b,
                      char          *str)
 {

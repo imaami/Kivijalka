@@ -52,6 +52,10 @@ banner_hash_cpy (banner_t *b,
                  sha1_t   *dest);
 
 extern void
+banner_uuid_unparse (banner_t *b,
+                     char     *str);
+
+extern void
 banner_hash_unparse (banner_t *b,
                      char     *str);
 

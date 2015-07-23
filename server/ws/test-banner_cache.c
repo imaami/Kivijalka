@@ -38,7 +38,7 @@ main (int    argc,
 		banner_destroy (&b);
 	} else {
 		banner_uuid_cpy (b, uuid);
-		uuid_unparse_lower (uuid, str);
+		banner_uuid_unparse (b, str);
 		printf ("cached banner, UUID=%s\n", str);
 		banner_hash_cpy (b, &hash);
 		b = NULL;
@@ -76,8 +76,7 @@ main (int    argc,
 				fprintf (stderr, "failed to add banner\n");
 				banner_destroy (&b);
 			} else {
-				banner_uuid_cpy (b, uuid);
-				uuid_unparse_lower (uuid, str);
+				banner_uuid_unparse (b, str);
 				printf ("cached banner, UUID=%s\n", str);
 			}
 		}

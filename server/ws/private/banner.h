@@ -214,6 +214,14 @@ _banner_hash_cpy (struct banner *b,
 
 __attribute__((always_inline))
 static inline void
+_banner_uuid_unparse (struct banner *b,
+                      char          *str)
+{
+	uuid_unparse_lower (b->uuid, str);
+}
+
+__attribute__((always_inline))
+static inline void
 _banner_hash_unparse (struct banner *b,
                       char          *str)
 {
