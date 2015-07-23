@@ -243,4 +243,59 @@ _banner_cache_most_recent (struct banner_cache *bc)
 	return NULL;
 }
 
+__attribute__((always_inline))
+static inline char *
+_banner_cache_json (struct banner_cache *bc)
+{
+	const size_t inc = 4096;
+	size_t size = inc, pos = 0;
+	char *buf;
+
+	if (!(buf = malloc (size))) {
+		fprintf (stderr, "%s: malloc: %s\n",
+		         __func__, strerror (errno));
+		return NULL;
+	}
+
+	list_head_t *h = &bc->by_uuid.in_use;
+	struct bucket *bkt;
+	list_for_each_entry (bkt, h, hook) {
+		list_head_t *h2 = &bkt->list;
+		struct banner *b;
+		list_for_each_entry (b, h2, by_uuid) {
+			size_t name_len = (b->name) ? strlen (b->name) : 0;
+			size_t need = 26 + 36 + 40 + name_len;
+			if (need >= (size - pos)) {
+				size += inc;
+				char *tmp = realloc (buf, size);
+				if (!tmp) {
+					fprintf (stderr, "%s: realloc: %s\n",
+					         __func__, strerror (errno));
+					free (buf);
+					return NULL;
+				}
+				buf = tmp;
+			}
+			snprintf (buf + pos, 8, "{uuid:\"");
+			pos += 7;
+			_banner_uuid_unparse (b, buf + pos);
+			pos += 36;
+			snprintf (buf + pos, 9, "\",hash:\"");
+			pos += 8;
+			_banner_hash_unparse (b, buf + pos);
+			pos += 40;
+			if (name_len > 0) {
+				snprintf (buf + pos, name_len + 12,
+				          "\",name:\"%s\"},", b->name);
+				pos += name_len;
+			} else {
+				snprintf (buf + pos, 12, "\",name:\"\"},");
+			}
+			pos += 11;
+		}
+	}
+
+	return buf;
+}
+
 #endif // __KIVIJALKA_PRIVATE_BANNER_CACHE_H__

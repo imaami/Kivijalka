@@ -37,6 +37,9 @@ banner_cache_add_banner (banner_cache_t *bc,
 extern banner_t *
 banner_cache_most_recent (banner_cache_t *bc);
 
+extern char *
+banner_cache_json (banner_cache_t *bc);
+
 #ifdef __cplusplus
 }
 #endif

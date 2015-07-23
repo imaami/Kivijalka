@@ -52,3 +52,9 @@ banner_cache_most_recent (struct banner_cache *bc)
 {
 	return (bc) ? _banner_cache_most_recent (bc) : NULL;
 }
+
+char *
+banner_cache_json (struct banner_cache *bc)
+{
+	return (bc) ? _banner_cache_json (bc) : NULL;
+}
