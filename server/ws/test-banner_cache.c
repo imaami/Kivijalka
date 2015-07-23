@@ -49,16 +49,17 @@ main (int    argc,
 		} else {
 			fprintf (stderr, "failed to retrieve most recently added banner\n");
 		}
-		puts ("testing whether banner_cache_find_by_uuid() works...");
+		fputs ("testing whether banner_cache_find_by_uuid() works...", stdout);
 		b2 = banner_cache_find_by_uuid (bc, uuid);
-		printf (" it does%s", (b2) ? "\n" : "n't\n");
-		puts ("testing whether banner_cache_find_by_hash() works...");
+		printf (" it does%s", (b2) ? "\n" : "n't!\n");
+		fputs ("testing whether banner_cache_find_by_hash() works...", stdout);
 		b2 = banner_cache_find_by_hash (bc, &hash);
 		if (!b2) {
-			fprintf (stderr, "failed to find banner\n");
+			puts (" it doesn't!");
 		} else {
+			puts (" it does");
 			banner_hash_unparse (b2, str);
-			printf ("found banner, SHA1=%s\ntrying to incorrectly add duplicate banner...", str);
+			printf ("found banner, SHA1=%s\ntrying to incorrectly add duplicate banner...\n", str);
 			if (!banner_cache_add_banner (bc, b2)) {
 				puts ("banner_cache_add_banner() refused our stupid request, things seem to work");
 			} else {
