@@ -11,6 +11,7 @@ extern "C" {
 #endif
 
 #include <stddef.h>
+#include <stdbool.h>
 
 typedef struct img_data img_data_t;
 
@@ -49,6 +50,17 @@ img_data_new_from_buffer (size_t      size,
  */
 extern img_data_t *
 img_data_new_from_file (const char *path);
+
+/**
+ * @brief Compare two img_data_t objects.
+ * @param imd Pointer to first img_data_t object.
+ * @param imd2 Pointer to second img_data_t object.
+ * @return true if the object pointers are the same or if the data
+ *         are identical, false otherwise.
+ */
+extern bool
+img_data_cmp (img_data_t *imd,
+              img_data_t *imd2);
 
 #ifdef __cplusplus
 }

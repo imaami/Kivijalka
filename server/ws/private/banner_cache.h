@@ -197,9 +197,12 @@ _banner_cache_add_banner (struct banner_cache *bc,
 		         "hash collision: %p SHA1=%s\n"
 		         "                   name=%s\n"
 		         "            vs. %p SHA1=%s\n"
-		         "                   name=%s\n",
+		         "                   name=%s\n"
+		         " ^ data bytes%smatch\n",
 		         banner, str, banner_name (banner),
-		         b, str2, banner_name (b));
+		         b, str2, banner_name (b),
+		         (img_data_cmp (banner->data, b->data))
+		         ? " ": " do not ");
 		return false;
 	}
 

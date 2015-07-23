@@ -72,3 +72,45 @@ img_data_new_from_file (const char *path)
 	}
 	return NULL;
 }
+
+bool
+img_data_cmp (img_data_t *imd,
+              img_data_t *imd2)
+{
+	if (imd) {
+		if (imd == imd2) {
+			return true;
+		}
+		if (imd2) {
+			size_t c = imd2->size;
+			if (c == imd->size) {
+				size_t s = c / sizeof (size_t), i = 0;
+				union {
+					size_t *s;
+					char   *c;
+				} p[2] = {
+					{.s = (size_t *) imd->data},
+					{.s = (size_t *) imd2->data}
+				};
+				for (; i < s; ++i) {
+					if (p[0].s[i] != p[1].s[i]) {
+						return false;
+					}
+				}
+				p[0].c = imd->data;
+				p[1].c = imd2->data;
+				for (i *= sizeof (size_t); i < c; ++i) {
+					if (p[0].c[i] != p[1].c[i]) {
+						return false;
+					}
+				}
+				return true;
+			}
+		} else {
+			fprintf (stderr, "%s: 2nd param is null\n", __func__);
+		}
+	} else {
+		fprintf (stderr, "%s: 1st param is null\n", __func__);
+	}
+	return false;
+}
