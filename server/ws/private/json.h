@@ -151,9 +151,9 @@ _json_stringify (const char  *str,
 	for (; str[i]; ++i, ++p) {
 		/* make sure the buffer has enough space for any possible
 		 * serialized char; the maximum amount we really need is
-		 * six bytes, but eight is a nice binarily-round number
+		 * six bytes, but 16 is a nice binarily-round number
 		 */
-		if (l - p < 8) {
+		if (l - p < 16) {
 			uint8_t *_b;
 			if (!(_b = realloc (b, (l += 4096)))) {
 				fprintf (stderr, "%s: realloc: %s\n",
