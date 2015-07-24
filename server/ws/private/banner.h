@@ -14,6 +14,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <string.h>
 #include <errno.h>
 
@@ -237,22 +238,6 @@ _banner_remove_data (struct banner *b)
 	b->data = NULL;
 	_sha1_init (&b->hash);
 	return imd;
-}
-
-__attribute__((always_inline))
-static inline size_t
-_banner_json_size (struct banner *b,
-                   size_t         name_len)
-{
-	size_t size = 36 + 40 + sizeof (
-		"{\"uuid\":\"\",\"hash\":\"\""
-		",\"w\":,\"h\":,\"x\":,\"y\":"
-		",\"name\":\"\"}");
-	char tmp[48];
-	snprintf (tmp, 48, "%u%u%d%d",
-	          (unsigned int) b->dims.w, (unsigned int) b->dims.h,
-	          (int) b->offset.x, (int) b->offset.y);
-	return size + strlen (tmp) + name_len;
 }
 
 __attribute__((always_inline))

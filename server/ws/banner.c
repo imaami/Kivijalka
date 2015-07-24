@@ -4,7 +4,6 @@
  */
 
 #include "private/banner.h"
-#include "private/json.h"
 
 struct banner *
 banner_create (void)
@@ -109,10 +108,4 @@ img_data_t *
 banner_remove_data (struct banner *b)
 {
 	return (b) ? _banner_remove_data (b) : NULL;
-}
-
-size_t
-banner_json_size (struct banner *b)
-{
-	return (b) ? _banner_json_size (b, (b->name) ? _json_utf8_escaped_size (b->name) : 0) : 0;
 }
