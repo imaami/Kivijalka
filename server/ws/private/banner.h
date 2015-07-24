@@ -307,12 +307,12 @@ _banner_serialize (struct banner  *ban,
 	(void) strncpy (b.c + p, ",\"x\":", 5);
 	p += 5;
 
-	b.c[p++] = '0'; // temporary shim
+	p += _i32_to_str (ban->offset.x, b.c + p);
 
 	(void) strncpy (b.c + p, ",\"y\":", 5);
 	p += 5;
 
-	b.c[p++] = '0'; // temporary shim
+	p += _i32_to_str (ban->offset.y, b.c + p);
 
 	(void) strncpy (b.c + p, ",\"name\":\"", 9);
 	p += 9;
