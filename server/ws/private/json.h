@@ -155,7 +155,7 @@ _json_stringify (const char  *str,
 		 */
 		if (l - p < 16) {
 			uint8_t *_b;
-			if (!(_b = realloc (b, (l += 4096)))) {
+			if (!(_b = realloc (b, (l += BUFSIZ)))) {
 				fprintf (stderr, "%s: realloc: %s\n",
 				         __func__, strerror (errno));
 				return false;
