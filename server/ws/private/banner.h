@@ -10,6 +10,7 @@
 #include "../point.h"
 #include "geo2d.h"
 #include "sha1.h"
+#include "json.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -252,6 +253,81 @@ _banner_json_size (struct banner *b,
 	          (unsigned int) b->dims.w, (unsigned int) b->dims.h,
 	          (int) b->offset.x, (int) b->offset.y);
 	return size + strlen (tmp) + name_len;
+}
+
+__attribute__((always_inline))
+static inline bool
+_banner_serialize (struct banner  *ban,
+                   size_t         *pos,
+                   size_t         *len,
+                   uint8_t       **buf)
+{
+	union {
+		uint8_t *u;
+		char    *c;
+	} b = {.u = *buf};
+	size_t l = *len, p = *pos;
+	size_t need = 36 + 40 + 42 + sizeof (
+		"{\"uuid\":\"\",\"hash\":\"\""
+		",\"w\":,\"h\":,\"x\":,\"y\":"
+		",\"name\":\"\"}");
+
+	if (l - p < need) {
+		uint8_t *_b;
+		if (!(_b = realloc (b.u, (l += BUFSIZ)))) {
+			fprintf (stderr, "%s: realloc: %s\n",
+			         __func__, strerror (errno));
+			return false;
+		}
+		b.u = _b;
+	}
+
+	(void) strncpy (b.c + p, "{\"uuid\":\"", 9);
+	p += 9;
+
+	_banner_uuid_unparse (ban, b.c + p);
+	p += 36;
+
+	(void) strncpy (b.c + p, "\",\"hash\":\"", 10);
+	p += 10;
+
+	_banner_hash_unparse (ban, b.c + p);
+	p += 40;
+
+	(void) strncpy (b.c + p, "\",\"w\":", 6);
+	p += 6;
+
+	p += _u32_to_str (ban->dims.w, b.c + p);
+
+	(void) strncpy (b.c + p, ",\"h\":", 5);
+	p += 5;
+
+	p += _u32_to_str (ban->dims.h, b.c + p);
+
+	(void) strncpy (b.c + p, ",\"x\":", 5);
+	p += 5;
+
+	b.c[p++] = '0'; // temporary shim
+
+	(void) strncpy (b.c + p, ",\"y\":", 5);
+	p += 5;
+
+	b.c[p++] = '0'; // temporary shim
+
+	(void) strncpy (b.c + p, ",\"name\":\"", 9);
+	p += 9;
+
+	(void) _json_stringify ((ban->name) ? (const char *) ban->name : "",
+	                        &p, &l, &b.u);
+
+	(void) strncpy (b.c + p, "\"}", 2);
+	p += 2;
+
+	*pos = p;
+	*len = l;
+	*buf = b.u;
+
+	return true;
 }
 
 #endif // __KIVIJALKA_PRIVATE_BANNER_H__
