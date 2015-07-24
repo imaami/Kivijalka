@@ -5,8 +5,13 @@
 #error This header must not be included directly by C++ code
 #endif
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include <errno.h>
 
 __attribute__((always_inline))
 static inline size_t
@@ -131,6 +136,108 @@ _json_utf8_escaped_size (const char *str)
 	}
 
 	return i + n;
+}
+
+__attribute__((always_inline))
+static inline bool
+_json_stringify (const char  *str,
+                 size_t      *pos,
+                 size_t      *len,
+                 uint8_t    **buf)
+{
+	uint8_t *b = *buf;
+	size_t l = *len, p = *pos, i = 0;
+
+	for (; str[i]; ++i, ++p) {
+		/* make sure the buffer has enough space for any possible
+		 * serialized char; the maximum amount we really need is
+		 * six bytes, but eight is a nice binarily-round number
+		 */
+		if (l - p < 8) {
+			uint8_t *_b;
+			if (!(_b = realloc (b, (l += 4096)))) {
+				fprintf (stderr, "%s: realloc: %s\n",
+				         __func__, strerror (errno));
+				return false;
+			}
+			b = _b;
+		}
+
+		uint8_t c = ((uint8_t *) str)[i];
+
+		switch (c) {
+		case 0x01 ... 0x07:
+			b[p++] = '\\';
+			b[p++] = 'u';
+			b[p++] = '0';
+			b[p++] = '0';
+			b[p++] = '0';
+			c += '0';
+			break;
+
+		case 0x0b: case 0x0e ... 0x0f:
+			b[p++] = '\\';
+			b[p++] = 'u';
+			b[p++] = '0';
+			b[p++] = '0';
+			b[p++] = '0';
+			c += ('a' - 0x0a);
+			break;
+
+		case 0x10 ... 0x19:
+			b[p++] = '\\';
+			b[p++] = 'u';
+			b[p++] = '0';
+			b[p++] = '0';
+			b[p++] = '1';
+			c += '0';
+			break;
+
+		case 0x1a ... 0x1f:
+			b[p++] = '\\';
+			b[p++] = 'u';
+			b[p++] = '0';
+			b[p++] = '0';
+			b[p++] = '1';
+			c += ('a' - 0x0a);
+			break;
+
+		case '\b': // 0x08
+			c = 'b';
+			goto escape;
+
+		case '\t': // 0x09
+			c = 't';
+			goto escape;
+
+		case '\n': // 0x0a
+			c = 'n';
+			goto escape;
+
+		case '\f': // 0x0c
+			c = 'f';
+			goto escape;
+
+		case '\r': // 0x0d
+			c = 'r';
+
+		case '"': // 0x22
+		case '\\': // 0x5c
+		escape:
+			b[p++] = '\\';
+
+		default:
+			break;
+		}
+
+		b[p] = c;
+	}
+
+	*buf = b;
+	*len = l;
+	*pos = p;
+
+	return true;
 }
 
 #endif // __KIVIJALKA_PRIVATE_JSON_H__
