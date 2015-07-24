@@ -9,6 +9,7 @@
 #include "../list.h"
 #include "sha1.h"
 #include "banner.h"
+#include "json.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -247,15 +248,20 @@ __attribute__((always_inline))
 static inline char *
 _banner_cache_json (struct banner_cache *bc)
 {
-	const size_t inc = 4096;
-	size_t size = inc, pos = 0;
-	char *buf;
+	size_t pos, len = BUFSIZ;
+	union {
+		uint8_t *u;
+		char    *c;
+	} buf;
 
-	if (!(buf = malloc (size))) {
+	if (!(buf.u = malloc (len))) {
 		fprintf (stderr, "%s: malloc: %s\n",
 		         __func__, strerror (errno));
 		return NULL;
 	}
+
+	buf.c[0] = '[';
+	pos = 1;
 
 	list_head_t *h = &bc->by_uuid.in_use;
 	struct bucket *bkt;
@@ -263,39 +269,17 @@ _banner_cache_json (struct banner_cache *bc)
 		list_head_t *h2 = &bkt->list;
 		struct banner *b;
 		list_for_each_entry (b, h2, by_uuid) {
-			size_t name_len = (b->name) ? strlen (b->name) : 0;
-			size_t need = 26 + 36 + 40 + name_len;
-			if (need >= (size - pos)) {
-				size += inc;
-				char *tmp = realloc (buf, size);
-				if (!tmp) {
-					fprintf (stderr, "%s: realloc: %s\n",
-					         __func__, strerror (errno));
-					free (buf);
-					return NULL;
-				}
-				buf = tmp;
+			if (pos > 1) {
+				buf.c[pos++] = ',';
 			}
-			snprintf (buf + pos, 8, "{uuid:\"");
-			pos += 7;
-			_banner_uuid_unparse (b, buf + pos);
-			pos += 36;
-			snprintf (buf + pos, 9, "\",hash:\"");
-			pos += 8;
-			_banner_hash_unparse (b, buf + pos);
-			pos += 40;
-			if (name_len > 0) {
-				snprintf (buf + pos, name_len + 12,
-				          "\",name:\"%s\"},", b->name);
-				pos += name_len;
-			} else {
-				snprintf (buf + pos, 12, "\",name:\"\"},");
-			}
-			pos += 11;
+			(void) _banner_serialize (b, &pos, &len, &buf.u);
 		}
 	}
 
-	return buf;
+	buf.c[pos++] = ']';
+	buf.c[pos] = '\0';
+
+	return buf.c;
 }
 
 #endif // __KIVIJALKA_PRIVATE_BANNER_CACHE_H__
