@@ -116,10 +116,16 @@ var drag_img_scaled_x = 0;
 var drag_img_scaled_y = 0;
 var drag_img_x_offset = 0;
 var drag_img_y_offset = 0;
+var drag_img_x_min = 0;
+var drag_img_x_max = 0;
+var drag_img_y_min = 0;
+var drag_img_y_max = 0;
 var drag_img_is_drawable = false;
 var drag_img_ants = false;
 var drag_img_ants_timeout = null;
 var drag_img_name = '';
+var drag_img_x_input = null;
+var drag_img_y_input = null;
 
 var drag_img_ants_draw = function (t, o, l, d) {
 	ctx2.strokeStyle = "#ff0000";
@@ -233,18 +239,83 @@ var drag_img_dropped = function () {
 	fadeout_dropped(0.618034, 0.03, 100);
 };
 
-var drag_img_begin = function (file) {
-	drag_img_name = file.name;
-	var name_input = document.createElement('input');
-	name_input.type = 'text';
-	name_input.name = 'name';
-	name_input.defaultValue = drag_img_name;
-	bq.appendChild(document.createTextNode('Name: '));
-	bq.appendChild(name_input);
+var drag_img_create_form = function() {
+	var bf = document.createElement('form');
+	bf.acceptCharset = 'UTF-8';
+
+	var fs = document.createElement('fieldset');
+
+	var el = document.createElement('legend');
+	el.innerHTML = 'Upload banner:';
+	fs.appendChild(el);
+
+	el = document.createElement('input');
+	el.type = 'text';
+	el.name = 'name';
+	el.defaultValue = drag_img_name;
+	fs.appendChild(document.createTextNode('Name: '));
+	fs.appendChild(el);
+	fs.appendChild(document.createElement('br'));
+
+	el = document.createElement('input');
+	el.type = 'number';
+	el.name = 'x';
+	el.value = 0;
+	el.min = drag_img_x_min;
+	el.max = drag_img_x_max;
+	el.onchange = function () {
+		console.log('drag_img_x_input.onchange: ' + this.value);
+	};
+	fs.appendChild(document.createTextNode('X: '));
+	fs.appendChild(el);
+	fs.appendChild(document.createElement('br'));
+	drag_img_x_input = el;
+
+	el = document.createElement('input');
+	el.type = 'number';
+	el.name = 'y';
+	el.value = 0;
+	el.min = drag_img_y_min;
+	el.max = drag_img_y_max;
+	el.onchange = function () {
+		console.log('drag_img_y_input.onchange: ' + this.value);
+	};
+	fs.appendChild(document.createTextNode('Y: '));
+	fs.appendChild(el);
+	fs.appendChild(document.createElement('br'));
+	drag_img_y_input = el;
+
+	el = document.createElement('input');
+	el.type = 'radio';
+	el.name = 'action';
+	el.value = 'apply';
+	el.checked = true;
+	fs.appendChild(el);
+	fs.appendChild(document.createTextNode(' Apply immediately'));
+	fs.appendChild(document.createElement('br'));
+
+	el = document.createElement('input');
+	el.type = 'radio';
+	el.name = 'action';
+	el.value = 'store';
+	fs.appendChild(el);
+	fs.appendChild(document.createTextNode(' Store for later use'));
+	fs.appendChild(document.createElement('br'));
+
+	el = document.createElement('input');
+	el.type = 'submit';
+	el.name = 'upload';
+	el.value = 'Upload';
+	fs.appendChild(el);
+
+	bf.appendChild(fs);
+	bq.appendChild(bf);
 };
 
-var drag_img_end = function () {
+var drag_img_destroy_form = function () {
 	drag_img_name = '';
+	drag_img_x_input = null;
+	drag_img_y_input = null;
 	while (bq.hasChildNodes()) {
 		bq.removeChild(bq.lastChild);
 	}
@@ -255,6 +326,8 @@ var drag_img_set_coords = function(x, y) {
 	drag_img_scaled_y = y + drag_img_y_offset;
 	drag_img_x = drag_img_scaled_x / thumb_scaling;
 	drag_img_y = drag_img_scaled_y / thumb_scaling;
+	drag_img_x_input.value = drag_img_x;
+	drag_img_y_input.value = drag_img_y;
 };
 
 var drag_img_reset_forced_scaling = function() {
@@ -272,6 +345,10 @@ drag_img.onload = function(e) {
 	drag_img_scaled_height = drag_img_height * thumb_scaling;
 	drag_img_x_offset = -Math.round(drag_img_scaled_width / 2.0);
 	drag_img_y_offset = -Math.round(drag_img_scaled_height / 2.0);
+	drag_img_x_min = -drag_img_width + 1;
+	drag_img_x_max = screen_width - 1;
+	drag_img_y_min = -drag_img_height + 1;
+	drag_img_y_max = screen_height - 1;
 
 	drag_img_canvas.width = drag_img_scaled_width;
 	drag_img_canvas.height = drag_img_scaled_height;
@@ -283,6 +360,7 @@ drag_img.onload = function(e) {
 	ctx1.globalAlpha = 0.99;
 
 	drag_img_is_drawable = true;
+	drag_img_create_form();
 
 	console.log('drag_img_width=' + drag_img_width);
 	console.log('drag_img_height=' + drag_img_height);
@@ -290,6 +368,10 @@ drag_img.onload = function(e) {
 	console.log('drag_img_scaled_height=' + drag_img_scaled_height);
 	console.log('drag_img_x_offset=' + drag_img_x_offset);
 	console.log('drag_img_y_offset=' + drag_img_y_offset);
+	console.log('drag_img_x_min=' + drag_img_x_min);
+	console.log('drag_img_x_max=' + drag_img_x_max);
+	console.log('drag_img_y_min=' + drag_img_y_min);
+	console.log('drag_img_y_max=' + drag_img_y_max);
 };
 
 var drag_img_clear = function() {
@@ -469,7 +551,7 @@ var drag_file = function(file) {
 		console.log('drag_file');
 
 		if (file.type === 'image/png') {
-			drag_img_begin(file);
+			drag_img_name = file.name;
 			var reader = new FileReader();
 
 			reader.onload = function (e) {
@@ -653,7 +735,7 @@ thumb.ondragleave = function () {
 	drag_img_canvas.width = 0;
 	drag_img_canvas.height = 0;
 	drag_img_is_drawable = false;
-	drag_img_end();
+	drag_img_destroy_form();
 	return false;
 };
 
