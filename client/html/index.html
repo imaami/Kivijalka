@@ -566,6 +566,15 @@ var upload_file = function(file) {
 	}
 }
 
+var deaf_listener = function (e) {
+	if (e.preventDefault) {
+		e.preventDefault();
+	} else if (e.returnValue) {
+		e.returnValue = false;
+	}
+	return false;
+};
+
 bq.ondrop = function (e) {
 //	console.log('bq.ondrop');
 	e.preventDefault();
@@ -628,7 +637,7 @@ thumb.ondragenter = function (e) {
 	return false;
 };
 
-thumb.ondragover = function (e) {
+var thumb_onmousemove = function (e) {
 	this.className = 'hover';
 	e.preventDefault();
 	thumb_mousemove(e);
@@ -655,11 +664,44 @@ thumb.ondragend = function () {
 	return false;
 };
 
-thumb.ondrop = function (e) {
+var thumb_dropped_onmouseup = function (e) {
+	console.log('thumb_dropped_onmouseup');
+	this.className = '';
+	e.preventDefault();
+	thumb.onmousemove = deaf_listener;
+	thumb.onmouseup = deaf_listener;
+	drag_img_ants_start2(100, 3);
+};
+
+var thumb_dropped_onmousedown = function (e) {
+	console.log('thumb_dropped_onmousedown');
+	var rect = cvs0.getBoundingClientRect();
+	var x = e.clientX - rect.left, y = 0, dx = 0, dy = 0;
+
+	if (x >= drag_img_scaled_x) {
+		dx = x - drag_img_scaled_x;
+		if (dx < drag_img_scaled_width) {
+			y = e.clientY - rect.top;
+			if (y >= drag_img_scaled_y) {
+				dy = y - drag_img_scaled_y;
+				if (dy < drag_img_scaled_height) {
+					drag_img_x_offset = -dx;
+					drag_img_y_offset = -dy;
+					thumb.onmousemove = thumb_onmousemove;
+					thumb.onmouseup = thumb_dropped_onmouseup;
+					drag_img_ants_stop();
+				}
+			}
+		}
+	}
+};
+
+var thumb_ondrop = function (e) {
 	console.log('thumb.ondrop');
 	this.className = '';
 	e.preventDefault();
 	dragging = false;
+	thumb.onmousedown = thumb_dropped_onmousedown;
 
 	drag_img_dropped();
 
@@ -672,12 +714,19 @@ thumb.ondrop = function (e) {
 		}
 	}
 
+/*
 	if (socket.readyState == 1) {
 		upload_file(e.dataTransfer.files[0]);
 	} else {
 		console.log('Socket not open');
 	}
+*/
 };
+
+thumb.ondrop = thumb_ondrop;
+thumb.ondragover = thumb_onmousemove;
+thumb.onmouseup = deaf_listener;
+thumb.onmousedown = deaf_listener;
 
 new_socket();
 
