@@ -204,6 +204,8 @@ var drag_img_ants_start2 = function (t, l) {
 };
 
 var drag_img_ants_stop = function () {
+	clearTimeout (drag_img_ants_timeout);
+	drag_img_ants_timeout = null;
 	drag_img_ants = false;
 };
 
@@ -265,6 +267,7 @@ var drag_img_create_form = function() {
 	el.max = drag_img_x_max;
 	el.onchange = function () {
 		console.log('drag_img_x_input.onchange: ' + this.value);
+		drag_img_redraw_x(this.value);
 	};
 	fs.appendChild(document.createTextNode('X: '));
 	fs.appendChild(el);
@@ -279,6 +282,7 @@ var drag_img_create_form = function() {
 	el.max = drag_img_y_max;
 	el.onchange = function () {
 		console.log('drag_img_y_input.onchange: ' + this.value);
+		drag_img_redraw_y(this.value);
 	};
 	fs.appendChild(document.createTextNode('Y: '));
 	fs.appendChild(el);
@@ -319,6 +323,22 @@ var drag_img_destroy_form = function () {
 	while (bq.hasChildNodes()) {
 		bq.removeChild(bq.lastChild);
 	}
+};
+
+var drag_img_set_x = function(x) {
+	if (x != drag_img_x && x >= drag_img_x_min && x <= drag_img_x_max) {
+		drag_img_x = x;
+		return true;
+	}
+	return false;
+};
+
+var drag_img_set_y = function(y) {
+	if (y != drag_img_y && y >= drag_img_y_min && y <= drag_img_y_max) {
+		drag_img_y = y;
+		return true;
+	}
+	return false;
 };
 
 var drag_img_set_coords = function(x, y) {
@@ -384,6 +404,26 @@ var drag_img_draw = function(x, y) {
 		drag_img_clear();
 		drag_img_set_coords(x, y);
 		ctx1.drawImage(drag_img_canvas, drag_img_scaled_x, drag_img_scaled_y);
+	}
+};
+
+var drag_img_redraw_x = function(x) {
+	if (drag_img_is_drawable && drag_img_set_x(x)) {
+		drag_img_ants_stop();
+		drag_img_clear();
+		drag_img_scaled_x = x * thumb_scaling;
+		ctx1.drawImage(drag_img_canvas, drag_img_scaled_x, drag_img_scaled_y);
+		drag_img_ants_start2(100, 3);
+	}
+};
+
+var drag_img_redraw_y = function(y) {
+	if (drag_img_is_drawable && drag_img_set_y(y)) {
+		drag_img_ants_stop();
+		drag_img_clear();
+		drag_img_scaled_y = y * thumb_scaling;
+		ctx1.drawImage(drag_img_canvas, drag_img_scaled_x, drag_img_scaled_y);
+		drag_img_ants_start2(100, 3);
 	}
 };
 
