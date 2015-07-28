@@ -75,6 +75,7 @@ html, body {
           Y: <input id="bannerY" type="number" step="1" required><br>
           <input id="bannerApply" type="checkbox"> Display immediately<br>
           <input id="bannerSubmit" type="submit" value="Upload">
+          &nbsp;&nbsp;<input id="bannerCancel" type="button" value="Cancel">
         </fieldset>
       </form>
     </div>
@@ -140,6 +141,7 @@ var drag_img_x_input = document.getElementById('bannerX');
 var drag_img_y_input = document.getElementById('bannerY');
 var drag_img_apply = document.getElementById('bannerApply');
 var drag_img_submit = document.getElementById('bannerSubmit');
+var drag_img_cancel = document.getElementById('bannerCancel');
 
 var drag_img_ants_draw = function (t, o, l, d) {
 	ctx2.strokeStyle = "#ff0000";
@@ -184,8 +186,6 @@ var drag_img_ants_start = function (t, l) {
 };
 
 var drag_img_ants_stop = function () {
-	clearTimeout (drag_img_ants_timeout);
-	drag_img_ants_timeout = null;
 	drag_img_ants = false;
 };
 
@@ -221,12 +221,24 @@ var drag_img_dropped = function () {
 	fadeout_dropped(0.618034, 0.03, 100);
 };
 
+var drag_img_destroy = function () {
+	dragging = false;
+	drag_img_ants_stop();
+	drag_img_clear();
+	drag_img_canvas.width = 0;
+	drag_img_canvas.height = 0;
+	drag_img_is_drawable = false;
+	drag_img_hide_form();
+	drag_img_file = null;
+};
+
 var drag_img_onsubmit = function() {
 	if (socket.readyState == 1) {
-		upload_file(drag_img_file);
+		drag_img_upload();
 	} else {
 		console.log('Socket not open');
 	}
+	drag_img_destroy();
 };
 
 var drag_img_show_form = function() {
@@ -250,6 +262,8 @@ var drag_img_show_form = function() {
 
 	drag_img_apply.checked = true;
 
+	drag_img_cancel.onclick = drag_img_destroy;
+
 	drag_img_form.onsubmit = drag_img_onsubmit;
 	drag_img_form.style.display = 'block';
 };
@@ -257,6 +271,8 @@ var drag_img_show_form = function() {
 var drag_img_hide_form = function () {
 	drag_img_form.style.display = 'none';
 	drag_img_form.onsubmit = function() {return false;};
+
+	drag_img_cancel.onclick = function() {return false;};
 
 	drag_img_apply.checked = false;
 
@@ -269,8 +285,6 @@ var drag_img_hide_form = function () {
 	drag_img_x_input.max = 0;
 	drag_img_x_input.min = 0;
 	drag_img_x_input.value = 0;
-
-	drag_img_name.value = '';
 };
 
 var drag_img_set_x = function(x) {
@@ -357,6 +371,8 @@ var drag_img_draw = function(x, y) {
 
 var drag_img_redraw_x = function(x) {
 	if (drag_img_is_drawable && drag_img_set_x(x)) {
+		clearTimeout (drag_img_ants_timeout);
+		drag_img_ants_timeout = null;
 		drag_img_ants_stop();
 		drag_img_clear();
 		drag_img_scaled_x = x * thumb_scaling;
@@ -367,6 +383,8 @@ var drag_img_redraw_x = function(x) {
 
 var drag_img_redraw_y = function(y) {
 	if (drag_img_is_drawable && drag_img_set_y(y)) {
+		clearTimeout (drag_img_ants_timeout);
+		drag_img_ants_timeout = null;
 		drag_img_ants_stop();
 		drag_img_clear();
 		drag_img_scaled_y = y * thumb_scaling;
@@ -604,21 +622,24 @@ var banner_upload_packet = function(data) {
 	return buffer;
 };
 
-var upload_file = function(file) {
-	console.log('upload_file');
+var drag_img_upload = function() {
+	console.log('drag_img_upload');
 
-	if (file !== undefined && file.type === 'image/png') {
+	if (drag_img_file !== undefined
+	    && drag_img_file !== null
+	    && drag_img_file.type === 'image/png') {
 		var reader = new FileReader();
 
 		reader.onload = function (e) {
-			console.log('upload_file.reader.onload');
+			console.log('drag_img_upload.reader.onload');
 			packet = banner_upload_packet(e.target.result);
 			socket.send(packet);
+			drag_img_name.value = '';
 		};
 
-		reader.readAsArrayBuffer(file);
+		reader.readAsArrayBuffer(drag_img_file);
 	} else {
-		console.log ('error: file is invalid');
+		console.log ('error: drag_img_file is invalid');
 	}
 }
 
@@ -668,14 +689,7 @@ var thumb_onmousemove = function (e) {
 thumb.ondragleave = function () {
 	console.log('thumb.ondragleave');
 	this.className = '';
-	dragging = false;
-	drag_img_ants_stop();
-	drag_img_clear();
-	drag_img_canvas.width = 0;
-	drag_img_canvas.height = 0;
-	drag_img_is_drawable = false;
-	drag_img_hide_form();
-	drag_img_file = null;
+	drag_img_destroy();
 	return false;
 };
 
