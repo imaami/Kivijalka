@@ -66,7 +66,17 @@ html, body {
       <canvas id="cvs2"></canvas>
     </div>
     <div id="bannerQueue">
-<!--  <img src="/usr/share/kivijalka/banners/banner.png" alt="banner" />-->
+      <form id="bannerUpload" style="display:none" accept-charset="UTF-8"
+            action="javascript:(function(){return false;})();">
+        <fieldset>
+          <legend>Upload banner:</legend>
+          Name: <input id="bannerName" type="text" required><br>
+          X: <input id="bannerX" type="number" step="1" required><br>
+          Y: <input id="bannerY" type="number" step="1" required><br>
+          <input id="bannerApply" type="checkbox"> Display immediately<br>
+          <input id="bannerSubmit" type="submit" value="Upload">
+        </fieldset>
+      </form>
     </div>
   </section>
 
@@ -123,9 +133,13 @@ var drag_img_y_max = 0;
 var drag_img_is_drawable = false;
 var drag_img_ants = false;
 var drag_img_ants_timeout = null;
-var drag_img_name = '';
-var drag_img_x_input = null;
-var drag_img_y_input = null;
+var drag_img_file = null;
+var drag_img_form = document.getElementById('bannerUpload');
+var drag_img_name = document.getElementById('bannerName');
+var drag_img_x_input = document.getElementById('bannerX');
+var drag_img_y_input = document.getElementById('bannerY');
+var drag_img_apply = document.getElementById('bannerApply');
+var drag_img_submit = document.getElementById('bannerSubmit');
 
 var drag_img_ants_draw = function (t, o, l, d) {
 	ctx2.strokeStyle = "#ff0000";
@@ -241,88 +255,56 @@ var drag_img_dropped = function () {
 	fadeout_dropped(0.618034, 0.03, 100);
 };
 
-var drag_img_create_form = function() {
-	var bf = document.createElement('form');
-	bf.acceptCharset = 'UTF-8';
+var drag_img_onsubmit = function() {
+	if (socket.readyState == 1) {
+		upload_file(drag_img_file);
+	} else {
+		console.log('Socket not open');
+	}
+};
 
-	var fs = document.createElement('fieldset');
+var drag_img_show_form = function() {
+	drag_img_name.value = drag_img_file.name;
 
-	var el = document.createElement('legend');
-	el.innerHTML = 'Upload banner:';
-	fs.appendChild(el);
-
-	el = document.createElement('input');
-	el.type = 'text';
-	el.name = 'name';
-	el.defaultValue = drag_img_name;
-	fs.appendChild(document.createTextNode('Name: '));
-	fs.appendChild(el);
-	fs.appendChild(document.createElement('br'));
-
-	el = document.createElement('input');
-	el.type = 'number';
-	el.name = 'x';
-	el.value = 0;
-	el.min = drag_img_x_min;
-	el.max = drag_img_x_max;
-	el.onchange = function () {
+	drag_img_x_input.value = 0;
+	drag_img_x_input.min = drag_img_x_min;
+	drag_img_x_input.max = drag_img_x_max;
+	drag_img_x_input.onchange = function () {
 		console.log('drag_img_x_input.onchange: ' + this.value);
 		drag_img_redraw_x(this.value);
 	};
-	fs.appendChild(document.createTextNode('X: '));
-	fs.appendChild(el);
-	fs.appendChild(document.createElement('br'));
-	drag_img_x_input = el;
 
-	el = document.createElement('input');
-	el.type = 'number';
-	el.name = 'y';
-	el.value = 0;
-	el.min = drag_img_y_min;
-	el.max = drag_img_y_max;
-	el.onchange = function () {
+	drag_img_y_input.value = 0;
+	drag_img_y_input.min = drag_img_y_min;
+	drag_img_y_input.max = drag_img_y_max;
+	drag_img_y_input.onchange = function () {
 		console.log('drag_img_y_input.onchange: ' + this.value);
 		drag_img_redraw_y(this.value);
 	};
-	fs.appendChild(document.createTextNode('Y: '));
-	fs.appendChild(el);
-	fs.appendChild(document.createElement('br'));
-	drag_img_y_input = el;
 
-	el = document.createElement('input');
-	el.type = 'radio';
-	el.name = 'action';
-	el.value = 'apply';
-	el.checked = true;
-	fs.appendChild(el);
-	fs.appendChild(document.createTextNode(' Apply immediately'));
-	fs.appendChild(document.createElement('br'));
+	drag_img_apply.checked = true;
 
-	el = document.createElement('input');
-	el.type = 'radio';
-	el.name = 'action';
-	el.value = 'store';
-	fs.appendChild(el);
-	fs.appendChild(document.createTextNode(' Store for later use'));
-	fs.appendChild(document.createElement('br'));
-
-	el = document.createElement('input');
-	el.type = 'submit';
-	el.name = 'upload';
-	el.value = 'Upload';
-	fs.appendChild(el);
-
-	bf.appendChild(fs);
-	bq.appendChild(bf);
+	drag_img_form.onsubmit = drag_img_onsubmit;
+	drag_img_form.style.display = 'block';
 };
 
-var drag_img_destroy_form = function () {
-	drag_img_name = '';
-	drag_img_x_input = null;
-	drag_img_y_input = null;
-	while (bq.hasChildNodes()) {
-		bq.removeChild(bq.lastChild);
-	}
+var drag_img_hide_form = function () {
+	drag_img_form.style.display = 'none';
+	drag_img_form.onsubmit = function() {return false;};
+
+	drag_img_apply.checked = false;
+
+	drag_img_y_input.onchange = function() {return false;};
+	drag_img_y_input.max = 0;
+	drag_img_y_input.min = 0;
+	drag_img_y_input.value = 0;
+
+	drag_img_x_input.onchange = function() {return false;};
+	drag_img_x_input.max = 0;
+	drag_img_x_input.min = 0;
+	drag_img_x_input.value = 0;
+
+	drag_img_name.value = '';
 };
 
 var drag_img_set_x = function(x) {
@@ -380,7 +362,7 @@ drag_img.onload = function(e) {
 	ctx1.globalAlpha = 0.99;
 
 	drag_img_is_drawable = true;
-	drag_img_create_form();
+	drag_img_show_form();
 
 	console.log('drag_img_width=' + drag_img_width);
 	console.log('drag_img_height=' + drag_img_height);
@@ -538,22 +520,6 @@ var new_socket = function() {
 	socket.onmessage = socket_recv_handshake;
 };
 
-var enqueue_file = function(file) {
-	console.log('enqueue_file');
-
-	if (file.type.match('image.*')) {
-		var reader = new FileReader();
-
-		reader.onload = function(e) {
-			var img = new Image();
-			img.src = reader.result;
-			bq.appendChild(img);
-		};
-
-		reader.readAsDataURL(file);
-	}
-};
-
 /**
  * Return Git-type SHA1 digest of Uint8array input data.
  */
@@ -591,7 +557,7 @@ var drag_file = function(file) {
 		console.log('drag_file');
 
 		if (file.type === 'image/png') {
-			drag_img_name = file.name;
+			drag_img_file = file;
 			var reader = new FileReader();
 
 			reader.onload = function (e) {
@@ -614,7 +580,7 @@ var banner_upload_packet = function(data) {
 	var TWOPOW32 = Math.pow(2, 32);
 	var time = Date.now();
 	var size = data.byteLength;
-	var name = (new TextEncoder('utf-8')).encode(drag_img_name);
+	var name = (new TextEncoder('utf-8')).encode(drag_img_name.value);
 	var name_size = name.byteLength;
 	var buffer = new ArrayBuffer(header_size + name_size + size);
 	var header = new DataView(buffer, 0, header_size);
@@ -685,6 +651,8 @@ var upload_file = function(file) {
 		};
 
 		reader.readAsArrayBuffer(file);
+	} else {
+		console.log ('error: file is invalid');
 	}
 }
 
@@ -697,47 +665,12 @@ var deaf_listener = function (e) {
 	return false;
 };
 
-bq.ondrop = function (e) {
-//	console.log('bq.ondrop');
-	e.preventDefault();
-	var dt = e.dataTransfer;
-
-	var types = dt.types;
-	for (var i = 0; i < types.length; ++i) {
-		if (types[i] === 'text/uri-list') {
-			console.log(types[i] + "=" + e.dataTransfer.getData('text/uri-list').split("\n"));
-		} else {
-			console.log(types[i]);
-		}
-	}
-
-	var files = dt.files;
-	for (var i = 0; i < files.length; ++i) {
-		enqueue_file (files[i]);
-	}
-};
-
-bq.ondragover = function (e) {
-//	console.log('bq.ondragover');
-	e.preventDefault();
-	return false;
-};
-
-bq.ondragleave = function () {
-//	console.log('bq.ondragleave');
-};
-
-bq.ondragend = function () {
-//	console.log('bq.ondragend');
-};
-
-bq.ondragenter = function (e) {
-//	console.log('bq.ondragenter');
-};
-
-bq.ondragstart = function (e) {
-//	console.log('bq.ondragstart');
-};
+bq.ondrop = deaf_listener;
+bq.ondragover = deaf_listener;
+bq.ondragleave = deaf_listener;
+bq.ondragend = deaf_listener;
+bq.ondragenter = deaf_listener;
+bq.ondragstart = deaf_listener;
 
 thumb.ondragstart = function (e) {
 	console.log('thumb.ondragstart');
@@ -775,7 +708,8 @@ thumb.ondragleave = function () {
 	drag_img_canvas.width = 0;
 	drag_img_canvas.height = 0;
 	drag_img_is_drawable = false;
-	drag_img_destroy_form();
+	drag_img_hide_form();
+	drag_img_file = null;
 	return false;
 };
 
@@ -835,14 +769,6 @@ var thumb_ondrop = function (e) {
 			console.log(types[i]);
 		}
 	}
-
-/*
-	if (socket.readyState == 1) {
-		upload_file(e.dataTransfer.files[0]);
-	} else {
-		console.log('Socket not open');
-	}
-*/
 };
 
 thumb.ondrop = thumb_ondrop;
