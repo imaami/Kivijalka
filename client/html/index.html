@@ -145,51 +145,17 @@ var drag_img_ants_draw = function (t, o, l, d) {
 	ctx2.strokeStyle = "#ff0000";
 	ctx2.lineWidth = l;
 	ctx2.setLineDash(d);
-	ctx2.lineDashOffset = o;
-	var x = drag_img_scaled_x,
-	    y = drag_img_scaled_y,
-	    w = drag_img_scaled_width,
-	    h = drag_img_scaled_height;
-	ctx2.strokeRect(x+(l/2), y+(l/2), w-l, h-l);
-	drag_img_ants_timeout = setTimeout(drag_img_ants_refresh, t,
-	                                   x, y, w, h, t, o + 1, l, d);
-};
-
-var drag_img_ants_refresh = function (prev_x, prev_y, prev_w, prev_h, t, o, l, d) {
-	ctx2.clearRect(prev_x, prev_y, prev_w, prev_h);
-	if (drag_img_ants) {
-		if (o > (d[0]+d[1])) {
-			o = 0;
-		}
-		drag_img_ants_draw(t, o, l, d);
-	} else {
-		drag_img_ants_timeout = null;
-	}
-};
-
-var drag_img_ants_start = function (t, l) {
-	if (!drag_img_ants) {
-		drag_img_ants = true;
-		ctx2.clearRect(0, 0, cvs2.width, cvs2.height);
-		drag_img_ants_draw(t, 0, l, [8, 6]);
-	}
-};
-
-var drag_img_ants_draw2 = function (t, o, l, d) {
-	ctx2.strokeStyle = "#ff0000";
-	ctx2.lineWidth = l;
-	ctx2.setLineDash(d);
 	ctx2.lineDashOffset = (o == 1) ? 0 : d[0];
 	var x = drag_img_scaled_x,
 	    y = drag_img_scaled_y,
 	    w = drag_img_scaled_width,
 	    h = drag_img_scaled_height;
 	ctx2.strokeRect(x+(l/2), y+(l/2), w-l, h-l);
-	drag_img_ants_timeout = setTimeout(drag_img_ants_refresh2, t,
+	drag_img_ants_timeout = setTimeout(drag_img_ants_refresh, t,
 	                                   x, y, w, h, t, o, l, d);
 };
 
-var drag_img_ants_refresh2 = function (prev_x, prev_y, prev_w, prev_h, t, o, l, d) {
+var drag_img_ants_refresh = function (prev_x, prev_y, prev_w, prev_h, t, o, l, d) {
 	ctx2.clearRect(prev_x, prev_y, prev_w, prev_h);
 	if (drag_img_ants) {
 		d[0] += o;
@@ -203,17 +169,17 @@ var drag_img_ants_refresh2 = function (prev_x, prev_y, prev_w, prev_h, t, o, l, 
 				o = 1;
 			}
 		}
-		drag_img_ants_draw2(t, o, l, d);
+		drag_img_ants_draw(t, o, l, d);
 	} else {
 		drag_img_ants_timeout = null;
 	}
 };
 
-var drag_img_ants_start2 = function (t, l) {
+var drag_img_ants_start = function (t, l) {
 	if (!drag_img_ants) {
 		drag_img_ants = true;
 		ctx2.clearRect(0, 0, cvs2.width, cvs2.height);
-		drag_img_ants_draw2(t, 1, l, [1, 31]);
+		drag_img_ants_draw(t, 1, l, [1, 31]);
 	}
 };
 
@@ -251,7 +217,7 @@ var fadeout_dropped = function (a, s, t) {
  * banner is dropped on thumbnail canvas.
  */
 var drag_img_dropped = function () {
-	drag_img_ants_start2(100, 3);
+	drag_img_ants_start(100, 3);
 	fadeout_dropped(0.618034, 0.03, 100);
 };
 
@@ -395,7 +361,7 @@ var drag_img_redraw_x = function(x) {
 		drag_img_clear();
 		drag_img_scaled_x = x * thumb_scaling;
 		ctx1.drawImage(drag_img_canvas, drag_img_scaled_x, drag_img_scaled_y);
-		drag_img_ants_start2(100, 3);
+		drag_img_ants_start(100, 3);
 	}
 };
 
@@ -405,7 +371,7 @@ var drag_img_redraw_y = function(y) {
 		drag_img_clear();
 		drag_img_scaled_y = y * thumb_scaling;
 		ctx1.drawImage(drag_img_canvas, drag_img_scaled_x, drag_img_scaled_y);
-		drag_img_ants_start2(100, 3);
+		drag_img_ants_start(100, 3);
 	}
 };
 
@@ -726,7 +692,7 @@ var thumb_dropped_onmouseup = function (e) {
 	e.preventDefault();
 	thumb.onmousemove = deaf_listener;
 	thumb.onmouseup = deaf_listener;
-	drag_img_ants_start2(100, 3);
+	drag_img_ants_start(100, 3);
 };
 
 var thumb_dropped_onmousedown = function (e) {
