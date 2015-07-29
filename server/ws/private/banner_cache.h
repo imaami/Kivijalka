@@ -34,6 +34,34 @@ struct banner_cache {
 } __attribute__((gcc_struct,packed));
 
 __attribute__((always_inline))
+static inline char *
+_banner_cache_path_dup (const char *path)
+{
+	char *str;
+	size_t len = strlen (path);
+
+	if (len <= 0) {
+		path = ".";
+		len = 1;
+	}
+
+	size_t append_slash = (path[len-1] != '/') ? 1 : 0;
+
+	if ((str = malloc (len + append_slash + 1))) {
+		strncpy (str, path, len);
+		if (append_slash) {
+			str[len++] = '/';
+		}
+		str[len] = '\0';
+	} else {
+		fprintf (stderr, "%s: malloc failed: %s\n", __func__,
+		         strerror (errno));
+	}
+
+	return str;
+}
+
+__attribute__((always_inline))
 static inline struct banner_cache *
 _banner_cache_create (const char *path)
 {
@@ -46,9 +74,8 @@ _banner_cache_create (const char *path)
 	                                       512 * sizeof (struct bucket)))) {
 		fprintf (stderr, "%s: lookup table allocation failed\n", __func__);
 		goto fail_free_bc;
-	} else if (!(bc->root_path = strdup (path))) {
-		fprintf (stderr, "%s: strdup failed: %s\n", __func__,
-		         strerror (errno));
+	} else if (!(bc->root_path = _banner_cache_path_dup (path))) {
+		fprintf (stderr, "%s: failed to copy path\n", __func__);
 		free (bc->data);
 		bc->data = NULL;
 	fail_free_bc:
