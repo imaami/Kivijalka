@@ -15,6 +15,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <dirent.h>
+#include <unistd.h>
+
+#ifndef _DIRENT_HAVE_D_TYPE
+#error The dirent structure does not have a d_type field on this platform
+#endif
 
 struct bucket {
 	list_head_t hook;
@@ -32,6 +39,291 @@ struct banner_cache {
 	struct table   by_hash;
 	struct bucket *data;
 } __attribute__((gcc_struct,packed));
+
+__attribute__((always_inline))
+static inline bool
+_banner_cache_import_subdir (struct banner_cache *bc,
+                             char                *path,
+                             size_t               len,
+                             struct dirent       *entry,
+                             uint8_t             *id)
+{
+	bool r;
+	DIR *dirp;
+
+	if ((dirp = opendir (path))) {
+		for (int i;;) {
+			struct dirent *result;
+			if ((i = readdir_r (dirp, entry, &result))) {
+				fprintf (stderr,
+				         "%s: readdir_r failed: %s\n",
+				         __func__, strerror (i));
+				result = NULL;
+				i = 0;
+				r = false;
+				goto close_dir;
+			}
+
+			if (!result) {
+				// end of directory stream
+				break;
+			}
+
+			const char *name;
+			uint8_t c;
+
+			switch (result->d_type) {
+			case DT_REG:
+				name = (const char *) result->d_name;
+				size_t k = 0;
+				uint8_t *ptr = id + 1;
+
+				do {
+					switch (name[k]) {
+					case '0' ... '9':
+						c = name[k] - '0';
+						break;
+					case 'A' ... 'F':
+						c = 10 + (name[k] - 'A');
+						break;
+					case 'a' ... 'f':
+						c = 10 + (name[k] - 'a');
+						break;
+					default:
+						goto _skip;
+					}
+
+					path[len + k] = name[k];
+					c <<= 4;
+					++k;
+
+					switch (name[k]) {
+					case '0' ... '9':
+						c |= name[k] - '0';
+						break;
+					case 'A' ... 'F':
+						c |= 10 + (name[k] - 'A');
+						break;
+					case 'a' ... 'f':
+						c |= 10 + (name[k] - 'a');
+						break;
+					default:
+						goto _skip;
+					}
+
+					path[len + k] = name[k];
+					*ptr++ = c;
+				} while (++k < 30);
+
+				if (!name[k]) {
+					path[len + k] = '\0';
+					printf ("UUID: %s\n", path);
+					continue;
+				}
+
+				do {
+					switch (name[k]) {
+					case '0' ... '9':
+						c = name[k] - '0';
+						break;
+					case 'A' ... 'F':
+						c = 10 + (name[k] - 'A');
+						break;
+					case 'a' ... 'f':
+						c = 10 + (name[k] - 'a');
+						break;
+					default:
+						goto _skip;
+					}
+
+					path[len + k] = name[k];
+					c <<= 4;
+					++k;
+
+					switch (name[k]) {
+					case '0' ... '9':
+						c |= name[k] - '0';
+						break;
+					case 'A' ... 'F':
+						c |= 10 + (name[k] - 'A');
+						break;
+					case 'a' ... 'f':
+						c |= 10 + (name[k] - 'a');
+						break;
+					default:
+						goto _skip;
+					}
+
+					path[len + k] = name[k];
+					*ptr++ = c;
+				} while (++k < 38);
+
+				if (!name[k]) {
+					path[len + k] = '\0';
+					printf ("SHA1: %s\n", path);
+				}
+
+			default:
+			_skip:
+				continue;
+			}
+		}
+
+		r = true;
+
+	close_dir:
+		if (closedir (dirp) == -1) {
+			fprintf (stderr, "%s: closedir failed: %s\n",
+			         __func__, strerror (errno));
+		}
+
+		path[len] = '\0';
+		dirp = NULL;
+
+	} else {
+		fprintf (stderr, "%s: opendir failed: %s\n", __func__,
+		         strerror (errno));
+		r = false;
+	}
+
+	path[len] = '\0';
+
+	return r;
+}
+
+__attribute__((always_inline))
+static inline bool
+_banner_cache_import (struct banner_cache *bc)
+{
+	const char *root_path = bc->root_path;
+	size_t root_len = strlen (root_path);
+	char *path;
+
+	if (!(path = malloc (root_len + 42))) {
+		return false;
+	}
+
+	strncpy (path, root_path, root_len);
+	path[root_len] = '\0';
+
+	errno = 0;
+	long name_max = pathconf (root_path, _PC_NAME_MAX);
+	size_t len;
+
+	if (-1 == name_max) {
+		if (errno) {
+			fprintf (stderr, "%s: pathconf failed: %s\n", __func__,
+			         strerror (errno));
+		}
+		goto len_to_default;
+	} else if (BUFSIZ > offsetof (struct dirent, d_name) + name_max + 1) {
+	len_to_default:
+		len = BUFSIZ;
+	} else {
+		len = offsetof (struct dirent, d_name) + name_max + 1;
+	}
+
+	name_max = 0;
+
+	bool r;
+
+	struct dirent *entry;
+	if ((entry = malloc (len))) {
+		DIR *dirp;
+		if ((dirp = opendir (root_path))) {
+			for (int i;;) {
+				struct dirent *result;
+				if ((i = readdir_r (dirp, entry, &result))) {
+					fprintf (stderr,
+					         "%s: readdir_r failed: %s\n",
+					         __func__, strerror (i));
+					result = NULL;
+					i = 0;
+					r = false;
+					goto close_dir;
+				}
+
+				if (!result) {
+					// end of directory stream
+					break;
+				}
+
+				const char *name;
+				uint8_t id[20], c;
+
+				switch (result->d_type) {
+				case DT_DIR:
+					name = (const char *) result->d_name;
+					switch (name[0]) {
+					case '0' ... '9':
+						c = name[0] - '0';
+						goto _2nd_char;
+					case 'A' ... 'F':
+						c = 10 + (name[0] - 'A');
+						goto _2nd_char;
+					case 'a' ... 'f':
+						c = 10 + (name[0] - 'a');
+					_2nd_char:
+						c <<= 4;
+						switch (name[1]) {
+						case '0' ... '9':
+							c |= name[1] - '0';
+							goto _3rd_char;
+						case 'A' ... 'F':
+							c |= 10 + (name[1] - 'A');
+							goto _3rd_char;
+						case 'a' ... 'f':
+							c |= 10 + (name[1] - 'a');
+						_3rd_char:
+							if (name[2] == '\0') {
+								path[root_len] = name[0];
+								path[root_len+1] = name[1];
+								path[root_len+2] = '/';
+								path[root_len+3] = '\0';
+								id[0] = c;
+								_banner_cache_import_subdir (bc, path, root_len + 3, entry, id);
+							}
+						default:
+							break;
+						}
+					default:
+						break;
+					}
+
+				case DT_LNK: // TODO: handle symlinks
+				default:
+					break;
+				}
+			}
+
+			r = true;
+
+		close_dir:
+			if (closedir (dirp) == -1) {
+				fprintf (stderr, "%s: closedir failed: %s\n",
+				         __func__, strerror (errno));
+			}
+
+			dirp = NULL;
+		} else {
+			fprintf (stderr, "%s: opendir failed: %s\n", __func__,
+			         strerror (errno));
+			r = false;
+		}
+
+		free (entry);
+		entry = NULL;
+	} else {
+		fprintf (stderr, "%s: malloc failed: %s\n",
+		         __func__, strerror (errno));
+		r = false;
+	}
+
+	free (path);
+	path = NULL;
+
+	return r;
+}
 
 __attribute__((always_inline))
 static inline char *
@@ -90,6 +382,7 @@ _banner_cache_create (const char *path)
 			list_init (&bc->data[i].hook);
 			list_init (&bc->data[i].list);
 		}
+		(void) _banner_cache_import (bc);
 	}
 
 	return bc;
