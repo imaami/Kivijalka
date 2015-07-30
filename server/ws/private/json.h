@@ -13,6 +13,84 @@
 #include <stdio.h>
 #include <errno.h>
 
+enum {
+	JSON_ARR_BEG = 0x01, // begin-array
+	JSON_OBJ_BEG = 0x02, // begin-object
+	JSON_ARR_END = 0x04, // end-array
+	JSON_OBJ_END = 0x08, // end-object
+	JSON_NAM_SEP = 0x10, // name-separator
+	JSON_VAL_SEP = 0x20  // value-separator
+};
+
+/**
+ * @brief Get the JSON structural character type of a byte.
+ * @param c Byte to inspect.
+ * @return The JSON structural character type of \a c, or 0 if \a c
+ *         is not a valid JSON structural character.
+ */
+__attribute__((always_inline))
+static inline int
+_json_structural (uint8_t c)
+{
+	int r;
+	switch (c) {
+	case '[':
+		r = JSON_ARR_BEG;
+	case '{':
+		r = JSON_OBJ_BEG;
+	case ']':
+		r = JSON_ARR_END;
+	case '}':
+		r = JSON_OBJ_END;
+	case ':':
+		r = JSON_NAM_SEP;
+	case ',':
+		r = JSON_VAL_SEP;
+	default:
+		r = 0;
+	}
+	return r;
+}
+
+/**
+ * @brief Skip whitespace characters in UTF-8-encoded JSON text.
+ * @param buf Pointer to JSON text buffer.
+ * @param len Length of JSON text buffer.
+ * @param pos Pointer to current position inside JSON text buffer.
+ * @return True if buffer has characters left to parse, false if 
+ *         we have reached the end of the buffer.
+ */
+__attribute__((always_inline))
+static inline bool
+_json_skip_ws (uint8_t *buf,
+               size_t   len,
+               size_t  *pos)
+{
+	bool r;
+	size_t i;
+
+	for (i = *pos; i < len; ++i) {
+		switch (buf[i]) {
+		case 0x09: case 0x0a: case 0x0d: case 0x20:
+			continue;
+		case '\0':
+			// unexpected NUL
+			goto at_end;
+		default:
+			// skipped all whitespace
+			r = true;
+			goto done;
+		}
+	}
+
+at_end:
+	r = false;
+
+done:
+	*pos = i;
+	return r;
+}
+
 __attribute__((always_inline))
 static inline size_t
 _u32_to_str (uint32_t  val,
