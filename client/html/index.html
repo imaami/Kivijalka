@@ -535,7 +535,7 @@ var sha1_hash = function(data) {
 };
 
 var drag_file = function(file) {
-	if (file !== undefined && !dragging) {
+	if (file !== undefined) {
 		dragging = true;
 
 		console.log('drag_file');
@@ -675,7 +675,10 @@ thumb.ondragenter = function (e) {
 	e.preventDefault();
 	ctx2.clearRect(0, 0, cvs2.width, cvs2.height);
 	drag_img_ants_stop();
-	drag_file(e.dataTransfer.files[0]);
+	if (!dragging && e.dataTransfer.files !== undefined
+	    && e.dataTransfer.files !== null) {
+		drag_file(e.dataTransfer.files[0]);
+	}
 	return false;
 };
 
@@ -736,6 +739,10 @@ var thumb_ondrop = function (e) {
 	console.log('thumb.ondrop');
 	this.className = '';
 	e.preventDefault();
+	if (!dragging && e.dataTransfer.files !== undefined
+	    && e.dataTransfer.files !== null) {
+		drag_file (e.dataTransfer.files[0]);
+	}
 	dragging = false;
 	thumb.onmousedown = thumb_dropped_onmousedown;
 
