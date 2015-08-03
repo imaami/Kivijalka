@@ -47,11 +47,9 @@ cutycapt --url="$URL" \
   --min-height=$PX_H \
   --out="$OUTPATH/$CAP"
 
-if [[ ! -f "$OUTPATH/$CAP" ]]; then
-  exit 1
+if [[ -f "$OUTPATH/$CAP" ]]; then
+  cp "$OUTPATH/$CAP" "$OUTPATH/$OUT"
 fi
-
-cp "$OUTPATH/$CAP" "$OUTPATH/$OUT"
 
 (
   echo $BASHPID > "$PIDFILE"
@@ -73,7 +71,11 @@ cp "$OUTPATH/$CAP" "$OUTPATH/$OUT"
 ) &>/dev/null &
 
 #/usr/bin/feh --no-fehbg --reload $DELAY -g "${PX_W}x${PX_H}+0+0" --zoom 100 --keep-zoom-vp -qpxY "$OUTPATH/$OUT"
-/usr/bin/qiv -fiRT "$OUTPATH/$OUT"
+
+while true; do
+  /usr/bin/qiv -fiRT "$OUTPATH/$OUT"
+  sleep 5
+done
 
 if [[ -f "$PIDFILE" ]]
 then
