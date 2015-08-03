@@ -17,6 +17,7 @@ SOURCES += \
     diskreader.cpp \
     imgworker.cpp \
     diskwriter.cpp \
+    args.c \
     read-file.c \
     watcher.c \
     display.c \
@@ -35,6 +36,7 @@ HEADERS += \
     diskreader.h \
     imgworker.h \
     diskwriter.h \
+    args.h \
     read-file.h \
     watcher.h \
     display.h \

@@ -77,6 +77,9 @@ sha1.o: sha1.c
 geo2d.o: geo2d.c
 	$(CC) $(CFLAGS) -std=gnu11 -c geo2d.c -o geo2d.o
 
+args.o: args.c
+	$(CC) $(CFLAGS) -std=gnu11 -c args.c -o args.o
+
 read-file.o: read-file.c
 	$(CC) $(CFLAGS) -std=gnu11 -c read-file.c -o read-file.o
 

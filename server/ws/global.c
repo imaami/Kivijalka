@@ -9,20 +9,16 @@
 
 #include "global.h"
 
-size_t banner_x, banner_y, thumb_w, thumb_h;
+size_t thumb_w, thumb_h;
 sem_t process_sem;
 img_file_t capture_file, banner_file, output_file, thumb_file;
 
 void
-global_init (size_t bx,
-             size_t by,
-             size_t tw,
-             size_t th)
+global_init (size_t thumb_width,
+             size_t thumb_height)
 {
-	banner_x = bx;
-	banner_y = by;
-	thumb_w = tw;
-	thumb_h = th;
+	thumb_w = thumb_width;
+	thumb_h = thumb_height;
 	if (sem_init (&process_sem, 0, 0)) {
 		fprintf (stderr, "%s: sem_init failed: %s\n",
 		                 __func__, strerror (errno));
@@ -46,6 +42,4 @@ global_fini (void)
 	}
 	thumb_h = 0;
 	thumb_w = 0;
-	banner_y = 0;
-	banner_x = 0;
 }

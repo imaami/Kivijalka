@@ -6,12 +6,8 @@
 #endif
 
 #include <stdbool.h>
-#include <stddef.h>
 #include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
 #include <stdio.h>
-#include <errno.h>
 
 struct args {
 	struct __attribute__((gcc_struct,packed)) {
@@ -154,7 +150,7 @@ _u32_arg (char     *str,
 }
 
 __attribute__((always_inline))
-static inline int
+static inline bool
 _args_parse (struct args  *a,
              int           argc,
              char        **argv)
@@ -226,6 +222,43 @@ _args_parse (struct args  *a,
 	}
 
 	return true;
+}
+
+__attribute__((always_inline))
+static inline uint32_t
+_args_get_display_width (struct args *a)
+{
+	return a->display.width;
+}
+
+__attribute__((always_inline))
+static inline uint32_t
+_args_get_display_height (struct args *a)
+{
+	return a->display.height;
+}
+
+__attribute__((always_inline))
+static inline const char *
+_args_get_banner_cache_path (struct args *a)
+{
+	return (a->banner_cache.path)
+	       ? (const char *) a->banner_cache.path
+	       : "/usr/share/kivijalka/banners";
+}
+
+__attribute__((always_inline))
+static inline const char *
+_args_get_server_addr (struct args *a)
+{
+	return (a->server.addr) ? (const char *) a->server.addr : "0.0.0.0";
+}
+
+__attribute__((always_inline))
+static inline uint16_t
+_args_get_server_port (struct args *a)
+{
+	return (a->server.port > 0) ? a->server.port : 8001;
 }
 
 #endif // __KIVIJALKA_PRIVATE_ARGS_H__

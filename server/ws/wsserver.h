@@ -19,7 +19,6 @@ public:
 	explicit WSServer(const QString &addr, quint16 port,
 	                  quint16 displayWidth, quint16 displayHeight,
 	                  quint16 thumbWidth, quint16 thumbHeight,
-	                  quint16 bannerX, quint16 bannerY,
 	                  QObject *parent = Q_NULLPTR);
 	~WSServer();
 	bool listen();
@@ -48,7 +47,6 @@ private:
 	quint16 serverPort;
 	quint16 displayWidth, displayHeight;
 	quint16 thumbWidth, thumbHeight;
-	quint16 bannerX, bannerY;
 	QByteArray thumbNail;
 	img_data_t *thumbnail;
 };

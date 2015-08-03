@@ -10,24 +10,45 @@
 #include "wsserver.h"
 #include "bannercache.h"
 #include "banner_cache.h"
+#include "args.h"
 
 int main(int argc, char *argv[])
 {
-	QCoreApplication a(argc, argv);
+	if (!args_parse (argc, argv)) {
+		fprintf (stderr, "%s: error parsing command line arguments\n",
+		         __func__);
+		return -9;
+	}
 
-	global_init (1024, 768, 640, 512);
+	uint32_t dw = args_get_display_width(), dh = args_get_display_height();
+	uint32_t tw = (dw & 0xfffffffe) >> 1, th = (dh & 0xfffffffe) >> 1;
+	const char *bp = args_get_banner_cache_path();
+	const char *sa = args_get_server_addr();
+	uint16_t sp = args_get_server_port();
+
+	if (dw < 2 || dh < 2) {
+		fprintf (stderr, "%s: invalid display size: %ux%u\n",
+		         __func__, dw, dh);
+		return -8;
+	}
+
+	int _argc = 1;
+	char *_argv[] = {argv[0], NULL};
+	QCoreApplication a(_argc, _argv);
+
+	global_init (tw, th);
 	(void) img_file_set_path (&capture_file, "/dev/shm/kivijalka/cap-0510.png");
 	(void) img_file_set_path (&output_file, "/dev/shm/kivijalka/out-0510.png");
 
 	banner_cache_t *bc;
-	if (!(bc = banner_cache_create ("/usr/share/kivijalka/banners"))) {
+	if (!(bc = banner_cache_create (bp))) {
 		global_fini ();
 		return -7;
 	}
 	BannerCache bannerCache(bc);
 
 	display_t *d;
-	if (!(d = display_create (1280, 1024))) {
+	if (!(d = display_create (dw, dh))) {
 		banner_cache_destroy (&bc);
 		global_fini ();
 		return -6;
@@ -73,8 +94,7 @@ int main(int argc, char *argv[])
 	QObject::connect (&diskWriterThread, &QThread::started,
 	                  &diskWriter, &DiskWriter::process);
 
-	WSServer *server = new WSServer("127.0.0.1", 8001,
-	                                1280, 1024, 640, 512, 1024, 768);
+	WSServer *server = new WSServer(sa, sp, dw, dh, tw, th);
 	if (!server) {
 		watcher_destroy (w);
 		w = NULL;

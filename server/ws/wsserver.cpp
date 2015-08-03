@@ -13,7 +13,6 @@ QT_USE_NAMESPACE
 WSServer::WSServer(const QString &addr, quint16 port,
                    quint16 displayWidth, quint16 displayHeight,
                    quint16 thumbWidth, quint16 thumbHeight,
-                   quint16 bannerX, quint16 bannerY,
                    QObject *parent) :
 	QObject(parent),
 	m_pWebSocketServer(new QWebSocketServer(QStringLiteral("Websocket Server"),
@@ -27,8 +26,6 @@ WSServer::WSServer(const QString &addr, quint16 port,
 	this->displayHeight = displayHeight;
 	this->thumbWidth = thumbWidth;
 	this->thumbHeight = thumbHeight;
-	this->bannerX = bannerX;
-	this->bannerY = bannerY;
 	thumbnail = NULL;
 }
 
