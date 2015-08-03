@@ -70,6 +70,9 @@ fi
   done
 ) &>/dev/null &
 
+xset -dpms
+xset s off
+
 #/usr/bin/feh --no-fehbg --reload $DELAY -g "${PX_W}x${PX_H}+0+0" --zoom 100 --keep-zoom-vp -qpxY "$OUTPATH/$OUT"
 
 while true; do
