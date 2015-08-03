@@ -1,9 +1,9 @@
 #!/bin/bash
 
 BASE="http://lissu.tampere.fi/monitor.php?stop="
-STOP="0510"
-FONT_SIZE=32
-ROW_HEIGHT=35
+STOP="0516"
+FONT_SIZE=50
+ROW_HEIGHT=55
 PARAMS="&font_size=$FONT_SIZE&row_height=$ROW_HEIGHT"
 URL="$BASE$STOP$PARAMS"
 OUTPATH="/dev/shm/kivijalka"
@@ -18,8 +18,8 @@ mkdir -p "$OUTPATH"
 #x=$(xrandr -q|egrep "^Screen 0"|sed -r 's|(^.*current )([1-9][0-9]*) x ([1-9][0-9]*),.*$|\2 \3|')
 #PX_W="${x%% *}"
 #PX_H="${x##* }"
-PX_W=1280
-PX_H=1024
+PX_W=1080
+PX_H=1920
 
 # defaults if we didn't find a resolution
 if [[ -z $PX_W ]]
