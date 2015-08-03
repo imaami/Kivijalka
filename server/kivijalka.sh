@@ -73,7 +73,7 @@ cp "$OUTPATH/$CAP" "$OUTPATH/$OUT"
 ) &>/dev/null &
 
 #/usr/bin/feh --no-fehbg --reload $DELAY -g "${PX_W}x${PX_H}+0+0" --zoom 100 --keep-zoom-vp -qpxY "$OUTPATH/$OUT"
-/usr/bin/qiv -RT "$OUTPATH/$OUT"
+/usr/bin/qiv -fiRT "$OUTPATH/$OUT"
 
 if [[ -f "$PIDFILE" ]]
 then
