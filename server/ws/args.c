@@ -44,6 +44,18 @@ args_get_banner_cache_path (void)
 }
 
 const char *
+args_get_capture_path (void)
+{
+	return _args_get_capture_path (&args);
+}
+
+const char *
+args_get_output_path (void)
+{
+	return _args_get_output_path (&args);
+}
+
+const char *
 args_get_server_addr (void)
 {
 	return _args_get_server_addr (&args);

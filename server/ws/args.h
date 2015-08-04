@@ -22,6 +22,12 @@ extern const char *
 args_get_banner_cache_path (void);
 
 extern const char *
+args_get_capture_path (void);
+
+extern const char *
+args_get_output_path (void);
+
+extern const char *
 args_get_server_addr (void);
 
 extern uint16_t

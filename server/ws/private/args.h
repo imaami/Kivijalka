@@ -18,6 +18,12 @@ struct args {
 		char *path;
 	} banner_cache;
 	struct __attribute__((gcc_struct,packed)) {
+		char *path;
+	} capture;
+	struct __attribute__((gcc_struct,packed)) {
+		char *path;
+	} output;
+	struct __attribute__((gcc_struct,packed)) {
 		char     *addr;
 		uint16_t  port;
 	} server;
@@ -29,6 +35,12 @@ struct args {
 		.height = 0\
 	},\
 	.banner_cache = {\
+		.path = NULL\
+	},\
+	.capture = {\
+		.path = NULL\
+	},\
+	.output = {\
 		.path = NULL\
 	},\
 	.server = {\
@@ -203,6 +215,17 @@ _args_parse (struct args  *a,
 					}
 					break;
 
+				case 'c':
+					if (*++p == '\0') {
+						if (++i == argc) {
+							return false;
+						}
+						a->capture.path = argv[i];
+					} else {
+						a->capture.path = p;
+					}
+					break;
+
 				case 'g':
 					if (*++p == '\0') {
 						if (++i == argc) {
@@ -213,6 +236,17 @@ _args_parse (struct args  *a,
 					if (!_geo2d_arg (p, &a->display.width,
 					                 &a->display.height)) {
 						return false;
+					}
+					break;
+
+				case 'o':
+					if (*++p == '\0') {
+						if (++i == argc) {
+							return false;
+						}
+						a->output.path = argv[i];
+					} else {
+						a->output.path = p;
 					}
 					break;
 
@@ -259,6 +293,20 @@ _args_get_banner_cache_path (struct args *a)
 	return (a->banner_cache.path)
 	       ? (const char *) a->banner_cache.path
 	       : "/usr/share/kivijalka/banners";
+}
+
+__attribute__((always_inline))
+static inline const char *
+_args_get_capture_path (struct args *a)
+{
+	return (const char *) a->capture.path;
+}
+
+__attribute__((always_inline))
+static inline const char *
+_args_get_output_path (struct args *a)
+{
+	return (const char *) a->output.path;
 }
 
 __attribute__((always_inline))

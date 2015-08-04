@@ -23,12 +23,31 @@ int main(int argc, char *argv[])
 	uint32_t dw = args_get_display_width(), dh = args_get_display_height();
 	uint32_t tw = (dw & 0xfffffffe) >> 1, th = (dh & 0xfffffffe) >> 1;
 	const char *bp = args_get_banner_cache_path();
+	const char *cp = args_get_capture_path();
+	const char *op = args_get_output_path();
 	const char *sa = args_get_server_addr();
 	uint16_t sp = args_get_server_port();
+
+	bool required_params = true;
+
+	if (!cp) {
+		fprintf (stderr, "%s: missing capture file path\n", __func__);
+		required_params = false;
+	}
+
+	if (!op) {
+		fprintf (stderr, "%s: missing output file path\n", __func__);
+		required_params = false;
+	}
 
 	if (dw < 2 || dh < 2) {
 		fprintf (stderr, "%s: invalid display size: %ux%u\n",
 		         __func__, dw, dh);
+		required_params = false;
+	}
+
+	if (!required_params) {
+		printf ("Shamefur dispray!\n");
 		return -8;
 	}
 
@@ -37,8 +56,8 @@ int main(int argc, char *argv[])
 	QCoreApplication a(_argc, _argv);
 
 	global_init (tw, th);
-	(void) img_file_set_path (&capture_file, "/dev/shm/kivijalka/cap-0510.png");
-	(void) img_file_set_path (&output_file, "/dev/shm/kivijalka/out-0510.png");
+	(void) img_file_set_path (&capture_file, cp);
+	(void) img_file_set_path (&output_file, op);
 
 	banner_cache_t *bc;
 	if (!(bc = banner_cache_create (bp))) {
