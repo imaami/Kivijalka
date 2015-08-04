@@ -313,7 +313,7 @@ __attribute__((always_inline))
 static inline const char *
 _args_get_server_addr (struct args *a)
 {
-	return (a->server.addr) ? (const char *) a->server.addr : "0.0.0.0";
+	return (a->server.addr) ? (const char *) a->server.addr : "127.0.0.1";
 }
 
 __attribute__((always_inline))
