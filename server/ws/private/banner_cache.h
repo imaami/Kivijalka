@@ -10,6 +10,7 @@
 #include "sha1.h"
 #include "banner.h"
 #include "json.h"
+#include "hex.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -503,6 +504,36 @@ _banner_cache_find_by_hash (struct banner_cache *bc,
 }
 
 __attribute__((always_inline))
+static inline void
+_banner_cache_mkdir (struct banner_cache *bc,
+                     struct banner       *banner)
+{
+	const char *root_path = bc->root_path;
+	size_t root_len = strlen (root_path);
+	char *path;
+
+	if (!(path = malloc (root_len + 2 + 1 + 30 + 1))) {
+		return false;
+	}
+
+	strncpy (path, root_path, root_len);
+
+	unsigned int i = banner->uuid[0];
+
+	path[root_len++] = _hex_char (i >> 4);
+	path[root_len++] = _hex_char (i & 0x0f);
+	path[root_len++] = '/';
+	path[root_len] = '\0';
+
+	char str[37];
+	_banner_uuid_unparse (banner, str);
+	printf ("%s: %s: %s\n", __func__, str, path);
+
+	free (path);
+	path = NULL;
+}
+
+__attribute__((always_inline))
 static inline bool
 _banner_cache_add_banner (struct banner_cache *bc,
                           struct banner       *banner)
@@ -546,6 +577,8 @@ _banner_cache_add_banner (struct banner_cache *bc,
 	if (bkt->hook.next == &bkt->hook) {
 		list_add (&bkt->hook, &bc->by_uuid.in_use);
 	}
+
+	_banner_cache_mkdir (bc, banner);
 
 	return true;
 }
