@@ -7,12 +7,15 @@ ROW_HEIGHT=55
 PARAMS="&font_size=$FONT_SIZE&row_height=$ROW_HEIGHT"
 URL="$BASE$STOP$PARAMS"
 OUTPATH="/dev/shm/kivijalka"
+BANPATH="/usr/share/kivijalka/banners"
 CAP="cap-$STOP.png"
 OUT="out-$STOP.png"
 PIDFILE="$OUTPATH/lock-$STOP.pid"
-#DELAY=5
+ADDR='127.0.0.1'
+PORT='8001'
 
 mkdir -p "$OUTPATH"
+mkdir -p "$BANPATH"
 
 # get resolution
 #x=$(xrandr -q|egrep "^Screen 0"|sed -r 's|(^.*current )([1-9][0-9]*) x ([1-9][0-9]*),.*$|\2 \3|')
@@ -70,10 +73,13 @@ fi
   done
 ) &>/dev/null &
 
+(
+  wsserver -c "$OUTPATH/$CAP" -o "$OUTPATH/$OUT" -b "$BANPATH" \
+           -g "${PX_W}x${PX_H}" -a "$ADDR" -p "$PORT"
+) &>/dev/null &
+
 xset -dpms
 xset s off
-
-#/usr/bin/feh --no-fehbg --reload $DELAY -g "${PX_W}x${PX_H}+0+0" --zoom 100 --keep-zoom-vp -qpxY "$OUTPATH/$OUT"
 
 while true; do
   /usr/bin/qiv -fiRT "$OUTPATH/$OUT"
