@@ -95,27 +95,28 @@ _u16_arg (char     *str,
 
 __attribute__((always_inline))
 static inline bool
-_u32_arg (char     *str,
-          uint32_t *dest)
+_u32_arg (char         *str,
+          unsigned int *pos,
+          uint32_t     *dest)
 {
 	uint32_t v;
-	unsigned int i, c = str[0];
+	unsigned int i, p = *pos;
+	unsigned int c = str[p];
 
 	switch (c) {
 	case '1' ... '9':
 		v = c - '0';
-		for (i = 1; (c = str[i]);) {
-			switch (c) {
+		i = p + 1;
+		for (;;) {
+			switch ((c = str[i])) {
 			case '0' ... '9':
 				v = (v << 1) + (v << 3) + (c - '0');
 
-				if (++i < 9) {
+				if (++i - p < 9) {
 					continue;
 				}
 
-				c = str[9];
-
-				switch (c) {
+				switch ((c = str[i])) {
 				case '0' ... '9':
 					if (v > 429496729
 					    || (v == 429496729 && c > '5')) {
@@ -124,25 +125,17 @@ _u32_arg (char     *str,
 					}
 
 					v = (v << 1) + (v << 3) + (c - '0');
-
-				case '\0':
-					goto done;
-
-				default:
-					break;
 				}
-
-			default:
-				goto zero;
 			}
+
+			break;
 		}
 
-	done:
+		*pos = i;
 		*dest = v;
 		return true;
 
 	default:
-	zero:
 		*dest = 0;
 	fail:
 		return false;
@@ -151,12 +144,38 @@ _u32_arg (char     *str,
 
 __attribute__((always_inline))
 static inline bool
+_geo2d_arg (char     *str,
+            uint32_t *x,
+            uint32_t *y)
+{
+	unsigned int i = 0;
+	uint32_t _x, _y;
+
+	if (_u32_arg (str, &i, &_x)) {
+		if (str[i] == 'x') {
+			++i;
+			if (_u32_arg (str, &i, &_y)) {
+				if (str[i] == '\0') {
+					*x = _x;
+					*y = _y;
+					return true;
+				}
+			}
+		}
+	}
+
+	fprintf (stderr, "%s: invalid display geometry\n", __func__);
+
+	return false;
+}
+
+	__attribute__((always_inline))
+static inline bool
 _args_parse (struct args  *a,
              int           argc,
              char        **argv)
 {
 	char *p;
-	uint32_t *pu32;
 
 	for (int i = 1; i < argc; ++i) {
 		switch (*(p = argv[i])) {
@@ -184,6 +203,19 @@ _args_parse (struct args  *a,
 					}
 					break;
 
+				case 'g':
+					if (*++p == '\0') {
+						if (++i == argc) {
+							return false;
+						}
+						p = argv[i];
+					}
+					if (!_geo2d_arg (p, &a->display.width,
+					                 &a->display.height)) {
+						return false;
+					}
+					break;
+
 				case 'p':
 					if (*++p == '\0') {
 						if (++i == argc) {
@@ -192,24 +224,6 @@ _args_parse (struct args  *a,
 						p = argv[i];
 					}
 					if (!_u16_arg (p, &a->server.port)) {
-						return false;
-					}
-					break;
-
-				case 'h':
-					pu32 = &a->display.height;
-					goto parse_u32_arg;
-
-				case 'w':
-					pu32 = &a->display.width;
-				parse_u32_arg:
-					if (*++p == '\0') {
-						if (++i == argc) {
-							return false;
-						}
-						p = argv[i];
-					}
-					if (!_u32_arg (p, pu32)) {
 						return false;
 					}
 					break;
