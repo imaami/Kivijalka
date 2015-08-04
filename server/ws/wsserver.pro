@@ -23,6 +23,7 @@ SOURCES += \
     display.c \
     banner.c \
     banner_cache.c \
+    hex.c \
     global.c \
     path.c \
     file.c \
@@ -42,6 +43,7 @@ HEADERS += \
     display.h \
     banner.h \
     banner_cache.h \
+    hex.h \
     global.h \
     path.h \
     file.h \

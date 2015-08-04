@@ -29,8 +29,8 @@ test-banner: read-file.o img_data.o banner.o test-banner.o
 test-banner_cache: read-file.o img_data.o banner.o banner_cache.o test-banner_cache.o
 	$(CC) $(CFLAGS) -std=gnu11 read-file.o img_data.o banner.o banner_cache.o test-banner_cache.o -luuid -lssl -lcrypto -o test-banner_cache
 
-test-sha1: file.o sha1.o test-sha1.o
-	$(CC) $(CFLAGS) -std=gnu11 file.o sha1.o test-sha1.o -lssl -lcrypto -o test-sha1
+test-sha1: file.o hex.o sha1.o test-sha1.o
+	$(CC) $(CFLAGS) -std=gnu11 file.o hex.o sha1.o test-sha1.o -lssl -lcrypto -o test-sha1
 
 test-geo2d: geo2d.o test-geo2d.o
 	$(CC) $(CFLAGS) -std=gnu11 geo2d.o test-geo2d.o -o test-geo2d
@@ -70,6 +70,9 @@ banner.o: banner.c
 
 banner_cache.o: banner_cache.c
 	$(CC) $(CFLAGS) -std=gnu11 -c banner_cache.c -o banner_cache.o
+
+hex.o: hex.c
+	$(CC) $(CFLAGS) -std=gnu11 -c hex.c -o hex.o
 
 sha1.o: sha1.c
 	$(CC) $(CFLAGS) -std=gnu11 -c sha1.c -o sha1.o
@@ -152,7 +155,7 @@ clean-test-banner_cache:
 	rm -f test-banner_cache test-banner_cache.o banner_cache.o banner.o img_data.o read-file.o
 
 clean-test-sha1:
-	rm -f test-sha1 test-sha1.o sha1.o
+	rm -f test-sha1 test-sha1.o sha1.o hex.o file.o
 
 clean-test-geo2d:
 	rm -f test-geo2d test-geo2d.o geo2d.o

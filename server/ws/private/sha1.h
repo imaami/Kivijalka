@@ -6,6 +6,7 @@
 #endif
 
 #include "../sha1.h"
+#include "hex.h"
 
 #include <openssl/sha.h>
 
@@ -61,16 +62,10 @@ static inline void
 _sha1_str (sha1_t *hash,
            char   *dest)
 {
-	static const char hex[16] = {
-		'0', '1', '2', '3',
-		'4', '5', '6', '7',
-		'8', '9', 'a', 'b',
-		'c', 'd', 'e', 'f'
-	};
 	for (size_t i = 0, j = 0; i < 20; ++i, ++j) {
 		uint8_t x = hash->u8[i];
-		dest[j] = hex[x >> 4];
-		dest[++j] = hex[x & 15];
+		dest[j] = _hex_char (x >> 4);
+		dest[++j] = _hex_char (x & 15);
 	}
 	dest[40] = '\0';
 }
