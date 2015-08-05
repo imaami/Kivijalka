@@ -104,6 +104,12 @@ banner_hash_unparse (struct banner *b,
 	}
 }
 
+struct img_data *
+banner_img (struct banner *b)
+{
+	return (b) ? _banner_img (b) : NULL;
+}
+
 img_data_t *
 banner_remove_data (struct banner *b)
 {

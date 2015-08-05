@@ -60,6 +60,9 @@ banner_hash_unparse (banner_t *b,
                      char     *str);
 
 extern img_data_t *
+banner_img (banner_t *b);
+
+extern img_data_t *
 banner_remove_data (banner_t *b);
 
 #ifdef __cplusplus

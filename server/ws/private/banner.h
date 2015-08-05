@@ -231,6 +231,13 @@ _banner_hash_unparse (struct banner *b,
 }
 
 __attribute__((always_inline))
+static inline struct img_data *
+_banner_img (struct banner *b)
+{
+	return b->data;
+}
+
+__attribute__((always_inline))
 static inline img_data_t *
 _banner_remove_data (struct banner *b)
 {
