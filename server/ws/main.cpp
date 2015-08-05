@@ -113,7 +113,7 @@ int main(int argc, char *argv[])
 	QObject::connect (&diskWriterThread, &QThread::started,
 	                  &diskWriter, &DiskWriter::process);
 
-	WSServer *server = new WSServer(sa, sp, dw, dh, tw, th);
+	WSServer *server = new WSServer(sa, sp, dw, dh, tw, th, bc);
 	if (!server) {
 		watcher_destroy (w);
 		w = NULL;
