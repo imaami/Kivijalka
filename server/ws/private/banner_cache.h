@@ -11,12 +11,14 @@
 #include "banner.h"
 #include "json.h"
 #include "hex.h"
+#include "img.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <dirent.h>
 #include <unistd.h>
 
@@ -40,6 +42,37 @@ struct banner_cache {
 	struct table   by_hash;
 	struct bucket *data;
 } __attribute__((gcc_struct,packed));
+
+__attribute__((always_inline))
+static inline void
+_banner_cache_import_img (struct banner_cache *bc,
+                          char                *path,
+                          uint8_t             *hash)
+{
+	printf ("%s: path=%s\n", __func__, path);
+	struct img *im = _img_read_file ((const char *) path);
+
+	if (!im) {
+		fprintf (stderr, "%s: _img_read_file failed\n", __func__);
+		return;
+	}
+
+	char str[41];
+	union {
+		sha1_t   *h;
+		uint8_t **u;
+	} hu = {.u = &hash};
+
+	_sha1_str (hu.h, str);
+	printf ("%s: %s\n", __func__, str);
+
+	if (!_sha1_cmp (hu.h, &im->hash)) {
+		fprintf (stderr, "%s: hash mismatch\n", __func__);
+	}
+
+	_img_destroy (im);
+	im = NULL;
+}
 
 __attribute__((always_inline))
 static inline bool
@@ -71,13 +104,14 @@ _banner_cache_import_subdir (struct banner_cache *bc,
 			}
 
 			const char *name;
-			uint8_t c;
+			size_t k;
+			uint8_t *ptr, c;
 
 			switch (result->d_type) {
-			case DT_REG:
+			case DT_DIR:
 				name = (const char *) result->d_name;
-				size_t k = 0;
-				uint8_t *ptr = id + 1;
+				k = 0;
+				ptr = id + 1;
 
 				do {
 					switch (name[k]) {
@@ -118,9 +152,15 @@ _banner_cache_import_subdir (struct banner_cache *bc,
 
 				if (!name[k]) {
 					path[len + k] = '\0';
-					printf ("UUID: %s\n", path);
-					continue;
+					printf ("%s: UUID=%s\n", __func__, path);
 				}
+
+				continue;
+
+			case DT_REG:
+				name = (const char *) result->d_name;
+				k = 0;
+				ptr = id + 1;
 
 				do {
 					switch (name[k]) {
@@ -161,7 +201,8 @@ _banner_cache_import_subdir (struct banner_cache *bc,
 
 				if (!name[k]) {
 					path[len + k] = '\0';
-					printf ("SHA1: %s\n", path);
+					printf ("%s: SHA1=%s\n", __func__, path);
+					_banner_cache_import_img (bc, path, id);
 				}
 
 			default:
@@ -504,33 +545,108 @@ _banner_cache_find_by_hash (struct banner_cache *bc,
 }
 
 __attribute__((always_inline))
-static inline void
+static inline bool
 _banner_cache_mkdir (struct banner_cache *bc,
                      struct banner       *banner)
 {
+	bool r;
 	const char *root_path = bc->root_path;
-	size_t root_len = strlen (root_path);
+	size_t len = strlen (root_path), k;
 	char *path;
+	unsigned int i;
+	struct stat sb;
+	int e;
 
-	if (!(path = malloc (root_len + 2 + 1 + 30 + 1))) {
+	if (!(path = malloc (len + 2 + 1 + 30 + 1 + 4 + 1))) {
 		return false;
 	}
 
-	strncpy (path, root_path, root_len);
+	strncpy (path, root_path, len);
 
-	unsigned int i = banner->uuid[0];
+	i = banner->uuid[0];
+	path[len++] = _hex_char (i >> 4);
+	path[len++] = _hex_char (i & 0x0f);
+	path[len] = '/';
 
-	path[root_len++] = _hex_char (i >> 4);
-	path[root_len++] = _hex_char (i & 0x0f);
-	path[root_len++] = '/';
-	path[root_len] = '\0';
+	k = len + 1;
+	for (size_t j = 0; j < 15;) {
+		i = banner->uuid[++j];
+		path[k++] = _hex_char (i >> 4);
+		path[k++] = _hex_char (i & 0x0f);
+	}
+	path[k] = '\0';
 
-	char str[37];
-	_banner_uuid_unparse (banner, str);
-	printf ("%s: %s: %s\n", __func__, str, path);
+	printf ("%s: target: %s\n", __func__, path);
+	path[len] = '\0';
 
+	/* check for, and if necessary create, first part of banner path */
+	if (stat (path, &sb) == -1) {
+		if ((e = errno) == ENOENT) {
+			printf ("%s: trying to mkdir: %s\n", __func__, path);
+			errno = 0;
+
+			if (mkdir (path,
+			           S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH) == -1) {
+				fprintf (stderr, "%s: mkdir: %s\n", __func__,
+				         strerror (errno));
+				goto fail;
+			}
+
+			printf ("%s: created path: %s\n", __func__, path);
+			path[len] = '/';
+			goto create_subdir;
+		}
+
+		fprintf (stderr, "%s: stat: %s\n", __func__, strerror (e));
+		goto fail;
+
+	} else if (!S_ISDIR(sb.st_mode)) {
+		fprintf (stderr, "%s: not a directory: %s\n", __func__, path);
+		goto fail;
+	} else {
+		printf ("%s: path exists: %s\n", __func__, path);
+	}
+
+	/* check for, and if necessary create, remaining part of banner path */
+	path[len] = '/';
+	if (stat (path, &sb) == -1) {
+		if ((e = errno) == ENOENT) {
+		create_subdir:
+			printf ("%s: trying to mkdir: %s\n", __func__, path);
+			errno = 0;
+
+			if (mkdir (path,
+			           S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH) == -1) {
+				fprintf (stderr, "%s: mkdir: %s\n", __func__,
+				         strerror (errno));
+				goto fail;
+			}
+
+			printf ("%s: created path: %s\n", __func__, path);
+			goto store_banner_data;
+		}
+
+		fprintf (stderr, "%s: stat: %s\n", __func__, strerror (e));
+		goto fail;
+
+	} else if (!S_ISDIR(sb.st_mode)) {
+		fprintf (stderr, "%s: not a directory: %s\n", __func__, path);
+	fail:
+		r = false;
+		goto end;
+	} else {
+		printf ("%s: path exists: %s\n", __func__, path);
+	}
+
+store_banner_data:
+	printf ("%s: store banner data to: %s\n", __func__, path);
+	r = true;
+
+end:
 	free (path);
 	path = NULL;
+
+	return r;
 }
 
 __attribute__((always_inline))
