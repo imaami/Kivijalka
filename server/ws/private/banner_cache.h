@@ -47,7 +47,7 @@ __attribute__((always_inline))
 static inline void
 _banner_cache_import_img (struct banner_cache *bc,
                           char                *path,
-                          uint8_t             *hash)
+                          sha1_t               hash)
 {
 	printf ("%s: path=%s\n", __func__, path);
 	struct img *im = _img_read_file ((const char *) path);
@@ -58,15 +58,10 @@ _banner_cache_import_img (struct banner_cache *bc,
 	}
 
 	char str[41];
-	union {
-		sha1_t   *h;
-		uint8_t **u;
-	} hu = {.u = &hash};
-
-	_sha1_str (hu.h, str);
+	_sha1_str (&hash, str);
 	printf ("%s: %s\n", __func__, str);
 
-	if (!_sha1_cmp (hu.h, &im->hash)) {
+	if (!_sha1_cmp (&hash, &im->hash)) {
 		fprintf (stderr, "%s: hash mismatch\n", __func__);
 	}
 
@@ -80,7 +75,7 @@ _banner_cache_import_subdir (struct banner_cache *bc,
                              char                *path,
                              size_t               len,
                              struct dirent       *entry,
-                             uint8_t             *id)
+                             uint8_t              id)
 {
 	bool r;
 	DIR *dirp;
@@ -105,13 +100,17 @@ _banner_cache_import_subdir (struct banner_cache *bc,
 
 			const char *name;
 			size_t k;
-			uint8_t *ptr, c;
+			uint8_t c;
+			union {
+				sha1_t  sha1;
+				uuid_t  uuid;
+			} v;
 
 			switch (result->d_type) {
 			case DT_DIR:
 				name = (const char *) result->d_name;
 				k = 0;
-				ptr = id + 1;
+				v.uuid[0] = id;
 
 				do {
 					switch (name[k]) {
@@ -147,8 +146,8 @@ _banner_cache_import_subdir (struct banner_cache *bc,
 					}
 
 					path[len + k] = name[k];
-					*ptr++ = c;
-				} while (++k < 30);
+					v.uuid[++k >> 1] = c;
+				} while (k < 30);
 
 				if (!name[k]) {
 					path[len + k] = '\0';
@@ -160,7 +159,7 @@ _banner_cache_import_subdir (struct banner_cache *bc,
 			case DT_REG:
 				name = (const char *) result->d_name;
 				k = 0;
-				ptr = id + 1;
+				v.sha1.u8[0] = id;
 
 				do {
 					switch (name[k]) {
@@ -196,13 +195,13 @@ _banner_cache_import_subdir (struct banner_cache *bc,
 					}
 
 					path[len + k] = name[k];
-					*ptr++ = c;
-				} while (++k < 38);
+					v.sha1.u8[++k >> 1] = c;
+				} while (k < 38);
 
 				if (!name[k]) {
 					path[len + k] = '\0';
 					printf ("%s: SHA1=%s\n", __func__, path);
-					_banner_cache_import_img (bc, path, id);
+					_banner_cache_import_img (bc, path, v.sha1);
 				}
 
 			default:
@@ -291,7 +290,7 @@ _banner_cache_import (struct banner_cache *bc)
 				}
 
 				const char *name;
-				uint8_t id[20], c;
+				uint8_t c;
 
 				switch (result->d_type) {
 				case DT_DIR:
@@ -322,8 +321,7 @@ _banner_cache_import (struct banner_cache *bc)
 								path[root_len+1] = name[1];
 								path[root_len+2] = '/';
 								path[root_len+3] = '\0';
-								id[0] = c;
-								_banner_cache_import_subdir (bc, path, root_len + 3, entry, id);
+								_banner_cache_import_subdir (bc, path, root_len + 3, entry, c);
 							}
 						default:
 							break;
