@@ -41,11 +41,17 @@ _parse_u32 (char         *str,
 				case '0' ... '9':
 					if (v > 429496729
 					    || (v == 429496729 && c > '5')) {
-						*dest = UINT32_MAX;
-						return false;
+						goto _overflow_u32;
 					}
 
 					v = (v << 1) + (v << 3) + (c - '0');
+
+					switch ((c = str[++i])) {
+					case '0' ... '9':
+					_overflow_u32:
+						*dest = UINT32_MAX;
+						return false;
+					}
 				}
 			}
 
@@ -94,12 +100,18 @@ _parse_i32 (char         *str,
 					case '0' ... '9':
 						if (v < -214748364
 						    || (v == -214748364 && c > '8')) {
-							*dest = INT32_MIN;
-							return false;
+							goto _underflow_i32;
 						}
 
 						v *= 10;
 						v -= (c - '0');
+
+						switch ((c = str[++i])) {
+						case '0' ... '9':
+						_underflow_i32:
+							*dest = INT32_MIN;
+							return false;
+						}
 					}
 				}
 
@@ -135,11 +147,17 @@ _parse_i32 (char         *str,
 				case '0' ... '9':
 					if (v > 214748364
 					    || (v == 214748364 && c > '7')) {
-						*dest = INT32_MAX;
-						return false;
+						goto _overflow_i32;
 					}
 
 					v = (v << 1) + (v << 3) + (c - '0');
+
+					switch ((c = str[++i])) {
+					case '0' ... '9':
+					_overflow_i32:
+						*dest = INT32_MAX;
+						return false;
+					}
 				}
 			}
 
