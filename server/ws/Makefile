@@ -35,6 +35,9 @@ test-sha1: file.o hex.o sha1.o test-sha1.o
 test-geo2d: geo2d.o test-geo2d.o
 	$(CC) $(CFLAGS) -std=gnu11 geo2d.o test-geo2d.o -o test-geo2d
 
+test-parse:
+	$(CC) $(CFLAGS) -std=gnu11 test-parse.c -o test-parse
+
 global.o: global.c
 	$(CC) $(CFLAGS) -std=gnu11 -c global.c -o global.o
 
@@ -125,7 +128,7 @@ wsserver:
 
 clean: clean-test clean-wsserver
 
-clean-test: clean-test-buf clean-test-path clean-test-watcher clean-test-img clean-test-task clean-test-file clean-test-display clean-test-banner clean-test-banner_cache
+clean-test: clean-test-buf clean-test-path clean-test-watcher clean-test-img clean-test-task clean-test-file clean-test-display clean-test-banner clean-test-banner_cache clean-test-parse
 
 clean-test-buf:
 	rm -f test-buf test-buf.o buf.o
@@ -159,6 +162,9 @@ clean-test-sha1:
 
 clean-test-geo2d:
 	rm -f test-geo2d test-geo2d.o geo2d.o
+
+clean-test-parse:
+	rm -f test-parse
 
 clean-wsserver:
 	rm -f *.o
