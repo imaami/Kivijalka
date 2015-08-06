@@ -12,6 +12,7 @@
 #include "json.h"
 #include "hex.h"
 #include "img.h"
+#include "mem.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,12 +45,366 @@ struct banner_cache {
 } __attribute__((gcc_struct,packed));
 
 __attribute__((always_inline))
+static inline bool
+_textfile_read (const char *path,
+                uint8_t    *dest,
+                size_t      size,
+                size_t     *len)
+{
+	bool r;
+	file_t *f;
+	size_t l;
+
+	printf ("%s: path=%s\n", __func__, path);
+
+	if (!(f = file_create (path))) {
+		fprintf (stderr, "%s: file_create failed\n", __func__);
+		return false;
+	}
+
+	if (!file_open (f, "r")) {
+		fprintf (stderr, "%s: file_open failed\n", __func__);
+		r = false;
+		goto destroy_file;
+	}
+
+	if (!file_read (f, size, dest, &l)) {
+		fprintf (stderr, "%s: file_read failed\n", __func__);
+		r = false;
+		goto close_file;
+	}
+
+	dest[l] = '\0';
+	*len = l;
+	r = true;
+
+	printf ("%s: \"%s\"\n", __func__, dest);
+
+close_file:
+	if (!file_close (f)) {
+		fprintf (stderr, "%s: file_close failed\n", __func__);
+	}
+
+destroy_file:
+	file_destroy (&f);
+
+	return r;
+}
+
+__attribute__((always_inline))
+static inline void
+_banner_cache_import_banner (struct banner_cache *bc,
+                             char                *path,
+                             size_t               path_alloc,
+                             size_t               path_pos,
+                             struct dirent       *entry,
+                             uuid_t               uuid)
+{
+	DIR *dirp;
+	uint8_t buf[256];
+	size_t size;
+
+	if ((dirp = opendir (path))) {
+		for (int i;;) {
+			struct dirent *result;
+			if ((i = readdir_r (dirp, entry, &result))) {
+				fprintf (stderr,
+				         "%s: readdir_r failed: %s\n",
+				         __func__, strerror (i));
+				result = NULL;
+				i = 0;
+				goto close_dir;
+			}
+
+			if (!result) {
+				// end of directory stream
+				break;
+			}
+
+			const char *name;
+
+			switch (result->d_type) {
+			case DT_REG:
+				name = (const char *) result->d_name;
+				unsigned int k;
+
+				for (k = 0; name[k]; ++k) {
+					path[path_pos + k] = name[k];
+
+					switch (name[k]) {
+					case 'h':
+						++k;
+						path[path_pos + k] = name[k];
+						if (!name[k]) {
+							size = 0;
+							_textfile_read (path, buf, 256, &size);
+							goto _skip;
+						}
+						break;
+
+					case 'i':
+						++k;
+						path[path_pos + k] = name[k];
+						switch (name[k]) {
+						case '\0':
+							goto _skip;
+						case 'm':
+							++k;
+							path[path_pos + k] = name[k];
+							switch (name[k]) {
+							case '\0':
+								goto _skip;
+							case 'g':
+								++k;
+								path[path_pos + k] = name[k];
+								if (!name[k]) {
+									size = 0;
+									_textfile_read (path, buf, 256, &size);
+									goto _skip;
+								}
+							}
+						}
+						break;
+
+					case 'n':
+						++k;
+						path[path_pos + k] = name[k];
+						switch (name[k]) {
+						case '\0':
+							goto _skip;
+						case 'a':
+							++k;
+							path[path_pos + k] = name[k];
+							switch (name[k]) {
+							case '\0':
+								goto _skip;
+							case 'm':
+								++k;
+								path[path_pos + k] = name[k];
+								switch (name[k]) {
+								case '\0':
+									goto _skip;
+								case 'e':
+									++k;
+									path[path_pos + k] = name[k];
+									if (!name[k]) {
+										size = 0;
+										_textfile_read (path, buf, 256, &size);
+										goto _skip;
+									}
+								}
+							}
+						}
+						break;
+
+					case 'w':
+						++k;
+						path[path_pos + k] = name[k];
+						if (!name[k]) {
+							size = 0;
+							_textfile_read (path, buf, 256, &size);
+							goto _skip;
+						}
+						break;
+
+					case 'x':
+						++k;
+						path[path_pos + k] = name[k];
+						if (!name[k]) {
+							size = 0;
+							_textfile_read (path, buf, 256, &size);
+							goto _skip;
+						}
+						break;
+
+					case 'y':
+						++k;
+						path[path_pos + k] = name[k];
+						if (!name[k]) {
+							printf ("%s: %s\n", __func__, path);
+							size = 0;
+							_textfile_read (path, buf, 256, &size);
+							goto _skip;
+						}
+						break;
+					}
+				}
+
+				path[path_pos + k] = name[k];
+
+			default:
+			_skip:
+				continue;
+			}
+		}
+
+	close_dir:
+		if (closedir (dirp) == -1) {
+			fprintf (stderr, "%s: closedir failed: %s\n",
+			         __func__, strerror (errno));
+		}
+
+		path[path_pos] = '\0';
+		dirp = NULL;
+
+	} else {
+		fprintf (stderr, "%s: opendir failed: %s\n", __func__,
+		         strerror (errno));
+	}
+}
+
+__attribute__((always_inline))
 static inline void
 _banner_cache_import_img (struct banner_cache *bc,
                           char                *path,
+                          size_t               path_alloc,
+                          size_t               path_pos,
+                          struct dirent       *entry,
                           sha1_t               hash)
 {
-	printf ("%s: path=%s\n", __func__, path);
+	DIR *dirp;
+
+	if ((dirp = opendir (path))) {
+		for (int i;;) {
+			struct dirent *result;
+			if ((i = readdir_r (dirp, entry, &result))) {
+				fprintf (stderr,
+				         "%s: readdir_r failed: %s\n",
+				         __func__, strerror (i));
+				result = NULL;
+				i = 0;
+				goto close_dir;
+			}
+
+			if (!result) {
+				// end of directory stream
+				break;
+			}
+
+			const char *name;
+
+			switch (result->d_type) {
+			case DT_REG:
+				name = (const char *) result->d_name;
+				unsigned int k;
+
+				for (k = 0; name[k]; ++k) {
+					path[path_pos + k] = name[k];
+					switch (name[k]) {
+					case '.':
+						++k;
+						path[path_pos + k] = name[k];
+						switch (name[k]) {
+						case '\0':
+							goto _skip;
+						case 'G': case 'g':
+							++k;
+							path[path_pos + k] = name[k];
+							switch (name[k]) {
+							case '\0':
+								goto _skip;
+							case 'I': case 'i':
+								++k;
+								path[path_pos + k] = name[k];
+								switch (name[k]) {
+								case '\0':
+									goto _skip;
+								case 'F': case 'f':
+									++k;
+									path[path_pos + k] = name[k];
+									if (!name[k]) {
+										printf ("%s: GIF: %s\n",
+											__func__, name);
+										goto _skip;
+									}
+								}
+							}
+							break;
+
+						case 'J': case 'j':
+							++k;
+							path[path_pos + k] = name[k];
+							switch (name[k]) {
+							case '\0':
+								goto _skip;
+							case 'P': case 'p':
+								++k;
+								path[path_pos + k] = name[k];
+								switch (name[k]) {
+								case '\0':
+									goto _skip;
+								case 'E': case 'e':
+									++k;
+									path[path_pos + k] = name[k];
+									switch (name[k]) {
+									case '\0':
+										goto _skip;
+									case 'G': case 'g':
+										goto _maybe_jpeg;
+									}
+									break;
+
+								case 'G': case 'g':
+								_maybe_jpeg:
+									++k;
+									path[path_pos + k] = name[k];
+									if (!name[k]) {
+										printf ("%s: JPG: %s\n",
+											__func__, name);
+										goto _skip;
+									}
+								}
+							}
+							break;
+
+						case 'P': case 'p':
+							++k;
+							path[path_pos + k] = name[k];
+							switch (name[k]) {
+							case '\0':
+								goto _skip;
+							case 'N': case 'n':
+								++k;
+								path[path_pos + k] = name[k];
+								switch (name[k]) {
+								case '\0':
+									goto _skip;
+								case 'G': case 'g':
+									++k;
+									path[path_pos + k] = name[k];
+									if (!name[k]) {
+										printf ("%s: JPG: %s\n",
+											__func__, name);
+									}
+								}
+							}
+						}
+					}
+				}
+
+				path[path_pos + k] = name[k];
+
+			default:
+			_skip:
+				continue;
+			}
+		}
+
+	close_dir:
+		if (closedir (dirp) == -1) {
+			fprintf (stderr, "%s: closedir failed: %s\n",
+			         __func__, strerror (errno));
+		}
+
+		path[path_pos] = '\0';
+		dirp = NULL;
+
+	} else {
+		fprintf (stderr, "%s: opendir failed: %s\n", __func__,
+		         strerror (errno));
+	}
+
+/*
 	struct img *im = _img_read_file ((const char *) path);
 
 	if (!im) {
@@ -67,13 +422,15 @@ _banner_cache_import_img (struct banner_cache *bc,
 
 	_img_destroy (im);
 	im = NULL;
+*/
 }
 
 __attribute__((always_inline))
 static inline bool
 _banner_cache_import_subdir (struct banner_cache *bc,
                              char                *path,
-                             size_t               len,
+                             size_t               path_alloc,
+                             size_t               path_pos,
                              struct dirent       *entry,
                              uint8_t              id)
 {
@@ -102,6 +459,7 @@ _banner_cache_import_subdir (struct banner_cache *bc,
 			size_t k;
 			uint8_t c;
 			union {
+				uint8_t u8[20];
 				sha1_t  sha1;
 				uuid_t  uuid;
 			} v;
@@ -110,7 +468,7 @@ _banner_cache_import_subdir (struct banner_cache *bc,
 			case DT_DIR:
 				name = (const char *) result->d_name;
 				k = 0;
-				v.uuid[0] = id;
+				v.u8[0] = id;
 
 				do {
 					switch (name[k]) {
@@ -127,7 +485,7 @@ _banner_cache_import_subdir (struct banner_cache *bc,
 						goto _skip;
 					}
 
-					path[len + k] = name[k];
+					path[path_pos + k] = name[k];
 					c <<= 4;
 					++k;
 
@@ -145,21 +503,16 @@ _banner_cache_import_subdir (struct banner_cache *bc,
 						goto _skip;
 					}
 
-					path[len + k] = name[k];
-					v.uuid[++k >> 1] = c;
+					path[path_pos + k] = name[k];
+					v.u8[++k >> 1] = c;
 				} while (k < 30);
 
 				if (!name[k]) {
-					path[len + k] = '\0';
-					printf ("%s: UUID=%s\n", __func__, path);
+					path[path_pos + k++] = '/';
+					path[path_pos + k] = '\0';
+					_banner_cache_import_banner (bc, path, path_alloc, path_pos + k, entry, v.uuid);
+					continue;
 				}
-
-				continue;
-
-			case DT_REG:
-				name = (const char *) result->d_name;
-				k = 0;
-				v.sha1.u8[0] = id;
 
 				do {
 					switch (name[k]) {
@@ -176,7 +529,7 @@ _banner_cache_import_subdir (struct banner_cache *bc,
 						goto _skip;
 					}
 
-					path[len + k] = name[k];
+					path[path_pos + k] = name[k];
 					c <<= 4;
 					++k;
 
@@ -194,14 +547,14 @@ _banner_cache_import_subdir (struct banner_cache *bc,
 						goto _skip;
 					}
 
-					path[len + k] = name[k];
-					v.sha1.u8[++k >> 1] = c;
+					path[path_pos + k] = name[k];
+					v.u8[++k >> 1] = c;
 				} while (k < 38);
 
 				if (!name[k]) {
-					path[len + k] = '\0';
-					printf ("%s: SHA1=%s\n", __func__, path);
-					_banner_cache_import_img (bc, path, v.sha1);
+					path[path_pos + k++] = '/';
+					path[path_pos + k] = '\0';
+					_banner_cache_import_img (bc, path, path_alloc, path_pos + k, entry, v.sha1);
 				}
 
 			default:
@@ -218,7 +571,7 @@ _banner_cache_import_subdir (struct banner_cache *bc,
 			         __func__, strerror (errno));
 		}
 
-		path[len] = '\0';
+		path[path_pos] = '\0';
 		dirp = NULL;
 
 	} else {
@@ -227,7 +580,7 @@ _banner_cache_import_subdir (struct banner_cache *bc,
 		r = false;
 	}
 
-	path[len] = '\0';
+	path[path_pos] = '\0';
 
 	return r;
 }
@@ -237,10 +590,10 @@ static inline bool
 _banner_cache_import (struct banner_cache *bc)
 {
 	const char *root_path = bc->root_path;
-	size_t root_len = strlen (root_path);
+	size_t root_len = strlen (root_path), path_alloc;
 	char *path;
 
-	if (!(path = malloc (root_len + 42))) {
+	if (!(path = _mem_new (6, root_len + 42 + 256, &path_alloc))) {
 		return false;
 	}
 
@@ -321,7 +674,7 @@ _banner_cache_import (struct banner_cache *bc)
 								path[root_len+1] = name[1];
 								path[root_len+2] = '/';
 								path[root_len+3] = '\0';
-								_banner_cache_import_subdir (bc, path, root_len + 3, entry, c);
+								_banner_cache_import_subdir (bc, path, path_alloc, root_len + 3, entry, c);
 							}
 						default:
 							break;
@@ -359,8 +712,7 @@ _banner_cache_import (struct banner_cache *bc)
 		r = false;
 	}
 
-	free (path);
-	path = NULL;
+	_mem_del (&path);
 
 	return r;
 }
