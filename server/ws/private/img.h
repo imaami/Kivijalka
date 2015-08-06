@@ -67,7 +67,7 @@ _img_read_file (const char *path)
 	alloc_size -= offsetof (struct img, data);
 
 	if (!file_read (f, alloc_size, im->data, &size)) {
-		fprintf (stderr, "%s: aligned_alloc failed\n", __func__);
+		fprintf (stderr, "%s: file_read failed\n", __func__);
 		free (im);
 		im = NULL;
 		goto close_file;
