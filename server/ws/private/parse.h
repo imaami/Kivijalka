@@ -86,7 +86,6 @@ _parse_u8 (char         *str,
 		break;
 
 	default:
-	_error_u8:
 		*dest = 0;
 		return false;
 	}
