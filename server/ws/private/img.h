@@ -5,6 +5,7 @@
 #error This header must not be included directly by C++ code
 #endif
 
+#include "../img.h"
 #include "../list.h"
 #include "../file.h"
 #include "sha1.h"

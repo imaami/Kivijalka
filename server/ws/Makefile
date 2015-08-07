@@ -11,8 +11,8 @@ test-path: path.o test-path.o
 test-watcher: path.o watcher.o test-watcher.o
 	$(CC) $(CFLAGS) -std=gnu11 path.o watcher.o test-watcher.o -lpthread -o test-watcher
 
-test-img: img.o test-img.o read-file.o
-	$(CC) $(CFLAGS) -std=gnu11 img.o test-img.o read-file.o -o test-img
+test-img: img.o test-img.o
+	$(CC) $(CFLAGS) -std=gnu11 img.o test-img.o -o test-img
 
 test-task: task.o test-task.o
 	$(CC) $(CFLAGS) -std=gnu11 task.o test-task.o -lpthread -o test-task
@@ -140,7 +140,7 @@ clean-test-watcher:
 	rm -f test-watcher test-watcher.o watcher.o
 
 clean-test-img:
-	rm -f test-img test-img.o img.o read-file.o
+	rm -f test-img test-img.o img.o
 
 clean-test-task:
 	rm -f test-task test-task.o task.o
