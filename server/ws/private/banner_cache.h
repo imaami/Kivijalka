@@ -103,198 +103,150 @@ _banner_cache_import_banner (struct banner_cache *bc,
                              uuid_t               uuid)
 {
 	DIR *dirp;
+
+	if (!(dirp = opendir (path))) {
+		fprintf (stderr, "%s: opendir failed: %s\n", __func__,
+		         strerror (errno));
+		return;
+	}
+
 	uint8_t buf[256];
 	size_t size;
-
 	sha1_t hash = SHA1_INITIALIZER;
 	uint32_t w = 0, h = 0;
 	int32_t x = 0, y = 0;
 	char *banner_name = NULL;
 
-	if ((dirp = opendir (path))) {
-		for (int i;;) {
-			struct dirent *result;
-			if ((i = readdir_r (dirp, entry, &result))) {
-				fprintf (stderr,
-				         "%s: readdir_r failed: %s\n",
-				         __func__, strerror (i));
-				result = NULL;
-				i = 0;
-				goto close_dir;
-			}
+	for (int i;;) {
+		struct dirent *result;
+		if ((i = readdir_r (dirp, entry, &result))) {
+			fprintf (stderr,
+			         "%s: readdir_r failed: %s\n",
+			         __func__, strerror (i));
+			result = NULL;
+			i = 0;
+			goto close_dir;
+		}
 
-			if (!result) {
-				// end of directory stream
-				break;
-			}
+		if (!result) {
+			// end of directory stream
+			break;
+		}
 
-			const char *name;
+		if (result->d_type != DT_REG) {
+			// these are not the entries you're looking for
+			continue;
+		}
 
-			switch (result->d_type) {
-			case DT_REG:
-				name = (const char *) result->d_name;
-				unsigned int k;
+		const char *name = (const char *) result->d_name;
 
-				for (k = 0; name[k]; ++k) {
-					path[path_pos + k] = name[k];
-
-					switch (name[k]) {
-					case 'h':
-						++k;
-						path[path_pos + k] = name[k];
-						if (!name[k]) {
-							size = 0;
-							if (_textfile_read (path, buf, 256, &size)) {
-								unsigned int j = 0;
-								if (!_parse_u32 ((char *) buf, &j, &h)) {
-									h = 0;
-								}
-							}
-							goto _skip;
-						}
-						break;
-
-					case 'i':
-						++k;
-						path[path_pos + k] = name[k];
-						switch (name[k]) {
-						case '\0':
-							goto _skip;
-						case 'm':
-							++k;
-							path[path_pos + k] = name[k];
-							switch (name[k]) {
-							case '\0':
-								goto _skip;
-							case 'g':
-								++k;
-								path[path_pos + k] = name[k];
-								if (!name[k]) {
-									size = 0;
-									if (_textfile_read (path, buf, 256, &size)) {
-										if (!_sha1_parse ((const char *) buf, &hash)) {
-											_sha1_init (&hash);
-										}
-									}
-									goto _skip;
-								}
-							}
-						}
-						break;
-
-					case 'n':
-						++k;
-						path[path_pos + k] = name[k];
-						switch (name[k]) {
-						case '\0':
-							goto _skip;
-						case 'a':
-							++k;
-							path[path_pos + k] = name[k];
-							switch (name[k]) {
-							case '\0':
-								goto _skip;
-							case 'm':
-								++k;
-								path[path_pos + k] = name[k];
-								switch (name[k]) {
-								case '\0':
-									goto _skip;
-								case 'e':
-									++k;
-									path[path_pos + k] = name[k];
-									if (!name[k]) {
-										size = 0;
-										if (_textfile_read (path, buf, 256, &size)) {
-											banner_name = strdup ((const char *) buf);
-										}
-										goto _skip;
-									}
-								}
-							}
-						}
-						break;
-
-					case 'w':
-						++k;
-						path[path_pos + k] = name[k];
-						if (!name[k]) {
-							size = 0;
-							if (_textfile_read (path, buf, 256, &size)) {
-								unsigned int j = 0;
-								if (!_parse_u32 ((char *) buf, &j, &w)) {
-									w = 0;
-								}
-							}
-							goto _skip;
-						}
-						break;
-
-					case 'x':
-						++k;
-						path[path_pos + k] = name[k];
-						if (!name[k]) {
-							size = 0;
-							if (_textfile_read (path, buf, 256, &size)) {
-								unsigned int j = 0;
-								if (!_parse_i32 ((char *) buf, &j, &x)) {
-									x = 0;
-								}
-							}
-							goto _skip;
-						}
-						break;
-
-					case 'y':
-						++k;
-						path[path_pos + k] = name[k];
-						if (!name[k]) {
-							size = 0;
-							if (_textfile_read (path, buf, 256, &size)) {
-								unsigned int j = 0;
-								if (!_parse_i32 ((char *) buf, &j, &y)) {
-									y = 0;
-								}
-							}
-							goto _skip;
-						}
-						break;
+		switch (name[0]) {
+		case 'h':
+			if (!name[1]) {
+				path[path_pos] = 'h';
+				path[path_pos + 1] = '\0';
+				size = 0;
+				if (_textfile_read (path, buf, 256, &size)) {
+					unsigned int j = 0;
+					if (!_parse_u32 ((char *) buf, &j, &h)) {
+						h = 0;
 					}
 				}
+				path[path_pos] = '\0';
+			}
+			continue;
 
-				path[path_pos + k] = name[k];
+		case 'i':
+			if (!name[1]) {
+				path[path_pos] = 'i';
+				path[path_pos + 1] = '\0';
+				size = 0;
+				if (_textfile_read (path, buf, 256, &size)) {
+					if (!_sha1_parse ((const char *) buf, &hash)) {
+						_sha1_init (&hash);
+					}
+				}
+				path[path_pos] = '\0';
+			}
+			continue;
 
-			default:
-			_skip:
-				continue;
+		case 'n':
+			if (!name[1]) {
+				path[path_pos] = 'n';
+				path[path_pos + 1] = '\0';
+				size = 0;
+				if (_textfile_read (path, buf, 256, &size)) {
+					banner_name = strdup ((const char *) buf);
+				}
+				path[path_pos] = '\0';
+			}
+			continue;
+
+		case 'w':
+			if (!name[1]) {
+				path[path_pos] = 'w';
+				path[path_pos + 1] = '\0';
+				size = 0;
+				if (_textfile_read (path, buf, 256, &size)) {
+					unsigned int j = 0;
+					if (!_parse_u32 ((char *) buf, &j, &w)) {
+						w = 0;
+					}
+				}
+				path[path_pos] = '\0';
+			}
+			continue;
+
+		case 'x':
+			if (!name[1]) {
+				path[path_pos] = 'x';
+				path[path_pos + 1] = '\0';
+				size = 0;
+				if (_textfile_read (path, buf, 256, &size)) {
+					unsigned int j = 0;
+					if (!_parse_i32 ((char *) buf, &j, &x)) {
+						x = 0;
+					}
+				}
+				path[path_pos] = '\0';
+			}
+			continue;
+
+		case 'y':
+			if (!name[1]) {
+				path[path_pos] = 'y';
+				path[path_pos + 1] = '\0';
+				size = 0;
+				if (_textfile_read (path, buf, 256, &size)) {
+					unsigned int j = 0;
+					if (!_parse_i32 ((char *) buf, &j, &y)) {
+						y = 0;
+					}
+				}
+				path[path_pos] = '\0';
 			}
 		}
-
-		_sha1_str (&hash, (char *) buf);
-		printf ("name:   \"%s\"\n"
-		        "hash:   %s\n"
-		        "width:  %" PRIu32 "\n"
-		        "height: %" PRIu32 "\n"
-		        "x_offs: %" PRId32 "\n"
-		        "y_offs: %" PRId32 "\n",
-		        banner_name, buf, w, h, x, y);
-		if (banner_name) {
-			free (banner_name);
-		}
-
-	close_dir:
-		if (closedir (dirp) == -1) {
-			fprintf (stderr, "%s: closedir failed: %s\n",
-			         __func__, strerror (errno));
-		}
-
-		path[path_pos] = '\0';
-		dirp = NULL;
-
-	} else {
-		fprintf (stderr, "%s: opendir failed: %s\n", __func__,
-		         strerror (errno));
 	}
+
+	_sha1_str (&hash, (char *) buf);
+	printf ("name:   \"%s\"\n"
+	        "hash:   %s\n"
+	        "width:  %" PRIu32 "\n"
+	        "height: %" PRIu32 "\n"
+	        "x_offs: %" PRId32 "\n"
+	        "y_offs: %" PRId32 "\n",
+	        banner_name, buf, w, h, x, y);
+	if (banner_name) {
+		free (banner_name);
+	}
+
+close_dir:
+	if (closedir (dirp) == -1) {
+		fprintf (stderr, "%s: closedir failed: %s\n",
+		         __func__, strerror (errno));
+	}
+
+	dirp = NULL;
 }
 
 __attribute__((always_inline))
