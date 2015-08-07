@@ -97,6 +97,101 @@ _parse_u8 (char         *str,
 
 __attribute__((always_inline))
 static inline bool
+_parse_i8 (char         *str,
+           unsigned int *pos,
+           int8_t       *dest)
+{
+	int8_t v;
+	unsigned int p = *pos;
+	unsigned int c = str[p];
+
+	switch (c) {
+	case '-':
+		c = str[++p];
+		switch (c) {
+		case '0':
+			goto _zero_i8;
+
+		case '1' ... '9':
+			v = 0 - (int8_t) (c - '0');
+			c = str[++p];
+			switch (c) {
+			case '0' ... '1':
+				break;
+			case '2':
+				break;
+			case '3' ... '9':
+				break;
+			}
+		}
+		goto _error_i8;
+
+	case '0':
+	_zero_i8:
+		v = 0;
+		++p;
+		break;
+
+	case '1':
+		c = str[++p];
+		switch (c) {
+		case '0' ... '1':
+			v = 10 + (c - '0');
+			c = str[++p];
+			switch (c) {
+			case '0' ... '9':
+				goto _must_end_i8;
+			}
+			break;
+
+		case '2':
+			v = 12;
+			c = str[++p];
+			switch (c) {
+			case '0' ... '7':
+				goto _must_end_i8;
+			case '8' ... '9':
+				goto _overflow_i8;
+			}
+			break;
+
+		case '3' ... '9':
+			goto _must_end_i8;
+		}
+
+		v = 1;
+		break;
+
+	case '2' ... '9':
+		v = c - '0';
+		c = str[++p];
+		switch (c) {
+		case '0' ... '9':
+		_must_end_i8:
+			v = (v << 1) + (v << 3) + (c - '0');
+			c = str[++p];
+			switch (c) {
+			case '0' ... '9':
+			_overflow_i8:
+				*dest = INT8_MAX;
+				return false;
+			}
+		}
+		break;
+
+	default:
+	_error_i8:
+		*dest = 0;
+		return false;
+	}
+
+	*pos = p;
+	*dest = v;
+	return true;
+}
+
+__attribute__((always_inline))
+static inline bool
 _parse_u16 (char         *str,
             unsigned int *pos,
             uint16_t     *dest)
