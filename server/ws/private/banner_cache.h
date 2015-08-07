@@ -13,6 +13,7 @@
 #include "hex.h"
 #include "img.h"
 #include "mem.h"
+#include "parse.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,6 +23,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <unistd.h>
+#include <inttypes.h>
 
 #ifndef _DIRENT_HAVE_D_TYPE
 #error The dirent structure does not have a d_type field on this platform
@@ -104,6 +106,11 @@ _banner_cache_import_banner (struct banner_cache *bc,
 	uint8_t buf[256];
 	size_t size;
 
+	sha1_t hash = SHA1_INITIALIZER;
+	uint32_t w = 0, h = 0;
+	int32_t x = 0, y = 0;
+	char *banner_name = NULL;
+
 	if ((dirp = opendir (path))) {
 		for (int i;;) {
 			struct dirent *result;
@@ -137,7 +144,12 @@ _banner_cache_import_banner (struct banner_cache *bc,
 						path[path_pos + k] = name[k];
 						if (!name[k]) {
 							size = 0;
-							_textfile_read (path, buf, 256, &size);
+							if (_textfile_read (path, buf, 256, &size)) {
+								unsigned int j = 0;
+								if (!_parse_u32 ((char *) buf, &j, &h)) {
+									h = 0;
+								}
+							}
 							goto _skip;
 						}
 						break;
@@ -159,7 +171,11 @@ _banner_cache_import_banner (struct banner_cache *bc,
 								path[path_pos + k] = name[k];
 								if (!name[k]) {
 									size = 0;
-									_textfile_read (path, buf, 256, &size);
+									if (_textfile_read (path, buf, 256, &size)) {
+										if (!_sha1_parse ((const char *) buf, &hash)) {
+											_sha1_init (&hash);
+										}
+									}
 									goto _skip;
 								}
 							}
@@ -189,7 +205,9 @@ _banner_cache_import_banner (struct banner_cache *bc,
 									path[path_pos + k] = name[k];
 									if (!name[k]) {
 										size = 0;
-										_textfile_read (path, buf, 256, &size);
+										if (_textfile_read (path, buf, 256, &size)) {
+											banner_name = strdup ((const char *) buf);
+										}
 										goto _skip;
 									}
 								}
@@ -202,7 +220,12 @@ _banner_cache_import_banner (struct banner_cache *bc,
 						path[path_pos + k] = name[k];
 						if (!name[k]) {
 							size = 0;
-							_textfile_read (path, buf, 256, &size);
+							if (_textfile_read (path, buf, 256, &size)) {
+								unsigned int j = 0;
+								if (!_parse_u32 ((char *) buf, &j, &w)) {
+									w = 0;
+								}
+							}
 							goto _skip;
 						}
 						break;
@@ -212,7 +235,12 @@ _banner_cache_import_banner (struct banner_cache *bc,
 						path[path_pos + k] = name[k];
 						if (!name[k]) {
 							size = 0;
-							_textfile_read (path, buf, 256, &size);
+							if (_textfile_read (path, buf, 256, &size)) {
+								unsigned int j = 0;
+								if (!_parse_i32 ((char *) buf, &j, &x)) {
+									x = 0;
+								}
+							}
 							goto _skip;
 						}
 						break;
@@ -221,9 +249,13 @@ _banner_cache_import_banner (struct banner_cache *bc,
 						++k;
 						path[path_pos + k] = name[k];
 						if (!name[k]) {
-							printf ("%s: %s\n", __func__, path);
 							size = 0;
-							_textfile_read (path, buf, 256, &size);
+							if (_textfile_read (path, buf, 256, &size)) {
+								unsigned int j = 0;
+								if (!_parse_i32 ((char *) buf, &j, &y)) {
+									y = 0;
+								}
+							}
 							goto _skip;
 						}
 						break;
@@ -236,6 +268,18 @@ _banner_cache_import_banner (struct banner_cache *bc,
 			_skip:
 				continue;
 			}
+		}
+
+		_sha1_str (&hash, (char *) buf);
+		printf ("name:   \"%s\"\n"
+		        "hash:   %s\n"
+		        "width:  %" PRIu32 "\n"
+		        "height: %" PRIu32 "\n"
+		        "x_offs: %" PRId32 "\n"
+		        "y_offs: %" PRId32 "\n",
+		        banner_name, buf, w, h, x, y);
+		if (banner_name) {
+			free (banner_name);
 		}
 
 	close_dir:
