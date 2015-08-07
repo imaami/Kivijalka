@@ -37,6 +37,10 @@ extern void
 sha1_str (sha1_t *hash,
           char   *dest);
 
+extern bool
+sha1_parse (const char *src,
+            sha1_t     *dest);
+
 #ifdef __cplusplus
 }
 #endif

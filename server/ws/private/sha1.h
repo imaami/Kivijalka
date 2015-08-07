@@ -70,4 +70,51 @@ _sha1_str (sha1_t *hash,
 	dest[40] = '\0';
 }
 
+__attribute__((always_inline))
+static inline bool
+_sha1_parse (const char *src,
+             sha1_t     *dest)
+{
+	unsigned int i = 0, j = 0;
+
+	do {
+		uint8_t c = src[i++], d;
+
+		switch (c) {
+		case '0' ... '9':
+			d = c - '0';
+			break;
+		case 'A' ... 'F':
+			d = 10 + (c - 'A');
+			break;
+		case 'a' ... 'f':
+			d = 10 + (c - 'a');
+			break;
+		default:
+			return false;
+		}
+
+		d <<= 4;
+		c = src[i++];
+
+		switch (c) {
+		case '0' ... '9':
+			d |= c - '0';
+			break;
+		case 'A' ... 'F':
+			d |= 10 + (c - 'A');
+			break;
+		case 'a' ... 'f':
+			d |= 10 + (c - 'a');
+			break;
+		default:
+			return false;
+		}
+
+		dest->u8[j] = d;
+	} while (++j < 20);
+
+	return true;
+}
+
 #endif // __KIVIJALKA_PRIVATE_SHA1_H__

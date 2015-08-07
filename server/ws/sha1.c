@@ -42,3 +42,12 @@ sha1_str (sha1_t *hash,
 		_sha1_str (hash, dest);
 	}
 }
+
+bool
+sha1_parse (const char *src,
+            sha1_t     *dest)
+{
+	if (src && dest) {
+		_sha1_parse (src, dest);
+	}
+}
