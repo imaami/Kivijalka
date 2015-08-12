@@ -16,7 +16,7 @@ _parse_u8 (char         *str,
            uint8_t      *dest)
 {
 	uint8_t v;
-	unsigned int p = *pos;
+	unsigned int p = (pos) ? *pos : 0;
 	unsigned int c = str[p];
 
 	switch (c) {
@@ -90,7 +90,9 @@ _parse_u8 (char         *str,
 		return false;
 	}
 
-	*pos = p;
+	if (pos) {
+		*pos = p;
+	}
 	*dest = v;
 	return true;
 }
@@ -102,7 +104,7 @@ _parse_i8 (char         *str,
            int8_t       *dest)
 {
 	int8_t v;
-	unsigned int p = *pos;
+	unsigned int p = (pos) ? *pos : 0;
 	unsigned int c = str[p];
 
 	switch (c) {
@@ -185,7 +187,9 @@ _parse_i8 (char         *str,
 		return false;
 	}
 
-	*pos = p;
+	if (pos) {
+		*pos = p;
+	}
 	*dest = v;
 	return true;
 }
@@ -197,12 +201,14 @@ _parse_u16 (char         *str,
             uint16_t     *dest)
 {
 	uint16_t v;
-	unsigned int i, p = *pos;
+	unsigned int i, p = (pos) ? *pos : 0;
 	unsigned int c = str[p];
 
 	switch (c) {
 	case '0':
-		*pos = p + 1;
+		if (pos) {
+			*pos = p + 1;
+		}
 		*dest = 0;
 		return true;
 
@@ -239,7 +245,9 @@ _parse_u16 (char         *str,
 			break;
 		}
 
-		*pos = i;
+		if (pos) {
+			*pos = i;
+		}
 		*dest = v;
 		return true;
 	}
@@ -255,7 +263,7 @@ _parse_i16 (char         *str,
             int16_t      *dest)
 {
 	int16_t v;
-	unsigned int i, p = *pos;
+	unsigned int i, p = (pos) ? *pos : 0;
 	unsigned int c = str[p];
 
 	switch (c) {
@@ -299,7 +307,9 @@ _parse_i16 (char         *str,
 				break;
 			}
 
-			*pos = i;
+			if (pos) {
+				*pos = i;
+			}
 			*dest = v;
 			return true;
 		}
@@ -308,7 +318,9 @@ _parse_i16 (char         *str,
 
 	case '0':
 	_zero:
-		*pos = p + 1;
+		if (pos) {
+			*pos = p + 1;
+		}
 		*dest = 0;
 		return true;
 
@@ -345,7 +357,9 @@ _parse_i16 (char         *str,
 			break;
 		}
 
-		*pos = i;
+		if (pos) {
+			*pos = i;
+		}
 		*dest = v;
 		return true;
 	}
@@ -361,12 +375,14 @@ _parse_u32 (char         *str,
             uint32_t     *dest)
 {
 	uint32_t v;
-	unsigned int i, p = *pos;
+	unsigned int i, p = (pos) ? *pos : 0;
 	unsigned int c = str[p];
 
 	switch (c) {
 	case '0':
-		*pos = p + 1;
+		if (pos) {
+			*pos = p + 1;
+		}
 		*dest = 0;
 		return true;
 
@@ -403,7 +419,9 @@ _parse_u32 (char         *str,
 			break;
 		}
 
-		*pos = i;
+		if (pos) {
+			*pos = i;
+		}
 		*dest = v;
 		return true;
 	}
@@ -419,7 +437,7 @@ _parse_i32 (char         *str,
             int32_t      *dest)
 {
 	int32_t v;
-	unsigned int i, p = *pos;
+	unsigned int i, p = (pos) ? *pos : 0;
 	unsigned int c = str[p];
 
 	switch (c) {
@@ -463,7 +481,9 @@ _parse_i32 (char         *str,
 				break;
 			}
 
-			*pos = i;
+			if (pos) {
+				*pos = i;
+			}
 			*dest = v;
 			return true;
 		}
@@ -472,7 +492,9 @@ _parse_i32 (char         *str,
 
 	case '0':
 	_zero:
-		*pos = p + 1;
+		if (pos) {
+			*pos = p + 1;
+		}
 		*dest = 0;
 		return true;
 
@@ -509,7 +531,9 @@ _parse_i32 (char         *str,
 			break;
 		}
 
-		*pos = i;
+		if (pos) {
+			*pos = i;
+		}
 		*dest = v;
 		return true;
 	}
@@ -525,12 +549,14 @@ _parse_u64 (char         *str,
             uint64_t     *dest)
 {
 	uint64_t v;
-	unsigned int i, p = *pos;
+	unsigned int i, p = (pos) ? *pos : 0;
 	unsigned int c = str[p];
 
 	switch (c) {
 	case '0':
-		*pos = p + 1;
+		if (pos) {
+			*pos = p + 1;
+		}
 		*dest = 0;
 		return true;
 
@@ -568,7 +594,9 @@ _parse_u64 (char         *str,
 			break;
 		}
 
-		*pos = i;
+		if (pos) {
+			*pos = i;
+		}
 		*dest = v;
 		return true;
 	}
@@ -584,7 +612,7 @@ _parse_i64 (char         *str,
             int64_t      *dest)
 {
 	int64_t v;
-	unsigned int i, p = *pos;
+	unsigned int i, p = (pos) ? *pos : 0;
 	unsigned int c = str[p];
 
 	switch (c) {
@@ -629,7 +657,9 @@ _parse_i64 (char         *str,
 				break;
 			}
 
-			*pos = i;
+			if (pos) {
+				*pos = i;
+			}
 			*dest = v;
 			return true;
 		}
@@ -638,7 +668,9 @@ _parse_i64 (char         *str,
 
 	case '0':
 	_zero:
-		*pos = p + 1;
+		if (pos) {
+			*pos = p + 1;
+		}
 		*dest = 0;
 		return true;
 
@@ -676,7 +708,9 @@ _parse_i64 (char         *str,
 			break;
 		}
 
-		*pos = i;
+		if (pos) {
+			*pos = i;
+		}
 		*dest = v;
 		return true;
 	}
