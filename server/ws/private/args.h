@@ -9,6 +9,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "parse.h"
+
 struct args {
 	struct __attribute__((gcc_struct,packed)) {
 		uint32_t width;
@@ -51,111 +53,6 @@ struct args {
 
 __attribute__((always_inline))
 static inline bool
-_u16_arg (char     *str,
-          uint16_t *dest)
-{
-	uint16_t v;
-	unsigned int i, c = str[0];
-
-	switch (c) {
-	case '1' ... '9':
-		v = c - '0';
-		for (i = 1; (c = str[i]);) {
-			switch (c) {
-			case '0' ... '9':
-				v = (v << 1) + (v << 3) + (c - '0');
-
-				if (++i < 4) {
-					continue;
-				}
-
-				c = str[4];
-
-				switch (c) {
-				case '0' ... '9':
-					if (v > 6553
-					    || (v == 6553 && c > '5')) {
-						*dest = UINT16_MAX;
-						goto fail;
-					}
-
-					v = (v << 1) + (v << 3) + (c - '0');
-
-				case '\0':
-					goto done;
-
-				default:
-					break;
-				}
-
-			default:
-				goto zero;
-			}
-		}
-
-	done:
-		*dest = v;
-		return true;
-
-	default:
-	zero:
-		*dest = 0;
-	fail:
-		return false;
-	}
-}
-
-__attribute__((always_inline))
-static inline bool
-_u32_arg (char         *str,
-          unsigned int *pos,
-          uint32_t     *dest)
-{
-	uint32_t v;
-	unsigned int i, p = *pos;
-	unsigned int c = str[p];
-
-	switch (c) {
-	case '1' ... '9':
-		v = c - '0';
-		i = p + 1;
-		for (;;) {
-			switch ((c = str[i])) {
-			case '0' ... '9':
-				v = (v << 1) + (v << 3) + (c - '0');
-
-				if (++i - p < 9) {
-					continue;
-				}
-
-				switch ((c = str[i])) {
-				case '0' ... '9':
-					if (v > 429496729
-					    || (v == 429496729 && c > '5')) {
-						*dest = UINT32_MAX;
-						goto fail;
-					}
-
-					v = (v << 1) + (v << 3) + (c - '0');
-				}
-			}
-
-			break;
-		}
-
-		*pos = i;
-		*dest = v;
-		return true;
-
-	default:
-		*dest = 0;
-	fail:
-		return false;
-	}
-}
-
-__attribute__((always_inline))
-static inline bool
 _geo2d_arg (char     *str,
             uint32_t *x,
             uint32_t *y)
@@ -163,10 +60,10 @@ _geo2d_arg (char     *str,
 	unsigned int i = 0;
 	uint32_t _x, _y;
 
-	if (_u32_arg (str, &i, &_x)) {
+	if (_parse_u32 (str, &i, &_x)) {
 		if (str[i] == 'x') {
 			++i;
-			if (_u32_arg (str, &i, &_y)) {
+			if (_parse_u32 (str, &i, &_y)) {
 				if (str[i] == '\0') {
 					*x = _x;
 					*y = _y;
@@ -257,7 +154,7 @@ _args_parse (struct args  *a,
 						}
 						p = argv[i];
 					}
-					if (!_u16_arg (p, &a->server.port)) {
+					if (!_parse_u16 (p, NULL, &a->server.port)) {
 						return false;
 					}
 					break;
