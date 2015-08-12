@@ -719,4 +719,60 @@ _parse_i64 (char         *str,
 	return false;
 }
 
+__attribute__((always_inline))
+static inline bool
+_parse_xgeo (char         *str,
+             unsigned int *pos,
+             uint32_t     *w,
+             uint32_t     *h,
+             int32_t      *x,
+             int32_t      *y)
+{
+	unsigned int p = (pos) ? *pos : 0;
+	uint32_t _w, _h;
+	int32_t _x, _y;
+
+	if (_parse_u32 (str, &p, &_w)) {
+		if (str[p] == 'x') {
+			++p;
+			if (_parse_u32 (str, &p, &_h)) {
+				switch (str[p]) {
+				case '\0':
+					_x = 0;
+					goto _xgeo_zero_y;
+				case '+':
+					++p;
+				}
+
+				if (_parse_i32 (str, &p, &_x)) {
+					switch (str[p]) {
+					case '\0':
+					_xgeo_zero_y:
+						_y = 0;
+						goto _xgeo_end;
+					case '+':
+						++p;
+					}
+
+					if (_parse_i32 (str, &p, &_y)) {
+					_xgeo_end:
+						if (pos) {
+							*pos = p;
+						}
+
+						*w = _w;
+						*h = _h;
+						*x = _x;
+						*y = _y;
+
+						return true;
+					}
+				}
+			}
+		}
+	}
+
+	return false;
+}
+
 #endif // __KIVIJALKA_PRIVATE_PARSE_H__

@@ -142,6 +142,27 @@ main (int    argc,
 					++pos;
 				}
 
+			} else if (ptr[pos] == 'g') {
+				if (ptr[pos + 1] == ':') {
+					pos += 2;
+					uint32_t w, h;
+					int32_t x, y;
+					printf ("%3.u  %3.d  geo   ", i, pos);
+					if (!_parse_xgeo (ptr, &pos,
+					                  &w, &h, &x, &y)) {
+						puts ("error");
+						goto _next_arg;
+					}
+					printf ("%" PRIu32 "x%" PRIu32
+					        "%s%" PRId32 "%s%" PRId32 "\n",
+					        w, h,
+					        (x >= 0) ? "+" : "", x,
+					        (y >= 0) ? "+" : "", y);
+
+				} else {
+					++pos;
+				}
+
 			} else {
 				++pos;
 			}
