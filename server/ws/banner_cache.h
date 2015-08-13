@@ -32,7 +32,8 @@ banner_cache_find_by_uuid (banner_cache_t *bc,
 
 extern bool
 banner_cache_add_banner (banner_cache_t *bc,
-                         banner_t       *banner);
+                         banner_t       *banner,
+                         const bool      write_to_disk);
 
 extern banner_t *
 banner_cache_most_recent (banner_cache_t *bc);

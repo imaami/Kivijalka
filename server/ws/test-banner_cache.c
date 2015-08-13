@@ -24,7 +24,7 @@ main (int    argc,
 
 	for (unsigned int i = 1; i < argc; ++i) {
 		if ((b = banner_create_from_path (argv[i]))
-		    && !banner_cache_add_banner (bc, b)) {
+		    && !banner_cache_add_banner (bc, b, false)) {
 			banner_destroy (&b);
 		}
 	}

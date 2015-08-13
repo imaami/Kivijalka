@@ -134,7 +134,7 @@ void WSServer::recvBanner(QByteArray message)
 		return;
 	}
 
-	if (!banner_cache_add_banner (bannerCache, b)) {
+	if (!banner_cache_add_banner (bannerCache, b, true)) {
 		std::fprintf (stderr, "%s: failed to add banner to cache\n",
 		              __func__);
 		banner_destroy (&b);

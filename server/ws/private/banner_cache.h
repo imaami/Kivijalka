@@ -950,22 +950,14 @@ _banner_cache_find_by_hash (struct banner_cache *bc,
 
 __attribute__((always_inline))
 static inline bool
-_banner_cache_mkdir (struct banner_cache *bc,
-                     struct banner       *banner)
+_banner_cache_mkdir (struct banner *banner,
+                     char          *path,
+                     size_t         len)
 {
-	bool r;
-	const char *root_path = bc->root_path;
-	size_t len = strlen (root_path), k;
-	char *path;
+	size_t k;
 	unsigned int i;
 	struct stat sb;
 	int e;
-
-	if (!(path = malloc (len + 2 + 1 + 30 + 1 + 4 + 1))) {
-		return false;
-	}
-
-	strncpy (path, root_path, len);
 
 	i = banner->uuid[0];
 	path[len++] = _hex_char (i >> 4);
@@ -985,28 +977,24 @@ _banner_cache_mkdir (struct banner_cache *bc,
 
 	/* check for, and if necessary create, first part of banner path */
 	if (stat (path, &sb) == -1) {
-		if ((e = errno) == ENOENT) {
-			printf ("%s: trying to mkdir: %s\n", __func__, path);
-			errno = 0;
-
-			if (mkdir (path,
-			           S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH) == -1) {
-				fprintf (stderr, "%s: mkdir: %s\n", __func__,
-				         strerror (errno));
-				goto fail;
-			}
-
-			printf ("%s: created path: %s\n", __func__, path);
-			path[len] = '/';
-			goto create_subdir;
+		if ((e = errno) != ENOENT) {
+			goto _fail_stat;
 		}
 
-		fprintf (stderr, "%s: stat: %s\n", __func__, strerror (e));
-		goto fail;
+		printf ("%s: trying to mkdir: %s\n", __func__, path);
+		errno = 0;
+
+		if (mkdir (path, S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH) == -1) {
+			goto _fail_mkdir;
+		}
+
+		printf ("%s: created path: %s\n", __func__, path);
+		path[len] = '/';
+		goto _create_subdir;
 
 	} else if (!S_ISDIR(sb.st_mode)) {
-		fprintf (stderr, "%s: not a directory: %s\n", __func__, path);
-		goto fail;
+		goto _fail_notadir;
+
 	} else {
 		printf ("%s: path exists: %s\n", __func__, path);
 	}
@@ -1014,49 +1002,43 @@ _banner_cache_mkdir (struct banner_cache *bc,
 	/* check for, and if necessary create, remaining part of banner path */
 	path[len] = '/';
 	if (stat (path, &sb) == -1) {
-		if ((e = errno) == ENOENT) {
-		create_subdir:
-			printf ("%s: trying to mkdir: %s\n", __func__, path);
-			errno = 0;
-
-			if (mkdir (path,
-			           S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH) == -1) {
-				fprintf (stderr, "%s: mkdir: %s\n", __func__,
-				         strerror (errno));
-				goto fail;
-			}
-
-			printf ("%s: created path: %s\n", __func__, path);
-			goto store_banner_data;
+		if ((e = errno) != ENOENT) {
+		_fail_stat:
+			fprintf (stderr, "%s: stat: %s\n", __func__,
+			         strerror (e));
+			return false;
 		}
 
-		fprintf (stderr, "%s: stat: %s\n", __func__, strerror (e));
-		goto fail;
+	_create_subdir:
+		printf ("%s: trying to mkdir: %s\n", __func__, path);
+		errno = 0;
+
+		if (mkdir (path, S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH) == -1) {
+		_fail_mkdir:
+			fprintf (stderr, "%s: mkdir: %s\n", __func__,
+			         strerror (errno));
+			return false;
+		}
+
+		printf ("%s: created path: %s\n", __func__, path);
 
 	} else if (!S_ISDIR(sb.st_mode)) {
+	_fail_notadir:
 		fprintf (stderr, "%s: not a directory: %s\n", __func__, path);
-	fail:
-		r = false;
-		goto end;
+		return false;
+
 	} else {
 		printf ("%s: path exists: %s\n", __func__, path);
 	}
 
-store_banner_data:
-	printf ("%s: store banner data to: %s\n", __func__, path);
-	r = true;
-
-end:
-	free (path);
-	path = NULL;
-
-	return r;
+	return true;
 }
 
 __attribute__((always_inline))
 static inline bool
 _banner_cache_add_banner (struct banner_cache *bc,
-                          struct banner       *banner)
+                          struct banner       *banner,
+                          const bool           write_to_disk)
 {
 	struct bucket *bkt = _bucket_by_hash (bc, &banner->hash);
 	struct banner *b;
@@ -1098,7 +1080,26 @@ _banner_cache_add_banner (struct banner_cache *bc,
 		list_add (&bkt->hook, &bc->by_uuid.in_use);
 	}
 
-	_banner_cache_mkdir (bc, banner);
+	if (write_to_disk) {
+		const char *root_path = bc->root_path;
+		size_t path_len = strlen (root_path), path_alloc;
+		char *path;
+
+		if (!(path = _mem_new (6, path_len + 36, &path_alloc))) {
+			return false;
+		}
+
+		strncpy (path, root_path, path_len);
+		path[path_len] = '\0';
+
+		if (_banner_cache_mkdir (banner, path, path_len)) {
+			printf ("%s: path ready: %s\n", __func__, path);
+			//_banner_write_to_disk ();
+		}
+
+		_mem_del (&path);
+	}
+
 
 	return true;
 }

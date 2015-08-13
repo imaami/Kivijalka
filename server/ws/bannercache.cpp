@@ -30,7 +30,7 @@ BannerCache::BannerCache(banner_cache_t *bc,
 		                QDir::Files|QDir::Readable);
 		while (di.hasNext()) {
 			if ((b = banner_create_from_path (di.next().toUtf8().data()))) {
-				banner_cache_add_banner (bc, b);
+				banner_cache_add_banner (bc, b, false);
 			}
 		}
 	}

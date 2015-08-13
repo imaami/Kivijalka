@@ -42,9 +42,12 @@ banner_cache_find_by_uuid (struct banner_cache *bc,
 
 bool
 banner_cache_add_banner (struct banner_cache *bc,
-                         struct banner       *banner)
+                         struct banner       *banner,
+                         const bool           write_to_disk)
 {
-	return (bc && banner) ? _banner_cache_add_banner (bc, banner) : false;
+	return (bc && banner)
+	       ? _banner_cache_add_banner (bc, banner, write_to_disk)
+	       : false;
 }
 
 struct banner *
