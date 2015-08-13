@@ -8,6 +8,7 @@
 #include "../banner.h"
 #include "../list.h"
 #include "../point.h"
+#include "../file.h"
 #include "geo2d.h"
 #include "sha1.h"
 #include "json.h"
@@ -320,6 +321,175 @@ _banner_serialize (struct banner  *ban,
 	*buf = b.u;
 
 	return true;
+}
+
+__attribute__((always_inline))
+static inline bool
+_banner_export (struct banner *b,
+                char          *path,
+                size_t         path_len)
+{
+	bool r;
+	file_t *f;
+	union {
+		char     c[48];
+		uint64_t u64[6];
+	} buf = {.u64 = {0, 0, 0, 0, 0, 0}};
+	char *fpath;
+	union {
+		char          *chr;
+		const char    *cch;
+		const uint8_t *cu8;
+	} ptr;
+	size_t len;
+
+	path[path_len] = 'i';
+	path[path_len + 1] = '\0';
+
+	if (!(f = file_create (path))) {
+		fprintf (stderr, "%s: file_create failed\n", __func__);
+		r = false;
+		goto _cleanup;
+	}
+
+	// image hash
+
+	ptr.chr = buf.c;
+	_sha1_str (&b->hash, ptr.chr);
+
+	if (!file_open (f, "w")) {
+		goto _fail_open;
+	}
+
+	if (!file_write (f, 40, ptr.cu8)) {
+		goto _fail_write;
+	}
+
+	if (!file_close (f)) {
+		goto _fail_close;
+	}
+
+	fpath = (char *) file_path (f);
+
+	// width
+
+	len = _u32_to_str (b->dims.w, ptr.chr);
+
+	fpath[path_len] = 'w';
+	if (!file_open (f, "w")) {
+		goto _fail_open;
+	}
+
+	if (!file_write (f, len, ptr.cu8)) {
+		goto _fail_write;
+	}
+
+	if (!file_close (f)) {
+		goto _fail_close;
+	}
+
+	// height
+
+	len = _u32_to_str (b->dims.h, ptr.chr);
+
+	fpath[path_len] = 'h';
+	if (!file_open (f, "w")) {
+		goto _fail_open;
+	}
+
+	if (!file_write (f, len, ptr.cu8)) {
+		goto _fail_write;
+	}
+
+	if (!file_close (f)) {
+		goto _fail_close;
+	}
+
+	// x offset
+
+	len = _i32_to_str (b->offset.x, ptr.chr);
+
+	fpath[path_len] = 'x';
+	if (!file_open (f, "w")) {
+		goto _fail_open;
+	}
+
+	if (!file_write (f, len, ptr.cu8)) {
+		goto _fail_write;
+	}
+
+	if (!file_close (f)) {
+		goto _fail_close;
+	}
+
+	// y offset
+
+	len = _i32_to_str (b->offset.y, ptr.chr);
+
+	fpath[path_len] = 'y';
+	if (!file_open (f, "w")) {
+		goto _fail_open;
+	}
+
+	if (!file_write (f, len, ptr.cu8)) {
+		goto _fail_write;
+	}
+
+	if (!file_close (f)) {
+		goto _fail_close;
+	}
+
+	// name
+
+	if (b->name) {
+		ptr.chr = b->name;
+		len = strlen (ptr.cch);
+	} else {
+		ptr.cch = "";
+		len = 0;
+	}
+
+	fpath[path_len] = 'n';
+	if (!file_open (f, "w")) {
+	_fail_open:
+		ptr.cch = "open";
+		goto _fail;
+	}
+
+	if (!file_write (f, len, ptr.cu8)) {
+	_fail_write:
+		ptr.cch = "write";
+		goto _fail;
+	}
+
+	if (!file_close (f)) {
+	_fail_close:
+		ptr.cch = "close";
+	_fail:
+		fprintf (stderr, "%s: file_%s failed\n", __func__, ptr.cch);
+		r = false;
+		goto _destroy_file;
+	}
+
+	r = true;
+
+_destroy_file:
+	file_destroy (&f);
+
+_cleanup:
+	buf.u64[0] = 0;
+	buf.u64[1] = 0;
+	buf.u64[2] = 0;
+	buf.u64[3] = 0;
+	buf.u64[4] = 0;
+	buf.u64[5] = 0;
+	fpath = NULL;
+	ptr.chr = NULL;
+	len = 0;
+
+	path[path_len] = '\0';
+
+	return r;
 }
 
 #endif // __KIVIJALKA_PRIVATE_BANNER_H__

@@ -1093,8 +1093,9 @@ _banner_cache_add_banner (struct banner_cache *bc,
 		path[path_len] = '\0';
 
 		if (_banner_cache_mkdir (banner, path, path_len)) {
-			printf ("%s: path ready: %s\n", __func__, path);
-			//_banner_write_to_disk ();
+			path[path_len + 33] = '/';
+			path[path_len + 34] = '\0';
+			_banner_export (banner, path, path_len + 34);
 		}
 
 		_mem_del (&path);
