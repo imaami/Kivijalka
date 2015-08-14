@@ -14,6 +14,7 @@
 #include "img.h"
 #include "mem.h"
 #include "parse.h"
+#include "cache.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,21 +30,11 @@
 #error The dirent structure does not have a d_type field on this platform
 #endif
 
-struct bucket {
-	list_head_t hook;
-	list_head_t list;
-} __attribute__((gcc_struct,packed));
-
-struct table {
-	list_head_t    in_use;
-	struct bucket *lookup_table;
-} __attribute__((gcc_struct,packed));
-
 struct banner_cache {
-	char          *root_path;
-	struct table   by_uuid;
-	struct table   by_hash;
-	struct bucket *data;
+	char                *root_path;
+	struct cache_table   by_uuid;
+	struct cache_table   by_hash;
+	struct cache_bucket *data;
 } __attribute__((gcc_struct,packed));
 
 __attribute__((always_inline))
@@ -808,8 +799,8 @@ _banner_cache_create (const char *path)
 	if (!(bc = aligned_alloc (sizeof (struct banner_cache),
 	                          sizeof (struct banner_cache)))) {
 		fprintf (stderr, "%s: object allocation failed\n", __func__);
-	} else if (!(bc->data = aligned_alloc (sizeof (struct bucket),
-	                                       512 * sizeof (struct bucket)))) {
+	} else if (!(bc->data = aligned_alloc (sizeof (struct cache_bucket),
+	                                       512 * sizeof (struct cache_bucket)))) {
 		fprintf (stderr, "%s: lookup table allocation failed\n", __func__);
 		goto fail_free_bc;
 	} else if (!(bc->root_path = _banner_cache_path_dup (path))) {
@@ -843,7 +834,7 @@ _banner_cache_destroy (struct banner_cache *bc)
 		bc->root_path = NULL;
 	}
 
-	struct bucket *bkt, *tmp;
+	struct cache_bucket *bkt, *tmp;
 	struct banner *b, *tmp2;
 
 	list_for_each_entry_safe (bkt, tmp, &bc->by_uuid.in_use, hook) {
@@ -870,7 +861,7 @@ _banner_cache_destroy (struct banner_cache *bc)
 	tmp2 = NULL;
 
 	if (bc->data) {
-		(void) memset (bc->data, 0, 512 * sizeof (struct bucket));
+		(void) memset (bc->data, 0, 512 * sizeof (struct cache_bucket));
 		free (bc->data);
 		bc->data = NULL;
 	}
@@ -887,7 +878,7 @@ _banner_cache_path (struct banner_cache *bc)
 }
 
 __attribute__((always_inline))
-static inline struct bucket *
+static inline struct cache_bucket *
 _bucket_by_uuid (struct banner_cache *bc,
                  const uuid_t         uuid)
 {
@@ -895,7 +886,7 @@ _bucket_by_uuid (struct banner_cache *bc,
 }
 
 __attribute__((always_inline))
-static inline struct bucket *
+static inline struct cache_bucket *
 _bucket_by_hash (struct banner_cache *bc,
                  sha1_t              *hash)
 {
@@ -935,7 +926,7 @@ static inline struct banner *
 _banner_cache_find_by_uuid (struct banner_cache *bc,
                             const uuid_t         uuid)
 {
-	struct bucket *bkt = _bucket_by_uuid (bc, uuid);
+	struct cache_bucket *bkt = _bucket_by_uuid (bc, uuid);
 	return _banner_by_uuid (&bkt->list, uuid);
 }
 
@@ -944,7 +935,7 @@ static inline struct banner *
 _banner_cache_find_by_hash (struct banner_cache *bc,
                             sha1_t              *hash)
 {
-	struct bucket *bkt = _bucket_by_hash (bc, hash);
+	struct cache_bucket *bkt = _bucket_by_hash (bc, hash);
 	return _banner_by_hash (&bkt->list, hash);
 }
 
@@ -1040,7 +1031,7 @@ _banner_cache_add_banner (struct banner_cache *bc,
                           struct banner       *banner,
                           const bool           write_to_disk)
 {
-	struct bucket *bkt = _bucket_by_hash (bc, &banner->hash);
+	struct cache_bucket *bkt = _bucket_by_hash (bc, &banner->hash);
 	struct banner *b;
 
 	if ((b = _banner_by_hash (&bkt->list, &banner->hash))) {
@@ -1111,7 +1102,7 @@ _banner_cache_most_recent (struct banner_cache *bc)
 {
 	list_head_t *h;
 	if ((h = bc->by_hash.in_use.next) != &bc->by_hash.in_use) {
-		struct bucket *bkt = list_entry (h, struct bucket, hook);
+		struct cache_bucket *bkt = list_entry (h, struct cache_bucket, hook);
 		if ((h = bkt->list.next) != &bkt->list) {
 			return list_entry (h, struct banner, by_hash);
 		}
@@ -1139,7 +1130,7 @@ _banner_cache_json (struct banner_cache *bc)
 	pos = 1;
 
 	list_head_t *h = &bc->by_uuid.in_use;
-	struct bucket *bkt;
+	struct cache_bucket *bkt;
 	list_for_each_entry (bkt, h, hook) {
 		list_head_t *h2 = &bkt->list;
 		struct banner *b;
