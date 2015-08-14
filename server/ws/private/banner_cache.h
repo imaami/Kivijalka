@@ -1009,7 +1009,6 @@ _banner_cache_add_banner (struct banner_cache *bc,
 		_mem_del (&path);
 	}
 
-
 	return true;
 }
 
