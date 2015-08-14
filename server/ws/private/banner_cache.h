@@ -941,92 +941,6 @@ _banner_cache_find_by_hash (struct banner_cache *bc,
 
 __attribute__((always_inline))
 static inline bool
-_banner_cache_mkdir (struct banner *banner,
-                     char          *path,
-                     size_t         len)
-{
-	size_t k;
-	unsigned int i;
-	struct stat sb;
-	int e;
-
-	i = banner->uuid[0];
-	path[len++] = _hex_char (i >> 4);
-	path[len++] = _hex_char (i & 0x0f);
-	path[len] = '/';
-
-	k = len + 1;
-	for (size_t j = 0; j < 15;) {
-		i = banner->uuid[++j];
-		path[k++] = _hex_char (i >> 4);
-		path[k++] = _hex_char (i & 0x0f);
-	}
-	path[k] = '\0';
-
-	printf ("%s: target: %s\n", __func__, path);
-	path[len] = '\0';
-
-	/* check for, and if necessary create, first part of banner path */
-	if (stat (path, &sb) == -1) {
-		if ((e = errno) != ENOENT) {
-			goto _fail_stat;
-		}
-
-		printf ("%s: trying to mkdir: %s\n", __func__, path);
-		errno = 0;
-
-		if (mkdir (path, S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH) == -1) {
-			goto _fail_mkdir;
-		}
-
-		printf ("%s: created path: %s\n", __func__, path);
-		path[len] = '/';
-		goto _create_subdir;
-
-	} else if (!S_ISDIR(sb.st_mode)) {
-		goto _fail_notadir;
-
-	} else {
-		printf ("%s: path exists: %s\n", __func__, path);
-	}
-
-	/* check for, and if necessary create, remaining part of banner path */
-	path[len] = '/';
-	if (stat (path, &sb) == -1) {
-		if ((e = errno) != ENOENT) {
-		_fail_stat:
-			fprintf (stderr, "%s: stat: %s\n", __func__,
-			         strerror (e));
-			return false;
-		}
-
-	_create_subdir:
-		printf ("%s: trying to mkdir: %s\n", __func__, path);
-		errno = 0;
-
-		if (mkdir (path, S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH) == -1) {
-		_fail_mkdir:
-			fprintf (stderr, "%s: mkdir: %s\n", __func__,
-			         strerror (errno));
-			return false;
-		}
-
-		printf ("%s: created path: %s\n", __func__, path);
-
-	} else if (!S_ISDIR(sb.st_mode)) {
-	_fail_notadir:
-		fprintf (stderr, "%s: not a directory: %s\n", __func__, path);
-		return false;
-
-	} else {
-		printf ("%s: path exists: %s\n", __func__, path);
-	}
-
-	return true;
-}
-
-__attribute__((always_inline))
-static inline bool
 _banner_cache_add_banner (struct banner_cache *bc,
                           struct banner       *banner,
                           const bool           write_to_disk)
@@ -1075,6 +989,7 @@ _banner_cache_add_banner (struct banner_cache *bc,
 		const char *root_path = bc->root_path;
 		size_t path_len = strlen (root_path), path_alloc;
 		char *path;
+		const uint8_t *id;
 
 		if (!(path = _mem_new (6, path_len + 36, &path_alloc))) {
 			return false;
@@ -1083,7 +998,9 @@ _banner_cache_add_banner (struct banner_cache *bc,
 		strncpy (path, root_path, path_len);
 		path[path_len] = '\0';
 
-		if (_banner_cache_mkdir (banner, path, path_len)) {
+		id = ((const uint8_t *)banner) + offsetof (struct banner, uuid);
+
+		if (_cache_mkdir (path, path_len, 16, id)) {
 			path[path_len + 33] = '/';
 			path[path_len + 34] = '\0';
 			_banner_export (banner, path, path_len + 34);
