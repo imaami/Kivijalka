@@ -9,7 +9,7 @@
 #include "diskwriter.h"
 #include "wsserver.h"
 #include "bannercache.h"
-#include "banner_cache.h"
+#include "cache.h"
 #include "args.h"
 
 int main(int argc, char *argv[])
@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
 
 	uint32_t dw = args_get_display_width(), dh = args_get_display_height();
 	uint32_t tw = (dw & 0xfffffffe) >> 1, th = (dh & 0xfffffffe) >> 1;
-	const char *bp = args_get_banner_cache_path();
+	const char *bp = args_get_cache_path();
 	const char *cp = args_get_capture_path();
 	const char *op = args_get_output_path();
 	const char *sa = args_get_server_addr();
@@ -59,16 +59,16 @@ int main(int argc, char *argv[])
 	(void) img_file_set_path (&capture_file, cp);
 	(void) img_file_set_path (&output_file, op);
 
-	banner_cache_t *bc;
-	if (!(bc = banner_cache_create (bp))) {
+	cache_t *c;
+	if (!(c = cache_create (bp))) {
 		global_fini ();
 		return -7;
 	}
-	BannerCache bannerCache(bc);
+	BannerCache cache(c);
 
 	display_t *d;
 	if (!(d = display_create (dw, dh))) {
-		banner_cache_destroy (&bc);
+		cache_destroy (&c);
 		global_fini ();
 		return -6;
 	}
@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
 	if (!(w = watcher_create (capture_file.path))) {
 		display_destroy (d);
 		d = NULL;
-		banner_cache_destroy (&bc);
+		cache_destroy (&c);
 		global_fini ();
 		return -5;
 	}
@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
 		w = NULL;
 		display_destroy (d);
 		d = NULL;
-		banner_cache_destroy (&bc);
+		cache_destroy (&c);
 		global_fini ();
 		return -4;
 	}
@@ -113,13 +113,13 @@ int main(int argc, char *argv[])
 	QObject::connect (&diskWriterThread, &QThread::started,
 	                  &diskWriter, &DiskWriter::process);
 
-	WSServer *server = new WSServer(sa, sp, dw, dh, tw, th, bc);
+	WSServer *server = new WSServer(sa, sp, dw, dh, tw, th, c);
 	if (!server) {
 		watcher_destroy (w);
 		w = NULL;
 		display_destroy (d);
 		d = NULL;
-		banner_cache_destroy (&bc);
+		cache_destroy (&c);
 		global_fini ();
 		return -3;
 	}
@@ -147,7 +147,7 @@ int main(int argc, char *argv[])
 	display_destroy (d);
 	d = NULL;
 
-	banner_cache_destroy (&bc);
+	cache_destroy (&c);
 
 	global_fini ();
 

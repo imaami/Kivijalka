@@ -3,18 +3,18 @@
 
 #include <QtCore/QObject>
 
-#include "banner_cache.h"
+#include "cache.h"
 
 class BannerCache : public QObject
 {
 	Q_OBJECT
 public:
-	explicit BannerCache(banner_cache_t *bc,
+	explicit BannerCache(cache_t *cache,
 	                     QObject *parent = Q_NULLPTR);
 	~BannerCache();
 
 private:
-	banner_cache_t *bc;
+	cache_t *ptr;
 };
 
 #endif // BANNERCACHE_H

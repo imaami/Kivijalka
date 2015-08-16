@@ -13,7 +13,7 @@ QT_USE_NAMESPACE
 WSServer::WSServer(const QString &addr, quint16 port,
                    quint16 displayWidth, quint16 displayHeight,
                    quint16 thumbWidth, quint16 thumbHeight,
-                   banner_cache_t *banner_cache,
+                   cache_t *cache,
                    QObject *parent) :
 	QObject(parent),
 	m_pWebSocketServer(new QWebSocketServer(QStringLiteral("Websocket Server"),
@@ -28,7 +28,7 @@ WSServer::WSServer(const QString &addr, quint16 port,
 	this->thumbWidth = thumbWidth;
 	this->thumbHeight = thumbHeight;
 	thumbnail = NULL;
-	bannerCache = banner_cache;
+	this->cache = cache;
 }
 
 WSServer::~WSServer()
@@ -39,7 +39,7 @@ WSServer::~WSServer()
 		img_data_free (thumbnail);
 		thumbnail = NULL;
 	}
-	bannerCache = NULL;
+	cache = NULL;
 }
 
 bool WSServer::listen()
@@ -134,7 +134,7 @@ void WSServer::recvBanner(QByteArray message)
 		return;
 	}
 
-	if (!banner_cache_add_banner (bannerCache, b, true)) {
+	if (!cache_add_banner (cache, b, true)) {
 		std::fprintf (stderr, "%s: failed to add banner to cache\n",
 		              __func__);
 		banner_destroy (&b);

@@ -492,4 +492,18 @@ _cleanup:
 	return r;
 }
 
+__attribute__((always_inline))
+static inline struct banner *
+_banner_find_in_list_by_uuid (list_head_t *list,
+                              uuid_t       uuid)
+{
+	struct banner *b;
+	list_for_each_entry (b, list, by_uuid) {
+		if (uuid_compare (b->uuid, uuid) == 0) {
+			return b;
+		}
+	}
+	return NULL;
+}
+
 #endif // __KIVIJALKA_PRIVATE_BANNER_H__

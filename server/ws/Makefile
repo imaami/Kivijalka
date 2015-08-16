@@ -26,9 +26,6 @@ test-display: display.o test-display.o
 test-banner: read-file.o img_data.o banner.o test-banner.o
 	$(CC) $(CFLAGS) -std=gnu11 read-file.o img_data.o banner.o test-banner.o -luuid -lssl -lcrypto -o test-banner
 
-test-banner_cache: read-file.o img_data.o banner.o banner_cache.o test-banner_cache.o
-	$(CC) $(CFLAGS) -std=gnu11 read-file.o img_data.o banner.o banner_cache.o test-banner_cache.o -luuid -lssl -lcrypto -o test-banner_cache
-
 test-sha1: file.o hex.o sha1.o test-sha1.o
 	$(CC) $(CFLAGS) -std=gnu11 file.o hex.o sha1.o test-sha1.o -lssl -lcrypto -o test-sha1
 
@@ -71,8 +68,8 @@ display.o: display.c
 banner.o: banner.c
 	$(CC) $(CFLAGS) -std=gnu11 -c banner.c -o banner.o
 
-banner_cache.o: banner_cache.c
-	$(CC) $(CFLAGS) -std=gnu11 -c banner_cache.c -o banner_cache.o
+cache.o: cache.c
+	$(CC) $(CFLAGS) -std=gnu11 -c cache.c -o cache.o
 
 hex.o: hex.c
 	$(CC) $(CFLAGS) -std=gnu11 -c hex.c -o hex.o
@@ -113,9 +110,6 @@ test-display.o: test-display.c
 test-banner.o: test-banner.c
 	$(CC) $(CFLAGS) -std=gnu11 -c test-banner.c -o test-banner.o
 
-test-banner_cache.o: test-banner_cache.c
-	$(CC) $(CFLAGS) -std=gnu11 -c test-banner_cache.c -o test-banner_cache.o
-
 test-sha1.o: test-sha1.c
 	$(CC) $(CFLAGS) -std=gnu11 -c test-sha1.c -o test-sha1.o
 
@@ -128,7 +122,7 @@ wsserver:
 
 clean: clean-test clean-wsserver
 
-clean-test: clean-test-buf clean-test-path clean-test-watcher clean-test-img clean-test-task clean-test-file clean-test-display clean-test-banner clean-test-banner_cache clean-test-parse
+clean-test: clean-test-buf clean-test-path clean-test-watcher clean-test-img clean-test-task clean-test-file clean-test-display clean-test-banner clean-test-parse
 
 clean-test-buf:
 	rm -f test-buf test-buf.o buf.o
@@ -153,9 +147,6 @@ clean-test-display:
 
 clean-test-banner:
 	rm -f test-banner test-banner.o banner.o img_data.o read-file.o
-
-clean-test-banner_cache:
-	rm -f test-banner_cache test-banner_cache.o banner_cache.o banner.o img_data.o read-file.o
 
 clean-test-sha1:
 	rm -f test-sha1 test-sha1.o sha1.o hex.o file.o

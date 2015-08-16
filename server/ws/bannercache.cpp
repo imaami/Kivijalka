@@ -10,17 +10,19 @@
 
 QT_USE_NAMESPACE
 
-BannerCache::BannerCache(banner_cache_t *bc,
+BannerCache::BannerCache(cache_t *cache,
                          QObject *parent) :
 	QObject(parent)
 {
-	if (!bc) {
+	if (!cache) {
 		return;
 	}
 
-	this->bc = bc;
+	cache_import (cache);
 
-	QString path(banner_cache_path (bc));
+	this->ptr = cache;
+
+	QString path(cache_path (cache));
 	banner_t *b;
 
 	if (QDir(path).isReadable()) {
@@ -30,12 +32,12 @@ BannerCache::BannerCache(banner_cache_t *bc,
 		                QDir::Files|QDir::Readable);
 		while (di.hasNext()) {
 			if ((b = banner_create_from_path (di.next().toUtf8().data()))) {
-				banner_cache_add_banner (bc, b, false);
+				cache_add_banner (cache, b, false);
 			}
 		}
 	}
 
-	if ((b = banner_cache_most_recent (bc))) {
+	if ((b = cache_most_recent (cache))) {
 		img_data_t *imd = img_data_new_from_file (banner_name (b));
 		if (imd) {
 			img_file_replace_data (&banner_file, imd);

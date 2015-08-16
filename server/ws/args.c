@@ -38,9 +38,9 @@ args_get_display_height (void)
 }
 
 const char *
-args_get_banner_cache_path (void)
+args_get_cache_path (void)
 {
-	return _args_get_banner_cache_path (&args);
+	return _args_get_cache_path (&args);
 }
 
 const char *

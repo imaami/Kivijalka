@@ -18,7 +18,7 @@ struct args {
 	} display;
 	struct __attribute__((gcc_struct,packed)) {
 		char *path;
-	} banner_cache;
+	} cache;
 	struct __attribute__((gcc_struct,packed)) {
 		char *path;
 	} capture;
@@ -36,7 +36,7 @@ struct args {
 		.width = 0,\
 		.height = 0\
 	},\
-	.banner_cache = {\
+	.cache = {\
 		.path = NULL\
 	},\
 	.capture = {\
@@ -106,9 +106,9 @@ _args_parse (struct args  *a,
 						if (++i == argc) {
 							return false;
 						}
-						a->banner_cache.path = argv[i];
+						a->cache.path = argv[i];
 					} else {
-						a->banner_cache.path = p;
+						a->cache.path = p;
 					}
 					break;
 
@@ -185,10 +185,10 @@ _args_get_display_height (struct args *a)
 
 __attribute__((always_inline))
 static inline const char *
-_args_get_banner_cache_path (struct args *a)
+_args_get_cache_path (struct args *a)
 {
-	return (a->banner_cache.path)
-	       ? (const char *) a->banner_cache.path
+	return (a->cache.path)
+	       ? (const char *) a->cache.path
 	       : "/usr/share/kivijalka/banners";
 }
 

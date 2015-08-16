@@ -19,7 +19,7 @@ extern uint32_t
 args_get_display_height (void);
 
 extern const char *
-args_get_banner_cache_path (void);
+args_get_cache_path (void);
 
 extern const char *
 args_get_capture_path (void);
