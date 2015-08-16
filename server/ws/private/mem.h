@@ -8,6 +8,7 @@
 #include <limits.h> // CHAR_BIT
 #include <stddef.h> // NULL, size_t
 #include <stdlib.h> // aligned_alloc(), free()
+#include <stdint.h>
 
 typedef union __attribute__((transparent_union)) {
 	void          **v;
