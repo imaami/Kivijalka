@@ -50,8 +50,8 @@ _mem_new (size_t  log2_align,
 			fprintf (stderr, "%s: aligned_alloc failed\n", __func__);
 		} else {
 			*allocated = alloc_size;
-			printf ("%s: allocated %zu B aligned to %zu B\n",
-			        __func__, alloc_size, alignment);
+//			printf ("%s: allocated %zu B aligned to %zu B\n",
+//			        __func__, alloc_size, alignment);
 		}
 	}
 
