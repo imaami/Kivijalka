@@ -14,10 +14,12 @@ extern "C" {
 #include <semaphore.h>
 
 #include "img_file.h"
+#include "banner.h"
 
 extern size_t thumb_w, thumb_h;
 extern sem_t process_sem;
 extern img_file_t capture_file, banner_file, output_file, thumb_file;
+extern banner_t *cur_banner;
 
 extern void
 global_init (size_t thumb_width,

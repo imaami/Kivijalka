@@ -12,6 +12,7 @@
 size_t thumb_w, thumb_h;
 sem_t process_sem;
 img_file_t capture_file, banner_file, output_file, thumb_file;
+banner_t *cur_banner;
 
 void
 global_init (size_t thumb_width,
@@ -27,11 +28,13 @@ global_init (size_t thumb_width,
 	img_file_init (&banner_file);
 	img_file_init (&output_file);
 	img_file_init (&thumb_file);
+	cur_banner = NULL;
 }
 
 void
 global_fini (void)
 {
+	cur_banner = NULL;
 	img_file_fini (&thumb_file);
 	img_file_fini (&output_file);
 	img_file_fini (&banner_file);
