@@ -55,3 +55,16 @@ cache_most_recent (struct cache *c)
 //{
 //	return (c) ? _cache_json (c) : NULL;
 //}
+
+struct banner *
+cache_find_banner_by_uuid_str (struct cache *c,
+                               const char   *uuid_str)
+{
+	if (c && uuid_str) {
+		uuid_t uuid;
+		if (_parse_uuid (uuid_str, uuid)) {
+			return _cache_find_banner_by_uuid (c, uuid);
+		}
+	}
+	return NULL;
+}
