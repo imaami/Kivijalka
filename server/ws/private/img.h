@@ -9,6 +9,7 @@
 #include "../list.h"
 #include "../file.h"
 #include "sha1.h"
+#include "mem.h"
 
 #include <stdint.h>
 #include <stdlib.h>
