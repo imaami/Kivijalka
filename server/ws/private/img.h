@@ -9,6 +9,7 @@
 #include "../list.h"
 #include "../file.h"
 #include "sha1.h"
+#include "json.h"
 #include "mem.h"
 
 #include <stdint.h>
@@ -434,6 +435,65 @@ _img_find_in_list_by_hash (list_head_t *list,
 		}
 	}
 	return NULL;
+}
+
+__attribute__((always_inline))
+static inline bool
+_img_serialize (struct img  *im,
+                size_t      *pos,
+                size_t      *len,
+                uint8_t    **buf)
+{
+	union {
+		uint8_t *u;
+		char    *c;
+	} b = {.u = *buf};
+	size_t l = *len, p = *pos;
+	size_t need = 40 + 10 + 10 + sizeof (
+		"{\"hash\":\"\""
+		",\"w\":,\"h\":"
+		",\"file\":\"\"}");
+
+	if (l - p < need) {
+		uint8_t *_b;
+		if (!(_b = realloc (b.u, (l += BUFSIZ)))) {
+			fprintf (stderr, "%s: realloc: %s\n",
+			         __func__, strerror (errno));
+			return false;
+		}
+		b.u = _b;
+	}
+
+	(void) strncpy (b.c + p, "{\"hash\":\"", 9);
+	p += 9;
+
+	_img_hash_unparse (im, b.c + p);
+	p += 40;
+
+	(void) strncpy (b.c + p, "\",\"w\":", 6);
+	p += 6;
+
+	p += _u32_to_str (im->width, b.c + p);
+
+	(void) strncpy (b.c + p, ",\"h\":", 5);
+	p += 5;
+
+	p += _u32_to_str (im->height, b.c + p);
+
+	(void) strncpy (b.c + p, ",\"file\":\"", 9);
+	p += 9;
+
+	(void) _json_stringify ((im->name) ? (const char *) im->name : "",
+	                        &p, &l, &b.u);
+
+	(void) strncpy (b.c + p, "\"}", 2);
+	p += 2;
+
+	*pos = p;
+	*len = l;
+	*buf = b.u;
+
+	return true;
 }
 
 #endif // __KIVIJALKA_PRIVATE_IMG_H__
