@@ -35,6 +35,10 @@ cache_most_recent (cache_t *c);
 extern char *
 cache_json (cache_t *c);
 
+extern bool
+cache_activate_banner (cache_t  *c,
+                       banner_t *b);
+
 extern banner_t *
 cache_find_banner_by_uuid_str (cache_t    *c,
                                const char *uuid_str);

@@ -31,6 +31,9 @@
 #include "banner.h"
 #include "../list.h"
 #include "../cache.h"
+#include "../global.h"
+#include "../img_data.h"
+#include "../img_file.h"
 
 typedef struct cache cache_t;
 typedef struct cache_bucket cache_bucket_t;
@@ -1293,6 +1296,28 @@ _cache_json (struct cache *c)
 	buf.c[pos] = '\0';
 
 	return buf.c;
+}
+
+__attribute__((always_inline))
+static inline bool
+_cache_activate_banner (struct cache  *c,
+                        struct banner *b)
+{
+	struct img *im;
+
+	if (!(im = _cache_find_img_by_hash (c, b->hash))) {
+		fprintf (stderr, "%s: image hash not in cache\n", __func__);
+		return false;
+	}
+
+	if (!_banner_activate (b, im)) {
+		fprintf (stderr, "%s: failed to activate banner\n", __func__);
+		return false;
+	}
+
+	printf ("%s: activated banner \"%s\"\n", __func__, b->name);
+
+	return true;
 }
 
 #endif // __KIVIJALKA_PRIVATE_CACHE_H__

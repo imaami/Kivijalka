@@ -56,6 +56,13 @@ cache_json (struct cache *c)
 	return (c) ? _cache_json (c) : NULL;
 }
 
+bool
+cache_activate_banner (struct cache  *c,
+                       struct banner *b)
+{
+	return (c && b) ? _cache_activate_banner (c, b) : false;
+}
+
 struct banner *
 cache_find_banner_by_uuid_str (struct cache *c,
                                const char   *uuid_str)
