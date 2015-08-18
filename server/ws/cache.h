@@ -32,8 +32,8 @@ cache_add_banner (cache_t    *c,
 extern banner_t *
 cache_most_recent (cache_t *c);
 
-//extern char *
-//cache_json (cache_t *c);
+extern char *
+cache_json (cache_t *c);
 
 extern banner_t *
 cache_find_banner_by_uuid_str (cache_t    *c,

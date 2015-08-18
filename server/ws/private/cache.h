@@ -1257,7 +1257,7 @@ _cache_most_recent (struct cache *c)
 	return NULL;
 }
 
-/*__attribute__((always_inline))
+__attribute__((always_inline))
 static inline char *
 _cache_json (struct cache *c)
 {
@@ -1276,7 +1276,7 @@ _cache_json (struct cache *c)
 	buf.c[0] = '[';
 	pos = 1;
 
-	list_head_t *h = &bc->by_uuid.in_use;
+	list_head_t *h = &c->used[CACHE_UUID];
 	struct cache_bucket *bkt;
 	list_for_each_entry (bkt, h, hook) {
 		list_head_t *h2 = &bkt->list;
@@ -1294,6 +1294,5 @@ _cache_json (struct cache *c)
 
 	return buf.c;
 }
-*/
 
 #endif // __KIVIJALKA_PRIVATE_CACHE_H__

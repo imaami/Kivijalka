@@ -50,11 +50,11 @@ cache_most_recent (struct cache *c)
 	return (c) ? _cache_most_recent (c) : NULL;
 }
 
-//char *
-//cache_json (struct cache *c)
-//{
-//	return (c) ? _cache_json (c) : NULL;
-//}
+char *
+cache_json (struct cache *c)
+{
+	return (c) ? _cache_json (c) : NULL;
+}
 
 struct banner *
 cache_find_banner_by_uuid_str (struct cache *c,
