@@ -6,12 +6,15 @@
 #endif
 
 #include "../banner.h"
+#include "../global.h"
 #include "../list.h"
 #include "../point.h"
 #include "../file.h"
+#include "../img_file.h"
 #include "geo2d.h"
 #include "sha1.h"
 #include "json.h"
+#include "img.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -518,6 +521,39 @@ _banner_find_in_list_by_uuid (list_head_t *list,
 		}
 	}
 	return NULL;
+}
+
+__attribute__((always_inline))
+static inline bool
+_banner_activate (struct banner *b,
+                  struct img    *im)
+{
+	img_data_t *imd;
+
+	if (!im->data) {
+		fprintf (stderr, "%s: image has null data\n", __func__);
+		return false;
+	}
+
+	if (!(imd = img_data_new_from_buffer (im->size,
+	                                      (const char *) im->data))) {
+		fprintf (stderr, "%s: img_data_new_from_buffer failed\n",
+		         __func__);
+		return false;
+	}
+
+	img_file_replace_data (&banner_file, imd);
+	imd = NULL;
+
+	cur_banner = b;
+
+	if (sem_post (&process_sem)) {
+		fprintf (stderr, "%s: sem_post failed: %s\n", __func__,
+		         strerror (errno));
+		return false;
+	}
+
+	return true;
 }
 
 #endif // __KIVIJALKA_PRIVATE_BANNER_H__
