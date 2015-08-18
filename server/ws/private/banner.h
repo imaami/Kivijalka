@@ -200,6 +200,20 @@ _banner_set_offset (struct banner *b,
 }
 
 __attribute__((always_inline))
+static inline int32_t
+_banner_offset_x (struct banner *b)
+{
+	return b->offset.x;
+}
+
+__attribute__((always_inline))
+static inline int32_t
+_banner_offset_y (struct banner *b)
+{
+	return b->offset.y;
+}
+
+__attribute__((always_inline))
 static inline bool
 _banner_hash_cmp (struct banner *b,
                   sha1_t        *hash)

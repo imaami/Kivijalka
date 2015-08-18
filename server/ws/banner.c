@@ -68,6 +68,18 @@ banner_set_offset (struct banner *b,
 	}
 }
 
+int32_t
+banner_offset_x (struct banner *b)
+{
+	return (b) ? _banner_offset_x (b) : INT32_MAX;
+}
+
+int32_t
+banner_offset_y (struct banner *b)
+{
+	return (b) ? _banner_offset_y (b) : INT32_MAX;
+}
+
 bool
 banner_hash_cmp (struct banner *b,
                  sha1_t        *hash)

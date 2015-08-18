@@ -43,6 +43,12 @@ extern void
 banner_set_offset (banner_t *b,
                    point_t   offset);
 
+extern int32_t
+banner_offset_x (banner_t *b);
+
+extern int32_t
+banner_offset_y (banner_t *b);
+
 extern bool
 banner_hash_cmp (banner_t *b,
                  sha1_t   *hash);
