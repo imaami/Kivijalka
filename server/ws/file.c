@@ -78,8 +78,8 @@ _file_open (struct file *f,
             const char  *mode)
 {
 	if (!(f->fp = fopen (f->path, mode))) {
-		fprintf (stderr, "%s: fopen: %s\n",
-		         __func__, strerror (errno));
+		fprintf (stderr, "%s: fopen(\"%s\", \"%s\"): %s\n",
+		         __func__, f->path, mode, strerror (errno));
 	} else {
 		if ((f->fd = fileno (f->fp)) < 0) {
 			fprintf (stderr, "%s: fileno: %s\n",
