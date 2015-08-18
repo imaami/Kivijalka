@@ -1264,7 +1264,7 @@ __attribute__((always_inline))
 static inline char *
 _cache_json (struct cache *c)
 {
-	size_t pos, len = BUFSIZ;
+	size_t pos, p, len = BUFSIZ;
 	union {
 		uint8_t *u;
 		char    *c;
@@ -1276,8 +1276,8 @@ _cache_json (struct cache *c)
 		return NULL;
 	}
 
-	buf.c[0] = '[';
-	pos = 1;
+	(void) strncpy (buf.c, "{\"b\":[", 6);
+	p = pos = 6;
 
 	list_head_t *h = &c->used[CACHE_UUID];
 	struct cache_bucket *bkt;
@@ -1285,14 +1285,31 @@ _cache_json (struct cache *c)
 		list_head_t *h2 = &bkt->list;
 		struct banner *b;
 		list_for_each_entry (b, h2, by_uuid) {
-			if (pos > 1) {
+			if (pos > p) {
 				buf.c[pos++] = ',';
 			}
 			(void) _banner_serialize (b, &pos, &len, &buf.u);
 		}
 	}
 
+	(void) strncpy (buf.c + pos, "],\"i\":[", 7);
+	pos += 7;
+	p = pos;
+
+	h = &c->used[CACHE_HASH];
+	list_for_each_entry (bkt, h, hook) {
+		list_head_t *h2 = &bkt->list;
+		struct img *im;
+		list_for_each_entry (im, h2, hook) {
+			if (pos > p) {
+				buf.c[pos++] = ',';
+			}
+			(void) _img_serialize (im, &pos, &len, &buf.u);
+		}
+	}
+
 	buf.c[pos++] = ']';
+	buf.c[pos++] = '}';
 	buf.c[pos] = '\0';
 
 	return buf.c;
