@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <uuid/uuid.h>
 
 __attribute__((always_inline))
 static inline bool
@@ -773,6 +774,49 @@ _parse_xgeo (char         *str,
 	}
 
 	return false;
+}
+
+__attribute__((always_inline))
+static inline bool
+_parse_uuid (const char *src,
+             uuid_t      dest)
+{
+	uint8_t *ptr = (uint8_t *) src, hi, lo;
+	unsigned int i = 0;
+
+	do {
+		switch ((hi = *ptr++)) {
+		case '0' ... '9':
+			hi -= '0';
+			break;
+		case 'a' ... 'f':
+			hi -= ('a' - 10);
+			break;
+		case 'A' ... 'F':
+			hi -= ('A' - 10);
+			break;
+		default:
+			return false;
+		}
+
+		switch ((lo = *ptr++)) {
+		case '0' ... '9':
+			lo -= '0';
+			break;
+		case 'a' ... 'f':
+			lo -= ('a' - 10);
+			break;
+		case 'A' ... 'F':
+			lo -= ('A' - 10);
+			break;
+		default:
+			return false;
+		}
+
+		dest[i] = ((hi << 4) | lo);
+	} while (++i < 16);
+
+	return true;
 }
 
 #endif // __KIVIJALKA_PRIVATE_PARSE_H__
