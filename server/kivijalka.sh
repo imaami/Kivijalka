@@ -78,9 +78,9 @@ fi
 
 BASE="http://lissu.tampere.fi/monitor.php?stop="
 OUTPATH="/dev/shm/kivijalka"
-CAP="cap-$STOP.png"
-OUT="out-$STOP.png"
-PIDFILE="$RUNPATH/lock-$STOP.pid"
+CAPFILE="$OUTPATH/cap.png"
+OUTFILE="$OUTPATH/out.png"
+PIDFILE="$RUNPATH/pid"
 
 mkdir -p "$OUTPATH"
 mkdir -p "$CACHEPATH"
@@ -97,10 +97,17 @@ fi
 (( PX_W > 0 )) || PX_W=1280
 (( PX_H > 0 )) || PX_H=1024
 
-# source stream parameters
-if [[ -f "$RUNPATH/s" ]]
+# stop number
+if [[ -f "$RUNPATH/stop" ]]
 then
-  TMP="$(< "$RUNPATH/s")"
+  TMP="$(< "$RUNPATH/stop")"
+  [[ $TMP == $STOP ]] || (( TMP < 1 )) || STOP="$TMP"
+fi
+
+# font params
+if [[ -f "$RUNPATH/font" ]]
+then
+  TMP="$(< "$RUNPATH/font")"
   TMP2="$(grep -o ',[0-9]*' <<< "$TMP")"
   TMP2="${TMP2##*,}"
   TMP="${TMP%%,*}"
@@ -108,10 +115,10 @@ then
   (( TMP2 == ROW_HEIGHT || TMP2 < 20 || TMP2 > 80 )) || (( ROW_HEIGHT=TMP2 ))
 fi
 
-# display parameters
-if [[ -f "$RUNPATH/d" ]]
+# display geometry
+if [[ -f "$RUNPATH/disp" ]]
 then
-  TMP="$(< "$RUNPATH/d")"
+  TMP="$(< "$RUNPATH/disp")"
   TMP2="$(grep -o 'x[0-9]*' <<< "$TMP")"
   TMP2="${TMP2##*x}"
   TMP="${TMP%%x*}"
@@ -129,20 +136,26 @@ cutycapt --url="$URL" \
   --auto-load-images=on \
   --min-width=$PX_W \
   --min-height=$PX_H \
-  --out="$OUTPATH/$CAP"
+  --out="$CAPFILE"
 
-if [[ -f "$OUTPATH/$CAP" ]]; then
-  cp "$OUTPATH/$CAP" "$OUTPATH/$OUT"
+if [[ -f "$CAPFILE" ]]; then
+  cp "$CAPFILE" "$OUTFILE"
 fi
 
 (
   echo $BASHPID > "$PIDFILE"
   while true
   do
-    # source stream parameters
-    if [[ -f "$RUNPATH/s" ]]
+    # stop number
+    if [[ -f "$RUNPATH/stop" ]]
     then
-      TMP="$(< "$RUNPATH/s")"
+      TMP="$(< "$RUNPATH/stop")"
+      [[ $TMP == $STOP ]] || (( TMP < 1 )) || STOP="$TMP"
+    fi
+
+    if [[ -f "$RUNPATH/font" ]]
+    then
+      TMP="$(< "$RUNPATH/font")"
       TMP2="$(grep -o ',[0-9]*' <<< "$TMP")"
       TMP2="${TMP2##*,}"
       TMP="${TMP%%,*}"
@@ -150,10 +163,9 @@ fi
       (( TMP2 == ROW_HEIGHT || TMP2 < 20 || TMP2 > 80 )) || (( ROW_HEIGHT=TMP2 ))
     fi
 
-    # display parameters
-    if [[ -f "$RUNPATH/d" ]]
+    if [[ -f "$RUNPATH/disp" ]]
     then
-      TMP="$(< "$RUNPATH/d")"
+      TMP="$(< "$RUNPATH/disp")"
       TMP2="$(grep -o 'x[0-9]*' <<< "$TMP")"
       TMP2="${TMP2##*x}"
       TMP="${TMP%%x*}"
@@ -174,7 +186,7 @@ fi
          --auto-load-images=on \
          --min-width=$PX_W \
          --min-height=$PX_H \
-         --out="$OUTPATH/$CAP"
+         --out="$CAPFILE"
     then
       sleep 5
     fi
@@ -182,7 +194,7 @@ fi
 ) &>/dev/null &
 
 (
-  wsserver -c "$OUTPATH/$CAP" -o "$OUTPATH/$OUT" -b "$CACHEPATH" \
+  wsserver -c "$CAPFILE" -o "$OUTFILE" -b "$CACHEPATH" \
            -g "${PX_W}x${PX_H}" -a "$ADDR" -p "$PORT"
 ) &>/dev/null &
 
@@ -190,7 +202,7 @@ xset -dpms
 xset s off
 
 while true; do
-  /usr/bin/qiv -fiRT "$OUTPATH/$OUT"
+  /usr/bin/qiv -fiRT "$OUTFILE"
   sleep 5
 done
 
