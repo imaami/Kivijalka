@@ -1337,4 +1337,49 @@ _cache_activate_banner (struct cache  *c,
 	return true;
 }
 
+__attribute__((always_inline))
+static inline bool
+_cache_import_packet (struct cache         *c,
+                      struct banner_packet *p)
+{
+	char str[48];
+	size_t fname_size, im_size;
+	uint8_t *fname_ptr, *im_ptr;
+	struct img *im;
+	struct banner *b;
+
+	_sha1_str (&p->hash, str);
+	printf ("type: %u\ntime: %lu\nxpos: %d\nypos: %d\nwidth: %d\n"
+	        "height: %d\nhash: %s\nsize: %lu\nname len: %u\nfilename len: %u\n",
+	        p->type, p->time, p->offs.x, p->offs.y,
+	        _geo2d_width (&p->dims), _geo2d_height (&p->dims), str, p->size,
+	        p->nsiz, p->fsiz);
+
+	fname_size = p->fsiz;
+	im_size = p->size;
+	fname_ptr = p->data + p->nsiz;
+	im_ptr = fname_ptr + fname_size;
+
+	if (!(im = _img_create_from_packet (&p->hash, fname_size, im_size,
+	                                    fname_ptr, im_ptr))) {
+		fprintf (stderr, "%s: failed to extract image payload\n",
+		         __func__);
+		return false;
+	}
+
+	if (!(b = _banner_create_from_packet (p))) {
+		fprintf (stderr, "%s: failed to create banner object\n",
+		         __func__);
+		_img_destroy (im);
+		return false;
+	}
+
+	printf ("%s: success\n", __func__);
+
+	_banner_destroy (b);
+	_img_destroy (im);
+
+	return true;
+}
+
 #endif // __KIVIJALKA_PRIVATE_CACHE_H__

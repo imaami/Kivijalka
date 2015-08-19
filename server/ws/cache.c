@@ -28,6 +28,13 @@ cache_import (struct cache *c)
 	}
 }
 
+bool
+cache_import_packet (struct cache         *c,
+                     struct banner_packet *p)
+{
+	return (c && p) ? _cache_import_packet (c, p) : false;
+}
+
 const char *
 cache_path (struct cache *c)
 {

@@ -135,6 +135,7 @@ var drag_img_is_drawable = false;
 var drag_img_ants = false;
 var drag_img_ants_timeout = null;
 var drag_img_file = null;
+var drag_img_filename = '';
 var drag_img_form = document.getElementById('bannerUpload');
 var drag_img_name = document.getElementById('bannerName');
 var drag_img_x_input = document.getElementById('bannerX');
@@ -229,6 +230,7 @@ var drag_img_destroy = function () {
 	drag_img_canvas.height = 0;
 	drag_img_is_drawable = false;
 	drag_img_hide_form();
+	drag_img_filename = '';
 	drag_img_file = null;
 };
 
@@ -242,7 +244,7 @@ var drag_img_onsubmit = function() {
 };
 
 var drag_img_show_form = function() {
-	drag_img_name.value = drag_img_file.name;
+	drag_img_name.value = drag_img_filename;
 
 	drag_img_x_input.value = 0;
 	drag_img_x_input.min = drag_img_x_min;
@@ -545,6 +547,9 @@ var drag_file = function(file) {
 			var reader = new FileReader();
 
 			reader.onload = function (e) {
+				drag_img_filename = drag_img_file.name;
+				console.log('drag_file.reader.onload: filename: '
+				            + drag_img_filename);
 				dragArray = new Uint8Array(e.target.result);
 				console.log('drag_file.reader.onload: SHA1: '
 				            + sha1_hash(dragArray));
@@ -560,13 +565,15 @@ var drag_file = function(file) {
 var banner_upload_packet = function(data) {
 	console.log('banner_upload_packet');
 
-	const header_size = 60;
+	const header_size = 64;
 	var TWOPOW32 = Math.pow(2, 32);
 	var time = Date.now();
 	var size = data.byteLength;
 	var name = (new TextEncoder('utf-8')).encode(drag_img_name.value);
 	var name_size = name.byteLength;
-	var buffer = new ArrayBuffer(header_size + name_size + size);
+	var filename = (new TextEncoder('utf-8')).encode(drag_img_filename);
+	var filename_size = filename.byteLength;
+	var buffer = new ArrayBuffer(header_size + name_size + filename_size + size);
 	var header = new DataView(buffer, 0, header_size);
 	var payload = new Uint8Array(data);
 	var packet = new Uint8Array(buffer);
@@ -607,17 +614,23 @@ var banner_upload_packet = function(data) {
 	// name size (4)
 	header.setUint32(48, name_size, true);
 
+	// filename size (4)
+	header.setUint32(52, filename_size, true);
+
 	// payload size (8)
 	lo = size % TWOPOW32;
 	hi = (size - lo) / TWOPOW32;
-	header.setUint32(52, lo, true);
-	header.setUint32(56, hi, true);
+	header.setUint32(56, lo, true);
+	header.setUint32(60, hi, true);
 
 	// name
 	packet.set(name, header_size);
 
+	// filename
+	packet.set(filename, header_size + name_size);
+
 	// payload
-	packet.set(payload, header_size + name_size);
+	packet.set(payload, header_size + name_size + filename_size);
 
 	return buffer;
 };
@@ -635,6 +648,7 @@ var drag_img_upload = function() {
 			packet = banner_upload_packet(e.target.result);
 			socket.send(packet);
 			drag_img_name.value = '';
+			drag_img_filename = '';
 		};
 
 		reader.readAsArrayBuffer(drag_img_file);

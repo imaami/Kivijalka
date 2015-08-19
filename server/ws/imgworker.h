@@ -27,6 +27,8 @@ private:
                                   QImage              &banner,
                                   int                  dw,
                                   int                  dh,
+                                  int32_t              bx,
+                                  int32_t              by,
                                   enum QImage::Format  fmt);
 };
 

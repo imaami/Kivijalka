@@ -127,6 +127,13 @@ void WSServer::recvBanner(QByteArray message)
 	printf ("WSServer::%s: received banner from %s\n", __func__,
 	        pClient->peerAddress().toString().toUtf8().data());
 
+	banner_packet_t *packet = (banner_packet_t *) message.constData();
+
+	if (!cache_import_packet (cache, packet)) {
+		std::fprintf (stderr, "%s: packet import error\n", __func__);
+	}
+
+/*
 	banner_t *b;
 
 	if (!(b = banner_create_from_packet ((banner_packet_t *) message.constData()))) {
@@ -142,16 +149,11 @@ void WSServer::recvBanner(QByteArray message)
 		return;
 	}
 
-	img_data_t *imd = banner_img (b);
-
-	if (imd) {
-		img_file_replace_data (&banner_file, imd);
-		if (sem_post (&process_sem)) {
-			std::fprintf (stderr, "%s: sem_post failed: %s\n",
-			              __func__, std::strerror (errno));
-		}
-		imd = NULL;
+	if (!cache_activate_banner (cache, b)) {
+		std::fprintf (stderr, "%s: failed to activate banner\n",
+		              __func__);
 	}
+*/
 }
 
 void WSServer::socketDisconnected()

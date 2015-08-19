@@ -73,8 +73,8 @@ display_render (display_t *d,
                 uint32_t  *ol_data,
                 uint32_t   ol_w,
                 uint32_t   ol_h,
-                uint32_t   ol_x,
-                uint32_t   ol_y);
+                int32_t    ol_x,
+                int32_t    ol_y);
 
 /**
  * @brief Render display background pixels.

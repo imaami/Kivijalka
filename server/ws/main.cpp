@@ -1,5 +1,8 @@
 #include <QtCore/QCoreApplication>
 #include <QtCore/QThread>
+#include <QtCore/QString>
+#include <QtCore/QDir>
+
 #include "global.h"
 #include "display.h"
 #include "img_file.h"
@@ -56,11 +59,18 @@ int main(int argc, char *argv[])
 	QCoreApplication a(_argc, _argv);
 
 	global_init (tw, th);
-	(void) img_file_set_path (&capture_file, cp);
-	(void) img_file_set_path (&output_file, op);
+
+	QString str(cp);
+	QDir dir(str);
+	(void) img_file_set_path (&capture_file, dir.absolutePath().toUtf8().data());
+	str = QString(op);
+	dir = QDir(str);
+	(void) img_file_set_path (&output_file, dir.absolutePath().toUtf8().data());
 
 	cache_t *c;
-	if (!(c = cache_create (bp))) {
+	str = QString(bp);
+	dir = QDir(str);
+	if (!(c = cache_create (dir.absolutePath().toUtf8().data()))) {
 		global_fini ();
 		return -7;
 	}

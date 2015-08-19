@@ -1,10 +1,6 @@
 #include "bannercache.h"
 #include "banner.h"
 #include <cstdio>
-#include <QtCore/QString>
-#include <QtCore/QStringList>
-#include <QtCore/QDir>
-#include <QtCore/QDirIterator>
 
 #include "global.h"
 
@@ -18,33 +14,25 @@ BannerCache::BannerCache(cache_t *cache,
 		return;
 	}
 
+	this->ptr = cache;
 	cache_import (cache);
 
-	this->ptr = cache;
+	char *json = cache_json (cache);
+	if (json) {
+		std::puts (json);
+		std::free (json);
+	}
 
-	QString path(cache_path (cache));
+	const char *uuid_str = "2e0dcdfc078c444f832717d1a54cf244";
 	banner_t *b;
 
-	if (QDir(path).isReadable()) {
-		path = QDir(path).absolutePath();
-		QDirIterator di(path,
-		                {"*.png", "*.jpg", "*.jpeg", "*.gif"},
-		                QDir::Files|QDir::Readable);
-		while (di.hasNext()) {
-			if ((b = banner_create_from_path (di.next().toUtf8().data()))) {
-				cache_add_banner (cache, b, false);
-			}
+	if ((b = cache_find_banner_by_uuid_str (cache, uuid_str))) {
+		if (!cache_activate_banner (cache, b)) {
+			std::fprintf (stderr, "%s: failed to activate banner\n",
+			              __func__);
 		}
 	}
-
-	if ((b = cache_most_recent (cache))) {
-		img_data_t *imd = img_data_new_from_file (banner_name (b));
-		if (imd) {
-			img_file_replace_data (&banner_file, imd);
-			imd = NULL;
-		}
-		b = NULL;
-	}
+	
 }
 
 BannerCache::~BannerCache()

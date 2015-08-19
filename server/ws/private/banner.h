@@ -15,6 +15,7 @@
 #include "sha1.h"
 #include "json.h"
 #include "img.h"
+#include "mem.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,9 +40,10 @@ struct banner_packet {
 	point_t      offs;
 	struct geo2d dims;
 	sha1_t       hash;
-	uint32_t     nsiz;
-	uint64_t     size;
-	uint8_t      data[];
+	uint32_t     nsiz;   //! Banner name length without terminating NUL
+	uint32_t     fsiz;   //! Image filename length without terminating NUL
+	uint64_t     size;   //! Image data size
+	uint8_t      data[]; //! Payload: banner name, filename, data
 } __attribute__((gcc_struct,packed));
 
 __attribute__((always_inline))
@@ -101,48 +103,41 @@ _banner_create_from_path (const char *path)
 
 __attribute__((always_inline))
 static inline struct banner *
-_banner_create_from_packet (struct banner_packet *pkt)
+_banner_create_from_packet (struct banner_packet *p)
 {
-	char str[41];
-	_sha1_str (&pkt->hash, str);
-	printf ("type: %u\ntime: %lu\nxpos: %d\nypos: %d\nwidth: %d\nheight: %d\nhash: %s\nsize: %lu\n",
-	        pkt->type, pkt->time, pkt->offs.x, pkt->offs.y,
-		_geo2d_width (&pkt->dims), _geo2d_height (&pkt->dims), str, pkt->size);
-
+	size_t name_size, alloc_size;
+	union {
+		uint8_t    *u8;
+		const char *cc;
+	} name_ptr;
 	struct banner *b;
+	char *name;
 
-	if ((b = aligned_alloc (64, sizeof (struct banner)))) {
-		_sha1_gen (&b->hash, (size_t) pkt->size,
-		           pkt->data + (size_t) pkt->nsiz);
-		_sha1_str (&b->hash, str);
-		printf ("payload hash: %s\n", str);
-		if (!_sha1_cmp (&b->hash, &pkt->hash)) {
-			fprintf (stderr, "%s: hash sum mismatch\n", __func__);
-			goto fail;
-		} else if (!(b->name = strndup ((const char *) pkt->data,
-		                                (size_t) pkt->nsiz))) {
-			fprintf (stderr, "%s: strndup: %s\n", __func__, strerror (errno));
-			goto fail2;
-		} else if (!(b->data = img_data_new_from_buffer ((size_t) pkt->size, (const char *) pkt->data + (size_t) pkt->nsiz))) {
-			fprintf (stderr, "%s: data copy failed\n", __func__);
-			free (b->name);
-		fail:
-			b->name = NULL;
-		fail2:
-			_geo2d_init (&b->dims);
-			_sha1_init (&b->hash);
-			free (b);
-			b = NULL;
-		} else {
-			b->offset.u64 = pkt->offs.u64;
-			_geo2d_cpy (&pkt->dims, &b->dims);
-			list_init (&b->by_uuid);
-			list_init (&b->by_hash);
-			printf ("name: \"%s\"\n", b->name);
-		}
-	} else {
-		fprintf (stderr, "%s: aligned_alloc failed\n", __func__);
+	name_size = p->nsiz;
+	name_ptr.u8 = p->data;
+
+	if (!(b = _mem_new (6, sizeof (struct banner), &alloc_size))) {
+		fprintf (stderr, "%s: failed to allocate banner\n", __func__);
+		return NULL;
 	}
+
+	if (!(name = _mem_new (3, name_size + 1, &alloc_size))) {
+		fprintf (stderr, "%s: failed to allocate banner name string\n",
+		         __func__);
+		free (b);
+		return NULL;
+	}
+
+	(void) strncpy (name, name_ptr.cc, name_size);
+	name[name_size] = '\0';
+
+	list_init (&b->by_uuid);
+	list_init (&b->by_hash);
+	b->name = name;
+	b->offset.u64 = p->offs.u64;
+	_geo2d_cpy (&p->dims, &b->dims);
+	_sha1_cpy (&p->hash, &b->hash);
+	b->data = NULL;
 
 	return b;
 }

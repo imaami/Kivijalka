@@ -22,9 +22,6 @@ banner_create (void);
 extern banner_t *
 banner_create_from_path (const char *path);
 
-extern banner_t *
-banner_create_from_packet (banner_packet_t *pkt);
-
 extern void
 banner_destroy (banner_t **b);
 

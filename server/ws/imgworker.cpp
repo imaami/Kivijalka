@@ -179,6 +179,8 @@ ImgWorker::update_display (QImage              &capture,
                            QImage              &banner,
                            int                  dw,
                            int                  dh,
+                           int32_t              bx,
+                           int32_t              by,
                            enum QImage::Format  fmt)
 {
 	bool r;
@@ -187,8 +189,6 @@ ImgWorker::update_display (QImage              &capture,
 		uint32_t *b = (uint32_t *) banner.constBits();
 		uint32_t bw = (uint32_t) banner.width();
 		uint32_t bh = (uint32_t) banner.height();
-		uint32_t bx = capture.width() - bw;
-		uint32_t by = capture.height() - bh;
 		r = display_render (display, c, b, bw, bh, bx, by);
 	} else {
 		r = display_render_bg (display, c);
@@ -241,6 +241,8 @@ void ImgWorker::process()
 		return;
 	}
 
+	int32_t bx = 0, by = 0;
+	bool banner_offset_changed = false;
 	QColor bgcolor(0, 0, 0, 255);
 	enum QImage::Format fmt = QImage::Format_ARGB32_Premultiplied;
 	QImage capture(dw, dh, fmt);
@@ -251,6 +253,16 @@ void ImgWorker::process()
 	for (;;) {
 		if (sem_wait (&process_sem)) {
 			continue;
+		}
+
+		if (cur_banner) {
+			int32_t _bx = banner_offset_x (cur_banner),
+			        _by = banner_offset_y (cur_banner);
+			_bx ^= bx;
+			_by ^= by;
+			banner_offset_changed = ((_bx | _by) != 0);
+			bx ^= _bx;
+			by ^= _by;
 		}
 
 		img_data_t *cd = img_file_steal_data (&capture_file);
@@ -267,11 +279,12 @@ void ImgWorker::process()
 		have_banner:
 			update_banner (&banner, bd, fmt);
 
-		} else {
+		} else if (!banner_offset_changed) {
 			continue;
 		}
 
-		update_display (capture, banner, dw, dh, fmt);
+		banner_offset_changed = false;
+		update_display (capture, banner, dw, dh, bx, by, fmt);
 
 		if (cd) {
 			img_data_free (cd);

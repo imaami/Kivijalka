@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 __attribute__((always_inline))
 static inline bool
@@ -138,6 +139,51 @@ typedef union {
 	} __attribute__((gcc_struct,packed));
 } argb_t;
 
+typedef union __attribute__((transparent_union)) {
+	int32_t  i;
+	uint32_t u;
+} val32_t;
+
+__attribute__((always_inline))
+static inline bool
+_dim_params (uint32_t  s, //! Dimension size
+             uint32_t  b, //! Bounding dimension size
+             val32_t   o, //! Offset relative to beginning of bounding dimension
+             uint32_t *r, //! Resulting size
+             uint32_t *i, //! Resulting internal offset
+             uint32_t *e) //! Resulting external offset
+{
+	val32_t v;
+	uint32_t u;
+
+	if (o.i < 0) {
+		// Dimension begins before bounding dimension
+		v.i = (o.i == INT32_MIN) ? o.i : -o.i;
+
+		if (v.u >= s) {
+			return false;
+		}
+
+		u = s - v.u;
+		*r = (u > b) ? b : u;
+		*i = v.u;
+		*e = 0;
+
+	} else if (o.u < b) {
+		// Beginning of dimension is located within bounding dimension
+
+		u = b - o.u;
+		*r = (s > u) ? u : s;
+		*i = 0;
+		*e = o.u;
+
+	} else {
+		return false;
+	}
+
+	return true;
+}
+
 __attribute__((always_inline))
 static inline void
 _display_render (uint32_t *dst,
@@ -147,30 +193,54 @@ _display_render (uint32_t *dst,
                  uint32_t *ol_data,
                  uint32_t  ol_w,
                  uint32_t  ol_h,
-                 uint32_t  ol_x,
-                 uint32_t  ol_y)
+                 int32_t   ol_x,
+                 int32_t   ol_y)
 {
-	size_t x, y, ow = ol_x + ol_w, oh = ol_y + ol_h;
+	uint32_t w0, w1, w2, h0, h1, h2, rect_x, rect_y, *dp, *bp, *op;
+	unsigned int y, x;
+
+	printf ("%s: bg_data=%p, ol_data=%p\n%s: w=%" PRIu32 ", h=%" PRIu32
+	        ", ol_w=%" PRIu32 ", ol_h=%" PRIu32 ", ol_x=%" PRId32 ", ol_y=%" PRId32 "\n",
+	        __func__, bg_data, ol_data, __func__, w, h, ol_w, ol_h, ol_x, ol_y);
+
+	if (!_dim_params (ol_w, w, ol_x, &w1, &rect_x, &w0)
+	    || !_dim_params (ol_h, h, ol_y, &h1, &rect_y, &h0)) {
+		_display_render_bg (dst, w, h, bg_data);
+		return;
+	}
+
+	w2 = w - (w0 + w1);
+	h2 = h - (h0 + h1);
+	dp = dst;
+	bp = bg_data;
+	op = &ol_data[(rect_y * ol_w) + rect_x];
+
+	printf ("%s: rect: [%" PRIu32 ",%" PRIu32 "] to [%" PRIu32 ",%" PRIu32
+	        "] (%" PRIu32 "x%" PRIu32 ")\n", __func__, rect_x, rect_y,
+	        rect_x + w1, rect_y + h1, w1, h1);
+
+	printf ("%s: offs: [%" PRIu32 ",%" PRIu32 "] to [%" PRIu32 ",%" PRIu32
+	        "]\n", __func__, w0, h0, w0 + w1, h0 + h1);
 
 	// vertical section above overlay
-	for (y = 0; y < ol_y; ++y) {
+	for (y = 0; y < h0; ++y) {
 		for (x = 0; x < w; ++x) {
-			dst[y * w + x] = bg_data[y * w + x];
+			*dp++ = *bp++;
 		}
 	}
 
 	// vertical section containing overlay
-	for (uint32_t *_o = ol_data; y < oh; ++y) {
+	for (y = 0; y < h1; ++y) {
 		// horizontal section at left side of overlay
-		for (x = 0; x < ol_x; ++x) {
-			dst[y * w + x] = bg_data[y * w + x];
+		for (x = 0; x < w0; ++x) {
+			*dp++ = *bp++;
 		}
 
 		// overlay
-		for (; x < ow; ++x, ++_o) {
+		for (x = 0; x < w1; ++x) {
 			// A over B premultiplied pixel sum
-			argb_t a = { .u32 = *_o },
-			       b = { .u32 = bg_data[y * w + x] };
+			argb_t a = { .u32 = op[x] },
+			       b = { .u32 = *bp++ };
 			float f = 1.0f - (a.a / 255.0f);
 			argb_t c = {
 				.a = 255,
@@ -178,19 +248,21 @@ _display_render (uint32_t *dst,
 				.g = a.g + (uint8_t) (b.g * f),
 				.b = a.b + (uint8_t) (b.b * f)
 			};
-			dst[y * w + x] = c.u32;
+			*dp++ = c.u32;
 		}
 
 		// horizontal section at right side of overlay
-		for (; x < w; ++x) {
-			dst[y * w + x] = bg_data[y * w + x];
+		for (x = 0; x < w2; ++x) {
+			*dp++ = *bp++;
 		}
+
+		op += ol_w;
 	}
 
 	// vertical section below overlay
-	for (; y < h; ++y) {
+	for (y = 0; y < h2; ++y) {
 		for (x = 0; x < w; ++x) {
-			dst[y * w + x] = bg_data[y * w + x];
+			*dp++ = *bp++;
 		}
 	}
 }
@@ -201,8 +273,8 @@ display_render (struct display *d,
                 uint32_t       *ol_data,
                 uint32_t        ol_w,
                 uint32_t        ol_h,
-                uint32_t        ol_x,
-                uint32_t        ol_y)
+                int32_t         ol_x,
+                int32_t         ol_y)
 {
 	if (d && bg_data && ol_data) {
 		_display_render (d->pixbuf, d->width, d->height, bg_data,

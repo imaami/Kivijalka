@@ -21,6 +21,10 @@ cache_destroy (cache_t **c);
 extern void
 cache_import (cache_t *c);
 
+extern bool
+cache_import_packet (cache_t         *c,
+                     banner_packet_t *p);
+
 extern const char *
 cache_path (cache_t *c);
 

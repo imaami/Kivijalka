@@ -122,6 +122,43 @@ _path_at_end:
 }
 
 __attribute__((always_inline))
+static inline char *
+_img_name_from_buf (uint8_t *buf,
+                    size_t   len)
+{
+	union {
+		uint8_t    *u8;
+		const char *cc;
+		char       *c;
+	} ptr = {.u8 = buf};
+	const char *begin = ptr.cc;
+	size_t i = 0;
+
+	for (; i < len && ptr.cc[i];) {
+		putchar (ptr.cc[i]);
+		if (ptr.cc[i++] == '/') {
+			begin = ptr.cc + i;
+		}
+	}
+	puts("");
+
+	size_t size = (size_t) ((ptrdiff_t) (ptr.cc + i) - (ptrdiff_t) begin);
+
+	if (size < 1 || !(ptr.c = _mem_new (3, size + 1, &i))) {
+		return NULL;
+	}
+
+	(void) memcpy (ptr.c, begin, size);
+	(void) memset (ptr.c + size, 0, i - size);
+
+	i = 0;
+	size = 0;
+	begin = NULL;
+
+	return ptr.c;
+}
+
+__attribute__((always_inline))
 static inline void
 _img_set_name (struct img *im,
                char       *name)
@@ -263,6 +300,59 @@ _img_import_buffer (struct img    *im,
 	_size = 0;
 
 	return r;
+}
+
+__attribute__((always_inline))
+static inline struct img *
+_img_create_from_packet (sha1_t  *expect_hash,
+                         size_t   name_size,
+                         size_t   im_size,
+                         uint8_t *name_ptr,
+                         uint8_t *im_ptr)
+{
+	sha1_t hash;
+	uint8_t *data;
+	size_t alloc_size;
+	char *name;
+	struct img *im;
+
+	_sha1_gen (&hash, im_size, im_ptr);
+
+	char str[41];
+	_sha1_str (&hash, str);
+	printf ("payload hash: %s\n", str);
+
+	if (!_sha1_cmp (&hash, expect_hash)) {
+		fprintf (stderr, "%s: hash sum mismatch in packet\n", __func__);
+		return NULL;
+	}
+
+	if (!(data = _mem_new (6, im_size + 1, &alloc_size))) {
+		fprintf (stderr, "%s: failed to allocate memory for data\n",
+		         __func__);
+		return NULL;
+	}
+
+	(void) memcpy (data, im_ptr, im_size);
+	(void) memset (data + im_size, 0, alloc_size - im_size);
+
+	if (!(name = _img_name_from_buf (name_ptr, name_size))) {
+		fprintf (stderr, "%s: failed to copy filename from packet\n",
+		         __func__);
+		goto _fail_free_data;
+	}
+
+	if (!(im = _img_alloc())) {
+		fprintf (stderr, "%s: _img_alloc failed\n", __func__);
+		free (name);
+	_fail_free_data:
+		free (data);
+		return NULL;
+	}
+
+	_img_init (im, NULL, &hash, name, im_size, data, 0, 0, NULL);
+
+	return im;
 }
 
 __attribute__((always_inline))
