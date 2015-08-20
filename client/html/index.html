@@ -70,6 +70,7 @@ html, body {
             action="javascript:(function(){return false;})();">
         <fieldset>
           <legend>Upload banner:</legend>
+          <input id="bannerFile" type="hidden" value=""><br>
           Name: <input id="bannerName" type="text" required><br>
           X: <input id="bannerX" type="number" step="1" required><br>
           Y: <input id="bannerY" type="number" step="1" required><br>
@@ -135,8 +136,8 @@ var drag_img_is_drawable = false;
 var drag_img_ants = false;
 var drag_img_ants_timeout = null;
 var drag_img_file = null;
-var drag_img_filename = '';
 var drag_img_form = document.getElementById('bannerUpload');
+var drag_img_filename = document.getElementById('bannerFile');
 var drag_img_name = document.getElementById('bannerName');
 var drag_img_x_input = document.getElementById('bannerX');
 var drag_img_y_input = document.getElementById('bannerY');
@@ -230,7 +231,6 @@ var drag_img_destroy = function () {
 	drag_img_canvas.height = 0;
 	drag_img_is_drawable = false;
 	drag_img_hide_form();
-	drag_img_filename = '';
 	drag_img_file = null;
 };
 
@@ -244,7 +244,8 @@ var drag_img_onsubmit = function() {
 };
 
 var drag_img_show_form = function() {
-	drag_img_name.value = drag_img_filename;
+	drag_img_filename.value = drag_img_file.name;
+	drag_img_name.value = drag_img_file.name;
 
 	drag_img_x_input.value = 0;
 	drag_img_x_input.min = drag_img_x_min;
@@ -547,9 +548,6 @@ var drag_file = function(file) {
 			var reader = new FileReader();
 
 			reader.onload = function (e) {
-				drag_img_filename = drag_img_file.name;
-				console.log('drag_file.reader.onload: filename: '
-				            + drag_img_filename);
 				dragArray = new Uint8Array(e.target.result);
 				console.log('drag_file.reader.onload: SHA1: '
 				            + sha1_hash(dragArray));
@@ -571,7 +569,7 @@ var banner_upload_packet = function(data) {
 	var size = data.byteLength;
 	var name = (new TextEncoder('utf-8')).encode(drag_img_name.value);
 	var name_size = name.byteLength;
-	var filename = (new TextEncoder('utf-8')).encode(drag_img_filename);
+	var filename = (new TextEncoder('utf-8')).encode(drag_img_filename.value);
 	var filename_size = filename.byteLength;
 	var buffer = new ArrayBuffer(header_size + name_size + filename_size + size);
 	var header = new DataView(buffer, 0, header_size);
@@ -648,7 +646,6 @@ var drag_img_upload = function() {
 			packet = banner_upload_packet(e.target.result);
 			socket.send(packet);
 			drag_img_name.value = '';
-			drag_img_filename = '';
 		};
 
 		reader.readAsArrayBuffer(drag_img_file);
