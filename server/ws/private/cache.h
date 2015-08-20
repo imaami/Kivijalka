@@ -327,21 +327,59 @@ _cache_find_or_add_img_from_packet (struct cache         *c,
 		printf ("%s: received image not previously cached, trying to "
 		        "add it", __func__);
 
-		size_t fsiz = p->fsiz, size = p->size;
-		uint8_t *fname_ptr = p->data + p->nsiz;
-		uint8_t *im_ptr = fname_ptr + fsiz;
+		size_t fsiz, size;
+		struct {
+			union {
+				uint8_t *fname;
+				char    *fpath;
+			};
+			union {
+				uint8_t       *data;
+				const uint8_t *hash;
+			};
+		} ptr_to;
+
+		fsiz = p->fsiz;
+		size = p->size;
+		ptr_to.fname = p->data + p->nsiz;
+		ptr_to.data = ptr_to.fname + fsiz;
 
 		if (!(im = _img_create_from_packet (list, &p->hash, fsiz, size,
-		                                    fname_ptr, im_ptr))) {
+		                                    ptr_to.fname, ptr_to.data))) {
 			fprintf (stderr,
 			         "%s: failed to extract packet payload\n",
 			         __func__);
 		} else {
 			printf ("%s: added image to cache\n", __func__);
+
 			list = &b->hook;
 			if (list->next == list) {
 				list_add (list, &c->used[CACHE_HASH]);
 			}
+
+			size_t root_len = strlen (c->path);
+			fsiz = strlen (_img_name (im));
+
+			if (!(ptr_to.fpath = _mem_new (3, root_len + 43 + fsiz,
+			                               &size))) {
+				return false;
+			}
+
+			strncpy (ptr_to.fpath, c->path, root_len);
+			ptr_to.fpath[root_len] = '\0';
+
+			ptr_to.hash = ((const uint8_t *) im)
+			              + offsetof (struct img, hash);
+
+			if (_cache_mkdir (ptr_to.fpath, root_len, 20,
+			                  ptr_to.hash)) {
+				ptr_to.fpath[root_len + 41] = '/';
+				ptr_to.fpath[root_len + 42] = '\0';
+				_img_export (im, ptr_to.fpath, root_len + 42,
+				             fsiz);
+			}
+
+			_mem_del (&ptr_to.fpath);
 		}
 	} else {
 		printf ("%s: received image has been previously cached with "
