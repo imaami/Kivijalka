@@ -525,6 +525,53 @@ _img_find_in_list_by_hash (list_head_t *list,
 
 __attribute__((always_inline))
 static inline bool
+_img_export (struct img *im,
+             char       *path,
+             size_t      pos,
+             size_t      fname_len)
+{
+	bool r;
+	file_t *f;
+
+	(void) strncpy (path + pos, _img_name (im), fname_len);
+	path[pos + fname_len] = '\0';
+
+	if (!(f = file_create (path))) {
+		fprintf (stderr, "%s: file_create failed\n", __func__);
+		r = false;
+
+	} else {
+		if (!file_open (f, "wb")) {
+			fprintf (stderr, "%s: file_open failed\n", __func__);
+			r = false;
+
+		} else {
+			if (!file_write (f, im->size,
+			                 (const uint8_t *) im->data)) {
+				fprintf (stderr, "%s: file_write failed\n",
+				         __func__);
+				r = false;
+			} else {
+				r = true;
+				printf ("%s: wrote %s\n", __func__, path);
+			}
+
+			if (!file_close (f)) {
+				fprintf (stderr, "%s: file_close failed\n",
+				         __func__);
+			}
+		}
+
+		file_destroy (&f);
+	}
+
+	path[pos] = '\0';
+
+	return r;
+}
+
+__attribute__((always_inline))
+static inline bool
 _img_serialize (struct img  *im,
                 size_t      *pos,
                 size_t      *len,
