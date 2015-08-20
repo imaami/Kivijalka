@@ -9,7 +9,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <inttypes.h>
 
 __attribute__((always_inline))
 static inline bool
@@ -199,10 +198,6 @@ _display_render (uint32_t *dst,
 	uint32_t w0, w1, w2, h0, h1, h2, rect_x, rect_y, *dp, *bp, *op;
 	unsigned int y, x;
 
-	printf ("%s: bg_data=%p, ol_data=%p\n%s: w=%" PRIu32 ", h=%" PRIu32
-	        ", ol_w=%" PRIu32 ", ol_h=%" PRIu32 ", ol_x=%" PRId32 ", ol_y=%" PRId32 "\n",
-	        __func__, bg_data, ol_data, __func__, w, h, ol_w, ol_h, ol_x, ol_y);
-
 	if (!_dim_params (ol_w, w, ol_x, &w1, &rect_x, &w0)
 	    || !_dim_params (ol_h, h, ol_y, &h1, &rect_y, &h0)) {
 		_display_render_bg (dst, w, h, bg_data);
@@ -214,13 +209,6 @@ _display_render (uint32_t *dst,
 	dp = dst;
 	bp = bg_data;
 	op = &ol_data[(rect_y * ol_w) + rect_x];
-
-	printf ("%s: rect: [%" PRIu32 ",%" PRIu32 "] to [%" PRIu32 ",%" PRIu32
-	        "] (%" PRIu32 "x%" PRIu32 ")\n", __func__, rect_x, rect_y,
-	        rect_x + w1, rect_y + h1, w1, h1);
-
-	printf ("%s: offs: [%" PRIu32 ",%" PRIu32 "] to [%" PRIu32 ",%" PRIu32
-	        "]\n", __func__, w0, h0, w0 + w1, h0 + h1);
 
 	// vertical section above overlay
 	for (y = 0; y < h0; ++y) {

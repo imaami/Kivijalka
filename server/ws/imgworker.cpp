@@ -99,9 +99,9 @@ update_capture (QImage     *capture,
 			goto capture_load_failed;
 		}
 
-		std::printf ("ImgWorker::%s: loaded new capture: "
-		             "w=%d h=%d fmt=%s\n", __func__,
-		             c.width(), c.height(), fmtstr (c.format()));
+//		std::printf ("ImgWorker::%s: loaded new capture: "
+//		             "w=%d h=%d fmt=%s\n", __func__,
+//		             c.width(), c.height(), fmtstr (c.format()));
 
 		if (cw != dw || ch != dh) {
 			c = c.scaled (dw, dh,
@@ -112,8 +112,8 @@ update_capture (QImage     *capture,
 			if (cw < 1 || ch < 1) {
 				goto capture_load_failed;
 			}
-			std::printf ("ImgWorker::%s: scaled capture to %dx%d\n",
-			             __func__, cw, ch);
+//			std::printf ("ImgWorker::%s: scaled capture to %dx%d\n",
+//			             __func__, cw, ch);
 		}
 
 		int dx = (cw < dw) ? ((dw - cw) & ~1) >> 1 : 0;

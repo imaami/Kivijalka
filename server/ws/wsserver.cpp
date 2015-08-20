@@ -63,7 +63,7 @@ bool WSServer::listen()
 
 void WSServer::thumbnailUpdated()
 {
-	printf ("WSServer::%s: triggered\n", __func__);
+//	printf ("WSServer::%s: triggered\n", __func__);
 	img_data_t *old;
 	if (tryUpdateThumbnail (&old)) {
 		if (!thumbNail.isEmpty()) {
@@ -159,7 +159,7 @@ bool WSServer::tryUpdateThumbnail(img_data_t **old)
 		thumbNail = QByteArray::fromRawData ((const char *) imd->data,
 		                                     (int) imd->size);
 		imd = NULL;
-		printf ("WSServer::%s: have new thumbnail\n", __func__);
+//		printf ("WSServer::%s: have new thumbnail\n", __func__);
 		return true;
 	}
 	return false;
@@ -168,8 +168,8 @@ bool WSServer::tryUpdateThumbnail(img_data_t **old)
 void WSServer::pushThumbnail(QWebSocket *dest)
 {
 	dest->sendBinaryMessage (thumbNail);
-	printf ("WSServer::%s: sent thumbnail to %s\n", __func__,
-	        dest->peerAddress().toString().toUtf8().data());
+//	printf ("WSServer::%s: sent thumbnail to %s\n", __func__,
+//	        dest->peerAddress().toString().toUtf8().data());
 }
 
 void WSServer::pushThumbnails()
