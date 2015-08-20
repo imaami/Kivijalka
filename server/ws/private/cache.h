@@ -359,8 +359,24 @@ _cache_add_banner (struct cache  *c,
                    struct img    *im,
                    const bool     write_to_disk)
 {
+	uuid_t uuid;
+	struct cache_bucket *cb;
+
 	// link banner into image's list of banner references
 	list_add (&b->by_hash, &im->refs);
+
+	do {
+		uuid_generate (uuid);
+		cb = _cache_bucket_by_uuid (c, uuid);
+	} while (_banner_find_in_list_by_uuid (&cb->list, uuid));
+
+	uuid_copy (b->uuid, uuid);
+
+	// link banner into uuid-indexed table
+	list_add (&b->by_uuid, &cb->list);
+	if (cb->hook.next == &cb->hook) {
+		list_add (&cb->hook, &c->used[CACHE_UUID]);
+	}
 
 	if (write_to_disk) {
 		const char *root_path = (const char *) c->path;
