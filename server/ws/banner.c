@@ -26,6 +26,13 @@ banner_destroy (struct banner **b)
 	}
 }
 
+struct banner_packet *
+banner_packet_inspect (const char *buf,
+                       int         len)
+{
+	return (buf) ? _banner_packet_inspect (buf, len) : NULL;
+}
+
 bool
 banner_uuid_cpy (struct banner *b,
                  uuid_t         dest)

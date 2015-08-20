@@ -102,6 +102,70 @@ _banner_create_from_path (const char *path)
 }
 
 __attribute__((always_inline))
+static inline struct banner_packet *
+_banner_packet_inspect (const char *buf,
+                        int         len)
+{
+	size_t n;
+	struct banner_packet *p;
+	size_t size, nsiz, fsiz;
+	sha1_t hash;
+
+	if (len < 1) {
+		fprintf (stderr, "%s: illegal packet length\n", __func__);
+		return NULL;
+	}
+
+	n = len;
+
+	if (n < 64) {
+		goto _packet_too_short;
+	}
+
+	n -= 64;
+	p = (struct banner_packet *) buf;
+	size = p->size;
+
+	if (n < size) {
+		goto _packet_too_short;
+	}
+
+	n -= size;
+	nsiz = p->nsiz;
+
+	if (n < nsiz) {
+		goto _packet_too_short;
+	}
+
+	n -= nsiz;
+	fsiz = p->fsiz;
+
+	if (n < fsiz) {
+	_packet_too_short:
+		fprintf (stderr, "%s: packet too short\n", __func__);
+		return NULL;
+	}
+
+	if (n != fsiz) {
+		fprintf (stderr, "%s: inconsistent packet length\n", __func__);
+		return NULL;
+	}
+
+	_sha1_gen (&hash, size, p->data + nsiz + fsiz);
+
+	char str[41];
+	_sha1_str (&hash, str);
+	printf ("payload hash: %s\n", str);
+
+	if (!_sha1_cmp (&hash, &p->hash)) {
+		fprintf (stderr, "%s: hash sum mismatch\n", __func__);
+		return NULL;
+	}
+
+	return p;
+}
+
+__attribute__((always_inline))
 static inline struct banner *
 _banner_create_from_packet (struct banner_packet *p)
 {

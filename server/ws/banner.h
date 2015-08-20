@@ -25,6 +25,10 @@ banner_create_from_path (const char *path);
 extern void
 banner_destroy (banner_t **b);
 
+extern banner_packet_t *
+banner_packet_inspect (const char *buf,
+                       int         len);
+
 extern bool
 banner_uuid_cpy (banner_t *b,
                  uuid_t    dest);
