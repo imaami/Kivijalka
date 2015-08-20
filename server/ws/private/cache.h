@@ -315,34 +315,52 @@ _cache_find_or_add_img (struct cache  *c,
 }
 
 __attribute__((always_inline))
+static inline struct img *
+_cache_find_or_add_img_from_packet (struct cache         *c,
+                                    struct banner_packet *p)
+{
+	struct cache_bucket *b = _cache_bucket_by_hash (c, p->hash);
+	list_head_t *list = &b->list;
+	struct img *im = _img_find_in_list_by_hash (list, p->hash);
+
+	if (!im) {
+		printf ("%s: received image not previously cached, trying to "
+		        "add it", __func__);
+
+		size_t fsiz = p->fsiz, size = p->size;
+		uint8_t *fname_ptr = p->data + p->nsiz;
+		uint8_t *im_ptr = fname_ptr + fsiz;
+
+		if (!(im = _img_create_from_packet (list, &p->hash, fsiz, size,
+		                                    fname_ptr, im_ptr))) {
+			fprintf (stderr,
+			         "%s: failed to extract packet payload\n",
+			         __func__);
+		} else {
+			printf ("%s: added image to cache\n", __func__);
+			list = &b->hook;
+			if (list->next == list) {
+				list_add (list, &c->used[CACHE_HASH]);
+			}
+		}
+	} else {
+		printf ("%s: received image has been previously cached with "
+		        "filename \"%s\", using it for this upload", __func__,
+		        _img_name (im));
+	}
+
+	return im;
+}
+
+__attribute__((always_inline))
 static inline bool
 _cache_add_banner (struct cache  *c,
                    struct banner *b,
+                   struct img    *im,
                    const bool     write_to_disk)
 {
-	struct img *im;
-	uuid_t uuid;
-	struct cache_bucket *cb;
-
-	if (!(im = _cache_find_or_add_img (c, b->hash))) {
-		return false;
-	}
-
 	// link banner into image's list of banner references
 	list_add (&b->by_hash, &im->refs);
-
-	do {
-		uuid_generate (uuid);
-		cb = _cache_bucket_by_uuid (c, uuid);
-	} while (_banner_find_in_list_by_uuid (&cb->list, uuid));
-
-	uuid_copy (b->uuid, uuid);
-
-	// link banner into uuid-indexed table
-	list_add (&b->by_uuid, &cb->list);
-	if (cb->hook.next == &cb->hook) {
-		list_add (&cb->hook, &c->used[CACHE_UUID]);
-	}
 
 	if (write_to_disk) {
 		const char *root_path = (const char *) c->path;
@@ -1343,8 +1361,6 @@ _cache_import_packet (struct cache         *c,
                       struct banner_packet *p)
 {
 	char str[48];
-	size_t fname_size, im_size;
-	uint8_t *fname_ptr, *im_ptr;
 	struct img *im;
 	struct banner *b;
 
@@ -1355,14 +1371,8 @@ _cache_import_packet (struct cache         *c,
 	        _geo2d_width (&p->dims), _geo2d_height (&p->dims), str, p->size,
 	        p->nsiz, p->fsiz);
 
-	fname_size = p->fsiz;
-	im_size = p->size;
-	fname_ptr = p->data + p->nsiz;
-	im_ptr = fname_ptr + fname_size;
-
-	if (!(im = _img_create_from_packet (&p->hash, fname_size, im_size,
-	                                    fname_ptr, im_ptr))) {
-		fprintf (stderr, "%s: failed to extract image payload\n",
+	if (!(im = _cache_find_or_add_img_from_packet (c, p))) {
+		fprintf (stderr, "%s: failed to extract image from packet\n",
 		         __func__);
 		return false;
 	}
@@ -1370,14 +1380,22 @@ _cache_import_packet (struct cache         *c,
 	if (!(b = _banner_create_from_packet (p))) {
 		fprintf (stderr, "%s: failed to create banner object\n",
 		         __func__);
-		_img_destroy (im);
+		return false;
+	}
+
+	if (!_cache_add_banner (c, b, im, true)) {
+		fprintf (stderr, "%s: failed to add banner to cache\n",
+		         __func__);
+		_banner_destroy (b);
+		return false;
+	}
+
+	if (!_banner_activate (b, im)) {
+		fprintf (stderr, "%s: failed to activate banner\n", __func__);
 		return false;
 	}
 
 	printf ("%s: success\n", __func__);
-
-	_banner_destroy (b);
-	_img_destroy (im);
 
 	return true;
 }

@@ -260,6 +260,13 @@ _img_destroy (struct img *im)
 }
 
 __attribute__((always_inline))
+static inline const char *
+_img_name (struct img *im)
+{
+	return (const char *) im->name;
+}
+
+__attribute__((always_inline))
 static inline void
 _img_set_data (struct img *im,
                uint8_t    *data,
@@ -304,28 +311,17 @@ _img_import_buffer (struct img    *im,
 
 __attribute__((always_inline))
 static inline struct img *
-_img_create_from_packet (sha1_t  *expect_hash,
-                         size_t   name_size,
-                         size_t   im_size,
-                         uint8_t *name_ptr,
-                         uint8_t *im_ptr)
+_img_create_from_packet (list_head_t *list,
+                         sha1_t      *hash,
+                         size_t       name_size,
+                         size_t       im_size,
+                         uint8_t     *name_ptr,
+                         uint8_t     *im_ptr)
 {
-	sha1_t hash;
 	uint8_t *data;
 	size_t alloc_size;
 	char *name;
 	struct img *im;
-
-	_sha1_gen (&hash, im_size, im_ptr);
-
-	char str[41];
-	_sha1_str (&hash, str);
-	printf ("payload hash: %s\n", str);
-
-	if (!_sha1_cmp (&hash, expect_hash)) {
-		fprintf (stderr, "%s: hash sum mismatch in packet\n", __func__);
-		return NULL;
-	}
 
 	if (!(data = _mem_new (6, im_size + 1, &alloc_size))) {
 		fprintf (stderr, "%s: failed to allocate memory for data\n",
@@ -350,7 +346,7 @@ _img_create_from_packet (sha1_t  *expect_hash,
 		return NULL;
 	}
 
-	_img_init (im, NULL, &hash, name, im_size, data, 0, 0, NULL);
+	_img_init (im, list, hash, name, im_size, data, 0, 0, NULL);
 
 	return im;
 }

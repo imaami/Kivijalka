@@ -41,16 +41,6 @@ cache_path (struct cache *c)
 	return (c) ? _cache_path (c) : NULL;
 }
 
-bool
-cache_add_banner (struct cache  *c,
-                  struct banner *banner,
-                  const bool     write_to_disk)
-{
-	return (c && banner)
-	       ? _cache_add_banner (c, banner, write_to_disk)
-	       : false;
-}
-
 struct banner *
 cache_most_recent (struct cache *c)
 {

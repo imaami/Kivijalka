@@ -28,11 +28,6 @@ cache_import_packet (cache_t         *c,
 extern const char *
 cache_path (cache_t *c);
 
-extern bool
-cache_add_banner (cache_t    *c,
-                  banner_t   *banner,
-                  const bool  write_to_disk);
-
 extern banner_t *
 cache_most_recent (cache_t *c);
 
