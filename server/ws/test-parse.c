@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <inttypes.h>
+#include <uuid/uuid.h>
 
 int
 main (int    argc,
@@ -158,6 +159,22 @@ main (int    argc,
 					        w, h,
 					        (x >= 0) ? "+" : "", x,
 					        (y >= 0) ? "+" : "", y);
+
+				} else {
+					++pos;
+				}
+
+			} else if (ptr[pos] == 'U') {
+				if (ptr[pos + 1] == ':') {
+					pos += 2;
+					printf ("%3.u  %3.d  uuid  ", i, pos);
+					uuid_t uuid;
+					size_t n;
+					if (!_parse_uuid (ptr + pos, uuid, &n)) {
+						printf ("error at %zu\n", n);
+						goto _next_arg;
+					}
+					printf ("\n");
 
 				} else {
 					++pos;

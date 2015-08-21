@@ -33,7 +33,7 @@ test-geo2d: geo2d.o test-geo2d.o
 	$(CC) $(CFLAGS) -std=gnu11 geo2d.o test-geo2d.o -o test-geo2d
 
 test-parse:
-	$(CC) $(CFLAGS) -std=gnu11 test-parse.c -o test-parse
+	$(CC) $(CFLAGS) -std=gnu11 test-parse.c -luuid -o test-parse
 
 global.o: global.c
 	$(CC) $(CFLAGS) -std=gnu11 -c global.c -o global.o
