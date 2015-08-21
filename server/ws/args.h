@@ -22,6 +22,9 @@ extern const char *
 args_get_cache_path (void);
 
 extern const char *
+args_get_cache_uuid (void);
+
+extern const char *
 args_get_capture_path (void);
 
 extern const char *

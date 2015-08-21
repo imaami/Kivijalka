@@ -18,6 +18,7 @@ struct args {
 	} display;
 	struct __attribute__((gcc_struct,packed)) {
 		char *path;
+		char *uuid;
 	} cache;
 	struct __attribute__((gcc_struct,packed)) {
 		char *path;
@@ -37,7 +38,8 @@ struct args {
 		.height = 0\
 	},\
 	.cache = {\
-		.path = NULL\
+		.path = NULL,\
+		.uuid = NULL\
 	},\
 	.capture = {\
 		.path = NULL\
@@ -90,6 +92,17 @@ _args_parse (struct args  *a,
 		switch (*(p = argv[i])) {
 			case '-':
 				switch (*++p) {
+				case 'U':
+					if (*++p == '\0') {
+						if (++i == argc) {
+							return false;
+						}
+						a->cache.uuid = argv[i];
+					} else {
+						a->cache.uuid = p;
+					}
+					break;
+
 				case 'a':
 					if (*++p == '\0') {
 						if (++i == argc) {
@@ -190,6 +203,13 @@ _args_get_cache_path (struct args *a)
 	return (a->cache.path)
 	       ? (const char *) a->cache.path
 	       : "/usr/share/kivijalka/banners";
+}
+
+__attribute__((always_inline))
+static inline const char *
+_args_get_cache_uuid (struct args *a)
+{
+	return (a->cache.uuid) ? (const char *) a->cache.uuid : NULL;
 }
 
 __attribute__((always_inline))

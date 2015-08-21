@@ -12,6 +12,7 @@
 #include "diskwriter.h"
 #include "wsserver.h"
 #include "bannercache.h"
+#include "banner.h"
 #include "cache.h"
 #include "args.h"
 
@@ -26,6 +27,7 @@ int main(int argc, char *argv[])
 	uint32_t dw = args_get_display_width(), dh = args_get_display_height();
 	uint32_t tw = (dw & 0xfffffffe) >> 1, th = (dh & 0xfffffffe) >> 1;
 	const char *bp = args_get_cache_path();
+	const char *uu = args_get_cache_uuid();
 	const char *cp = args_get_capture_path();
 	const char *op = args_get_output_path();
 	const char *sa = args_get_server_addr();
@@ -75,6 +77,17 @@ int main(int argc, char *argv[])
 		return -7;
 	}
 	BannerCache cache(c);
+
+	if (uu) {
+		banner_t *b;
+		if ((b = cache_find_banner_by_uuid_str (c, uu))) {
+			if (!cache_activate_banner (c, b)) {
+				fprintf (stderr,
+				         "%s: failed to activate banner\n",
+				         __func__);
+			}
+		}
+	}
 
 	display_t *d;
 	if (!(d = display_create (dw, dh))) {

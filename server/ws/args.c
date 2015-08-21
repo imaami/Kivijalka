@@ -44,6 +44,12 @@ args_get_cache_path (void)
 }
 
 const char *
+args_get_cache_uuid (void)
+{
+	return _args_get_cache_uuid (&args);
+}
+
+const char *
 args_get_capture_path (void)
 {
 	return _args_get_capture_path (&args);

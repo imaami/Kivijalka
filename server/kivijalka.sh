@@ -76,6 +76,13 @@ else
   ROW_HEIGHT=''
 fi
 
+if [[ -n $KIVIJALKA_BANNER_UUID ]]
+then
+  UUID="$KIVIJALKA_BANNER_UUID"
+else
+  UUID=''
+fi
+
 BASE="http://lissu.tampere.fi/monitor.php?stop="
 OUTPATH="/dev/shm/kivijalka"
 CAPFILE="$OUTPATH/cap.png"
@@ -195,7 +202,7 @@ fi
 
 (
   wsserver -c "$CAPFILE" -o "$OUTFILE" -b "$CACHEPATH" \
-           -g "${PX_W}x${PX_H}" -a "$ADDR" -p "$PORT"
+           -g "${PX_W}x${PX_H}" -a "$ADDR" -p "$PORT" "${UUID:+-U$UUID}"
 ) &>/dev/null &
 
 xset -dpms
