@@ -66,8 +66,12 @@ cache_find_banner_by_uuid_str (struct cache *c,
 {
 	if (c && uuid_str) {
 		uuid_t uuid;
-		if (_parse_uuid (uuid_str, uuid)) {
+		size_t n;
+		if (_parse_uuid (uuid_str, uuid, &n)) {
 			return _cache_find_banner_by_uuid (c, uuid);
+		} else {
+			fprintf (stderr, "%s: invalid UUID string: syntax error"
+			         " at offset %zu\n", __func__, n);
 		}
 	}
 	return NULL;

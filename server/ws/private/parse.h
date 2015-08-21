@@ -776,47 +776,102 @@ _parse_xgeo (char         *str,
 	return false;
 }
 
+typedef union __attribute__((transparent_union)) {
+	const char *cc;
+	uint8_t    *u8;
+} id_str_t;
+
+/**
+ * @brief Parse an arbitrary-length hexadecimal ID string.
+ * @param src Pointer to input string.
+ * @param dest Pointer to destination buffer to write the resulting bytes to.
+ * @param req The number of characters requested to be parsed, beginning at
+ *            \a src.
+ * @return The number of characters parsed. If this is less than \a req it
+ *         means that an error occurred whilst parsing the input character
+ *         found at the offset indicated by this return value.
+ */
+__attribute__((always_inline))
+static inline size_t
+_parse_id (id_str_t  src,
+           uint8_t  *dest,
+           size_t    req)
+{
+	size_t i = 0;
+
+	if (req > 0) {
+		for (uint8_t *ptr = dest, x;; ++ptr) {
+			switch ((x = src.u8[i])) {
+			case '0' ... '9':
+				x -= '0';
+				break;
+			case 'a' ... 'f':
+				x -= ('a' - 10);
+				break;
+			case 'A' ... 'F':
+				x -= ('A' - 10);
+				break;
+			default:
+				goto _end;
+			}
+
+			*ptr = x << 4;
+
+			if (++i >= req) {
+				break;
+			}
+
+			switch ((x = src.u8[i])) {
+			case '0' ... '9':
+				x -= '0';
+				break;
+			case 'a' ... 'f':
+				x -= ('a' - 10);
+				break;
+			case 'A' ... 'F':
+				x -= ('A' - 10);
+				break;
+			default:
+				goto _end;
+			}
+
+			*ptr |= x;
+
+			if (++i >= req) {
+				break;
+			}
+		}
+	}
+
+_end:
+	return i;
+}
+
 __attribute__((always_inline))
 static inline bool
 _parse_uuid (const char *src,
-             uuid_t      dest)
+             uuid_t      dest,
+             size_t     *pos)
 {
-	uint8_t *ptr = (uint8_t *) src, hi, lo;
-	unsigned int i = 0;
+	uint8_t *d = (uint8_t *) dest;
+	size_t n;
 
-	do {
-		switch ((hi = *ptr++)) {
-		case '0' ... '9':
-			hi -= '0';
+	switch ((n = _parse_id (src, d, 32))) {
+	case 8:
+		if (src[8] != '-'     || _parse_id (src + 9, d + 4, 4) != 4
+		    || src[13] != '-' || _parse_id (src + 14, d + 6, 4) != 4
+		    || src[18] != '-' || _parse_id (src + 19, d + 8, 4) != 4
+		    || src[23] != '-' || _parse_id (src + 24, d + 10, 12) != 12) {
 			break;
-		case 'a' ... 'f':
-			hi -= ('a' - 10);
-			break;
-		case 'A' ... 'F':
-			hi -= ('A' - 10);
-			break;
-		default:
-			return false;
 		}
+		n = 36;
+	case 32:
+		*pos = n;
+		return (!src[n]);
+	}
 
-		switch ((lo = *ptr++)) {
-		case '0' ... '9':
-			lo -= '0';
-			break;
-		case 'a' ... 'f':
-			lo -= ('a' - 10);
-			break;
-		case 'A' ... 'F':
-			lo -= ('A' - 10);
-			break;
-		default:
-			return false;
-		}
-
-		dest[i] = ((hi << 4) | lo);
-	} while (++i < 16);
-
-	return true;
+	*pos = n;
+	return false;
 }
 
 #endif // __KIVIJALKA_PRIVATE_PARSE_H__
