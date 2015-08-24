@@ -15,7 +15,7 @@ BannerCache::BannerCache(cache_t *cache,
 	this->ptr = cache;
 	cache_import (cache);
 
-	char *json = cache_json (cache);
+	char *json = cache_json_stringified (cache);
 	if (json) {
 		std::puts (json);
 		std::free (json);

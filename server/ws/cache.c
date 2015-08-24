@@ -53,6 +53,37 @@ cache_json (struct cache *c)
 	return (c) ? _cache_json (c) : NULL;
 }
 
+char *
+cache_json_stringified (struct cache *c)
+{
+	union {
+		char       *c;
+		uint8_t    *u8;
+		const char *cc;
+	} json, str;
+	size_t len, pos;
+
+	if (!c || !(json.c = _cache_json (c))) {
+		return NULL;
+	}
+
+	str.c = NULL;
+	len = 0;
+	pos = 0;
+
+	if (!_json_stringify (json.cc, &pos, &len, &str.u8)) {
+		if (str.c) {
+			free (str.c);
+			str.c = NULL;
+		}
+	}
+
+	free (json.c);
+	json.c = NULL;
+
+	return str.c;
+}
+
 bool
 cache_activate_banner (struct cache  *c,
                        struct banner *b)
