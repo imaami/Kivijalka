@@ -46,6 +46,7 @@ struct cache_bucket {
 struct cache {
 	struct cache_bucket data[2][256];
 	list_head_t         used[2];
+	size_t              path_len;
 	char                path[];
 } __attribute__((gcc_struct,packed));
 
@@ -100,8 +101,9 @@ _cache_create (const char *path)
 		path_len = 2;
 	}
 
-	if (!(c = _mem_new (6, offsetof (struct cache, path) + path_len + 1,
-	                    &alloc_size))) {
+	k = offsetof (struct cache, path);
+
+	if (!(c = _mem_new (6, k + path_len + 1, &alloc_size))) {
 		fprintf (stderr, "%s: allocation failed\n",
 		         __func__);
 		return NULL;
@@ -115,8 +117,9 @@ _cache_create (const char *path)
 	}
 	list_init (dest.l);
 
+	c->path_len = path_len;
+
 	dest.c = (char *) c;
-	k = offsetof (struct cache, path);
 
 	if (src) {
 		for (i = 0; src[i]; ++i) {
@@ -252,6 +255,13 @@ _cache_path (struct cache *c)
 }
 
 __attribute__((always_inline))
+static inline size_t
+_cache_path_length (struct cache *c)
+{
+	return c->path_len;
+}
+
+__attribute__((always_inline))
 static inline struct cache_bucket *
 _cache_bucket (struct cache *c,
                int           type,
@@ -357,7 +367,7 @@ _cache_find_or_add_img_from_packet (struct cache         *c,
 				list_add (list, &c->used[CACHE_HASH]);
 			}
 
-			size_t root_len = strlen (c->path);
+			size_t root_len = _cache_path_length (c);
 			fsiz = strlen (_img_name (im));
 
 			if (!(ptr_to.fpath = _mem_new (3, root_len + 43 + fsiz,
@@ -418,7 +428,7 @@ _cache_add_banner (struct cache  *c,
 
 	if (write_to_disk) {
 		const char *root_path = (const char *) c->path;
-		size_t path_len = strlen (root_path), path_alloc;
+		size_t path_len = _cache_path_length (c), path_alloc;
 		char *path;
 		const uint8_t *id;
 
@@ -1181,7 +1191,7 @@ static inline bool
 _cache_import (struct cache *cache)
 {
 	const char *root_path = (const char *) cache->path;
-	size_t root_len = strlen (root_path), path_alloc;
+	size_t root_len = _cache_path_length (cache), path_alloc;
 	char *path;
 
 	if (!(path = _mem_new (6, root_len + 42 + 256, &path_alloc))) {
