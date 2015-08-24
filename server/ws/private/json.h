@@ -309,6 +309,20 @@ _i32_to_str (int32_t  val,
 
 __attribute__((always_inline))
 static inline size_t
+_json_char_escaped_size (char c)
+{
+	switch (c) {
+	case 1 ... 7: case 11: case 14 ... 31:
+		return 6;
+	case 8 ... 10: case 12 ... 13: case 34: case 47: case 92:
+		return 2;
+	default:
+		return 1;
+	}
+}
+
+__attribute__((always_inline))
+static inline size_t
 _json_stringified_size (const char *str)
 {
 	size_t n = 0, i = 0;
