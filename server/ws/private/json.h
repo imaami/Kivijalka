@@ -309,7 +309,7 @@ _i32_to_str (int32_t  val,
 
 __attribute__((always_inline))
 static inline size_t
-_json_utf8_escaped_size (const char *str)
+_json_stringified_size (const char *str)
 {
 	size_t n = 0, i = 0;
 
