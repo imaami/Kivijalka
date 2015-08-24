@@ -412,6 +412,7 @@ _json_stringify (const char  *str,
 			c = 'r';
 
 		case '"': // 0x22
+		case '/': // 0x2f
 		case '\\': // 0x5c
 		escape:
 			b[p++] = '\\';
