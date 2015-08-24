@@ -69,40 +69,6 @@ _banner_create (void)
 }
 
 __attribute__((always_inline))
-static inline struct banner *
-_banner_create_from_path (const char *path)
-{
-	struct banner *b;
-
-	if ((b = aligned_alloc (64, sizeof (struct banner)))) {
-		if ((b->data = img_data_new_from_file (path))) {
-			if ((b->name = strdup (path))) {
-				_sha1_gen (&b->hash, b->data->size,
-				           (uint8_t *) b->data->data);
-				b->offset.u64 = 0;
-				_geo2d_init (&b->dims);
-				list_init (&b->by_uuid);
-				list_init (&b->by_hash);
-				return b;
-			} else {
-				fprintf (stderr, "%s: strdup failed: %s\n", __func__,
-				         strerror (errno));
-			}
-			free (b->data);
-			b->data = NULL;
-		} else {
-			fprintf (stderr, "%s: image loading failed\n", __func__);
-		}
-		free (b);
-		b = NULL;
-	} else {
-		fprintf (stderr, "%s: aligned_alloc failed\n", __func__);
-	}
-
-	return NULL;
-}
-
-__attribute__((always_inline))
 static inline struct banner_packet *
 _banner_packet_inspect (const char *buf,
                         int         len)

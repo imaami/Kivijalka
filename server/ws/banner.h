@@ -19,9 +19,6 @@ typedef struct banner_packet banner_packet_t;
 extern banner_t *
 banner_create (void);
 
-extern banner_t *
-banner_create_from_path (const char *path);
-
 extern void
 banner_destroy (banner_t **b);
 

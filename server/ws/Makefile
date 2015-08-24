@@ -23,8 +23,8 @@ test-file: buf.o file.o test-file.o
 test-display: display.o test-display.o
 	$(CC) $(CFLAGS) -std=gnu11 display.o test-display.o -o test-display
 
-test-banner: read-file.o img_data.o banner.o test-banner.o
-	$(CC) $(CFLAGS) -std=gnu11 read-file.o img_data.o banner.o test-banner.o -luuid -lssl -lcrypto -o test-banner
+test-banner: read-file.o img_data.o hex.o banner.o test-banner.o
+	$(CC) $(CFLAGS) -std=gnu11 read-file.o img_data.o hex.o banner.o test-banner.o -luuid -lssl -lcrypto -o test-banner
 
 test-sha1: file.o hex.o sha1.o test-sha1.o
 	$(CC) $(CFLAGS) -std=gnu11 file.o hex.o sha1.o test-sha1.o -lssl -lcrypto -o test-sha1

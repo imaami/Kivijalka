@@ -11,16 +11,19 @@ main (int    argc,
 {
 	banner_t *b;
 
-	if (argc < 2 || !argv[1]) {
-		return EXIT_FAILURE;
-	}
-
-	if (!(b = banner_create_from_path (argv[1]))) {
+	if (!(b = banner_create ())) {
+		fprintf (stderr, "failed to create banner object\n");
 		return EXIT_FAILURE;
 	}
 
 	point_t offset = POINT_INIT(100, 200);
 	banner_set_offset (b, offset);
+
+	if (argc > 1 && argv[1]) {
+		if (!banner_set_name (b, (const char *) argv[1])) {
+			fprintf (stderr, "failed to set banner name\n");
+		}
+	}
 
 	char str[41];
 	banner_hash_unparse (b, str);
