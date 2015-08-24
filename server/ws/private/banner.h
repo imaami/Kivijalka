@@ -27,7 +27,10 @@ struct banner {
 	list_head_t   by_uuid;
 	list_head_t   by_hash;
 	uuid_t        uuid;
+	size_t        name_len;
+	size_t        json_name_len;
 	char         *name;
+	char         *json_name;
 	point_t       offset;
 	struct geo2d  dims;
 	sha1_t        hash;
@@ -58,7 +61,10 @@ _banner_create (void)
 		list_init (&b->by_uuid);
 		list_init (&b->by_hash);
 		uuid_clear (b->uuid);
+		b->name_len = 0;
+		b->json_name_len = 0;
 		b->name = NULL;
+		b->json_name = NULL;
 		b->offset.u64 = 0;
 		_geo2d_init (&b->dims);
 		_sha1_init (&b->hash);
@@ -136,21 +142,21 @@ __attribute__((always_inline))
 static inline struct banner *
 _banner_create_from_packet (struct banner_packet *p)
 {
-	size_t name_size, alloc_size;
+	size_t name_size, json_name_size, alloc_size;
 	union {
 		uint8_t    *u8;
+		char       *c;
 		const char *cc;
 	} name_ptr;
 	struct banner *b;
 	char *name;
 
-	name_size = p->nsiz;
-	name_ptr.u8 = p->data;
-
 	if (!(b = _mem_new (6, sizeof (struct banner), &alloc_size))) {
 		fprintf (stderr, "%s: failed to allocate banner\n", __func__);
 		return NULL;
 	}
+
+	name_size = p->nsiz;
 
 	if (!(name = _mem_new (3, name_size + 1, &alloc_size))) {
 		fprintf (stderr, "%s: failed to allocate banner name string\n",
@@ -159,12 +165,26 @@ _banner_create_from_packet (struct banner_packet *p)
 		return NULL;
 	}
 
+	name_ptr.u8 = p->data;
 	(void) strncpy (name, name_ptr.cc, name_size);
 	name[name_size] = '\0';
 
+	name_ptr.c = name;
+	if (!_json_dup_stringified (name_ptr.cc, name_size,
+	                            &name, &json_name_size)) {
+		fprintf (stderr, "%s: failed to create JSON-stringified "
+		         "banner name\n", __func__);
+		free (name_ptr.c);
+		free (b);
+		return NULL;
+	}
+
 	list_init (&b->by_uuid);
 	list_init (&b->by_hash);
-	b->name = name;
+	b->name_len = name_size;
+	b->json_name_len = json_name_size;
+	b->name = name_ptr.c;
+	b->json_name = name;
 	b->offset.u64 = p->offs.u64;
 	_geo2d_cpy (&p->dims, &b->dims);
 	_sha1_cpy (&p->hash, &b->hash);
@@ -184,9 +204,15 @@ _banner_destroy (struct banner *b)
 		list_del (&b->by_hash);
 	}
 	uuid_clear (b->uuid);
+	b->name_len = 0;
+	b->json_name_len = 0;
 	if (b->name) {
 		free (b->name);
 		b->name = NULL;
+	}
+	if (b->json_name) {
+		free (b->json_name);
+		b->json_name = NULL;
 	}
 	b->offset.u64 = 0;
 	_sha1_init (&b->hash);
@@ -210,14 +236,44 @@ static inline bool
 _banner_set_name (struct banner *b,
                   const char    *name)
 {
+	size_t _name_len, _json_name_len;
+	union {
+		char       *c;
+		const char *cc;
+	} _name, _json_name;
+
+	if ((_name_len = strlen (name)) < 1) {
+		fprintf (stderr, "%s: name is empty\n", __func__);
+		return false;
+	}
+
+	if (!(_name.c = strndup (name, _name_len))) {
+		fprintf (stderr, "%s: failed to create banner name: strndup "
+		         "failed: %s\n", __func__, strerror (errno));
+		return false;
+	}
+	_name.c[_name_len] = '\0';
+
+	if (!_json_dup_stringified (_name.cc, _name_len,
+	                            &_json_name.c, &_json_name_len)) {
+		fprintf (stderr, "%s: failed to create JSON-stringified "
+		         "banner name\n", __func__);
+		free (_name.c);
+		return false;
+	}
+
 	if (b->name) {
 		free (b->name);
 	}
-	if (!(b->name = strdup (name))) {
-		fprintf (stderr, "%s: strdup failed: %s\n", __func__,
-		         strerror (errno));
-		return false;
+	if (b->json_name) {
+		free (b->json_name);
 	}
+
+	b->name_len = _name_len;
+	b->json_name_len = _json_name_len;
+	b->name = _name.c;
+	b->json_name = _json_name.c;
+
 	return true;
 }
 
@@ -485,9 +541,9 @@ _banner_export (struct banner *b,
 
 	// name
 
-	if (b->name) {
+	if (b->name && b->name_len > 0) {
 		ptr.chr = b->name;
-		len = strlen (ptr.cch);
+		len = b->name_len;
 	} else {
 		ptr.cch = "";
 		len = 0;

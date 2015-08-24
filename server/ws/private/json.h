@@ -13,6 +13,8 @@
 #include <stdio.h>
 #include <errno.h>
 
+#include "mem.h"
+
 enum {
 	JSON_ARR_BEG = 0x01, // begin-array
 	JSON_OBJ_BEG = 0x02, // begin-object
@@ -323,23 +325,16 @@ _json_char_escaped_size (char c)
 
 __attribute__((always_inline))
 static inline size_t
-_json_stringified_size (const char *str)
+_json_stringified_size (const char *str,
+                        size_t      len)
 {
 	size_t n = 0, i = 0;
 
-	for (; str[i]; ++i) {
-		switch (str[i]) {
-		case 1 ... 7: case 11: case 14 ... 31:
-			n += 5;
-			break;
-		case 8 ... 10: case 12 ... 13: case 34: case 47: case 92:
-			++n;
-		default:
-			break;
-		}
+	for (; i < len; ++i) {
+		n += _json_char_escaped_size (str[i]);
 	}
 
-	return i + n;
+	return n;
 }
 
 __attribute__((always_inline))
@@ -441,6 +436,106 @@ _json_stringify (const char  *str,
 	*buf = b;
 	*len = l;
 	*pos = p;
+
+	return true;
+}
+
+__attribute__((always_inline))
+static inline bool
+_json_dup_stringified (const char  *src,
+                       size_t       src_len,
+                       char       **dest,
+                       size_t      *dest_len)
+{
+	size_t size, i, p;
+	char *json;
+
+	if (src_len < 1) {
+		return false;
+	}
+
+	size = _json_stringified_size (src, src_len);
+
+	if (!(json = _mem_new (3, size + 1, &i))) {
+		return false;
+	}
+
+	for (i = 0, p = 0; i < src_len; ++i, ++p) {
+		uint8_t c = ((uint8_t *) src)[i];
+
+		switch (c) {
+		case 0x01 ... 0x07:
+			json[p++] = '\\';
+			json[p++] = 'u';
+			json[p++] = '0';
+			json[p++] = '0';
+			json[p++] = '0';
+			c += '0';
+			break;
+
+		case 0x0b: case 0x0e ... 0x0f:
+			json[p++] = '\\';
+			json[p++] = 'u';
+			json[p++] = '0';
+			json[p++] = '0';
+			json[p++] = '0';
+			c += ('a' - 0x0a);
+			break;
+
+		case 0x10 ... 0x19:
+			json[p++] = '\\';
+			json[p++] = 'u';
+			json[p++] = '0';
+			json[p++] = '0';
+			json[p++] = '1';
+			c += '0';
+			break;
+
+		case 0x1a ... 0x1f:
+			json[p++] = '\\';
+			json[p++] = 'u';
+			json[p++] = '0';
+			json[p++] = '0';
+			json[p++] = '1';
+			c += ('a' - 0x0a);
+			break;
+
+		case '\b': // 0x08
+			c = 'b';
+			goto escape;
+
+		case '\t': // 0x09
+			c = 't';
+			goto escape;
+
+		case '\n': // 0x0a
+			c = 'n';
+			goto escape;
+
+		case '\f': // 0x0c
+			c = 'f';
+			goto escape;
+
+		case '\r': // 0x0d
+			c = 'r';
+
+		case '"': // 0x22
+		case '/': // 0x2f
+		case '\\': // 0x5c
+		escape:
+			json[p++] = '\\';
+
+		default:
+			break;
+		}
+
+		json[p] = c;
+	}
+
+	json[p] = '\0';
+
+	*dest = json;
+	*dest_len = size;
 
 	return true;
 }
