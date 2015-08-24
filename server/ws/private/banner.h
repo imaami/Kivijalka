@@ -57,6 +57,7 @@ _banner_create (void)
 	} else {
 		list_init (&b->by_uuid);
 		list_init (&b->by_hash);
+		uuid_clear (b->uuid);
 		b->name = NULL;
 		b->offset.u64 = 0;
 		_geo2d_init (&b->dims);
