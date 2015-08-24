@@ -183,6 +183,7 @@ _banner_destroy (struct banner *b)
 	if (b->by_hash.next && b->by_hash.prev) {
 		list_del (&b->by_hash);
 	}
+	uuid_clear (b->uuid);
 	if (b->name) {
 		free (b->name);
 		b->name = NULL;
