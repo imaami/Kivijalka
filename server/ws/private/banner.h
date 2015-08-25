@@ -28,9 +28,7 @@ struct banner {
 	list_head_t   by_hash;
 	uuid_t        uuid;
 	size_t        name_len;
-	size_t        json_name_len;
 	char         *name;
-	char         *json_name;
 	point_t       offset;
 	struct geo2d  dims;
 	sha1_t        hash;
@@ -62,9 +60,7 @@ _banner_create (void)
 		list_init (&b->by_hash);
 		uuid_clear (b->uuid);
 		b->name_len = 0;
-		b->json_name_len = 0;
 		b->name = NULL;
-		b->json_name = NULL;
 		b->offset.u64 = 0;
 		_geo2d_init (&b->dims);
 		_sha1_init (&b->hash);
@@ -139,52 +135,239 @@ _banner_packet_inspect (const char *buf,
 }
 
 __attribute__((always_inline))
+static inline void
+_banner_name_trimmed_size (const char *str,
+                           size_t      len,
+                           size_t     *leading_ws,
+                           size_t     *trim_len)
+{
+	const uint8_t *s = (const uint8_t *) str;
+	size_t o = 0, t = 0;
+
+	// skip leading whitespace
+	for (;; ++o) {
+		if (o >= len) {
+			goto _at_end;
+		}
+
+		switch (s[o]) {
+		case 0x09: case 0x20:
+			continue;
+
+		case 0x00 ... 0x08:
+		case 0x0a ... 0x1f:
+		case 0x7f:
+		case 0xf8 ... 0xff:
+			goto _at_end;
+		}
+
+		*leading_ws = o;
+		goto _skip_to_next;
+	}
+
+	for (;;) {
+		if (o >= len) {
+			goto _at_end;
+		}
+
+		switch (s[o]) {
+		case 0x09: case 0x20:
+			for (;;) {
+				if (++o >= len) {
+					goto _at_end;
+				}
+
+				switch (s[o]) {
+				case 0x09: case 0x20:
+					continue;
+
+				case 0x00 ... 0x08:
+				case 0x0a ... 0x1f:
+				case 0x7f:
+				case 0xf8 ... 0xff:
+					goto _at_end;
+				}
+
+				break;
+			}
+
+			++t;
+			break;
+
+		// C0 controls
+		case 0x00 ... 0x08:
+		case 0x0a ... 0x1f:
+		// delete
+		case 0x7f:
+		// invalid UTF-8
+		case 0xf8 ... 0xff:
+			goto _at_end;
+		}
+
+	_skip_to_next:
+		++o;
+		++t;
+	}
+
+_at_end:
+	*trim_len = t;
+
+	return;
+}
+
+__attribute__((always_inline))
+static inline void
+_banner_name_copy_trimmed (const char *src,
+                           size_t      src_len,
+                           char       *dest,
+                           size_t      dest_len)
+{
+	if (src_len < 1 || dest_len < 1) {
+		return;
+	}
+
+	union {
+		const char    *cc;
+		const uint8_t *u8;
+		char          *c;
+	} _src = {.cc = src};
+	size_t s = 0, d = 0;
+
+	for (;;) {
+		switch (_src.u8[s]) {
+		case 0x00 ... 0x08:
+		case 0x0a ... 0x1f:
+		case 0x7f:
+		case 0xf8 ... 0xff:
+			goto _at_end;
+		}
+
+	_next_valid_char:
+		dest[d++] = _src.c[s++];
+
+		if (d >= dest_len) {
+			d = dest_len - 1;
+			goto _at_end;
+		}
+
+		if (s >= src_len) {
+			goto _at_end;
+		}
+
+		switch (_src.u8[s]) {
+		case 0x09: case 0x20:
+			if (d + 1 >= dest_len) {
+				goto _at_end;
+			}
+
+			for (;;) {
+				if (++s >= src_len) {
+					goto _at_end;
+				}
+
+				switch (_src.u8[s]) {
+				case 0x09: case 0x20:
+					continue;
+
+				case 0x00 ... 0x08:
+				case 0x0a ... 0x1f:
+				case 0x7f:
+				case 0xf8 ... 0xff:
+					goto _at_end;
+				}
+
+				break;
+			}
+
+			dest[d++] = ' ';
+			goto _next_valid_char;
+		}
+	}
+
+_at_end:
+	for (; d < dest_len; ++d) {
+		dest[d] = '\0';
+	}
+}
+
+__attribute__((always_inline))
+static inline bool
+_banner_name_dup (const char  *str,
+                  size_t       len,
+                  char       **dest,
+                  size_t      *dest_len)
+{
+	size_t leading_ws, trim_len, alloc_size;
+	char *name;
+
+	if (len < 1) {
+		fprintf (stderr, "%s: name is empty\n", __func__);
+		return false;
+	}
+
+	leading_ws = 0;
+
+	_banner_name_trimmed_size (str, len, &leading_ws, &trim_len);
+
+	if (trim_len < 1) {
+		fprintf (stderr, "%s: trimmed name is empty\n", __func__);
+		return false;
+	}
+
+	if (!(name = _mem_new (3, trim_len + 1, &alloc_size))) {
+		fprintf (stderr, "%s: _mem_new failed\n", __func__);
+		return false;
+	}
+
+	if (trim_len == len) {
+		(void) strncpy (name, str, len);
+		name[len] = '\0';
+	} else {
+		printf ("%s: name trimmed from %zu B to %zu B\n", __func__,
+		        len, trim_len);
+		_banner_name_copy_trimmed (str + leading_ws, len - leading_ws,
+		                           name, alloc_size);
+	}
+
+	for (size_t k = trim_len; ++k < alloc_size;) {
+		name[k] = '\0';
+	}
+
+	*dest = name;
+	*dest_len = trim_len;
+
+	return true;
+}
+
+__attribute__((always_inline))
 static inline struct banner *
 _banner_create_from_packet (struct banner_packet *p)
 {
-	size_t name_size, json_name_size, alloc_size;
+	size_t size;
 	union {
 		uint8_t    *u8;
-		char       *c;
 		const char *cc;
 	} name_ptr;
 	struct banner *b;
 	char *name;
 
-	if (!(b = _mem_new (6, sizeof (struct banner), &alloc_size))) {
+	if (!(b = _mem_new (6, sizeof (struct banner), &size))) {
 		fprintf (stderr, "%s: failed to allocate banner\n", __func__);
 		return NULL;
 	}
 
-	name_size = p->nsiz;
-
-	if (!(name = _mem_new (3, name_size + 1, &alloc_size))) {
-		fprintf (stderr, "%s: failed to allocate banner name string\n",
-		         __func__);
-		free (b);
-		return NULL;
-	}
-
 	name_ptr.u8 = p->data;
-	(void) strncpy (name, name_ptr.cc, name_size);
-	name[name_size] = '\0';
 
-	name_ptr.c = name;
-	if (!_json_dup_stringified (name_ptr.cc, name_size,
-	                            &name, &json_name_size)) {
-		fprintf (stderr, "%s: failed to create JSON-stringified "
-		         "banner name\n", __func__);
-		free (name_ptr.c);
+	if (!_banner_name_dup (name_ptr.cc, p->nsiz, &name, &size)) {
+		fprintf (stderr, "%s: failed to copy banner name\n", __func__);
 		free (b);
 		return NULL;
 	}
 
 	list_init (&b->by_uuid);
 	list_init (&b->by_hash);
-	b->name_len = name_size;
-	b->json_name_len = json_name_size;
-	b->name = name_ptr.c;
-	b->json_name = name;
+	b->name_len = size;
+	b->name = name;
 	b->offset.u64 = p->offs.u64;
 	_geo2d_cpy (&p->dims, &b->dims);
 	_sha1_cpy (&p->hash, &b->hash);
@@ -205,14 +388,9 @@ _banner_destroy (struct banner *b)
 	}
 	uuid_clear (b->uuid);
 	b->name_len = 0;
-	b->json_name_len = 0;
 	if (b->name) {
 		free (b->name);
 		b->name = NULL;
-	}
-	if (b->json_name) {
-		free (b->json_name);
-		b->json_name = NULL;
 	}
 	b->offset.u64 = 0;
 	_sha1_init (&b->hash);
@@ -236,43 +414,25 @@ static inline bool
 _banner_set_name (struct banner *b,
                   const char    *name)
 {
-	size_t _name_len, _json_name_len;
-	union {
-		char       *c;
-		const char *cc;
-	} _name, _json_name;
+	size_t len, _name_len;
+	char *_name;
 
-	if ((_name_len = strlen (name)) < 1) {
+	if ((len = strlen (name)) < 1) {
 		fprintf (stderr, "%s: name is empty\n", __func__);
 		return false;
 	}
 
-	if (!(_name.c = strndup (name, _name_len))) {
-		fprintf (stderr, "%s: failed to create banner name: strndup "
-		         "failed: %s\n", __func__, strerror (errno));
-		return false;
-	}
-	_name.c[_name_len] = '\0';
-
-	if (!_json_dup_stringified (_name.cc, _name_len,
-	                            &_json_name.c, &_json_name_len)) {
-		fprintf (stderr, "%s: failed to create JSON-stringified "
-		         "banner name\n", __func__);
-		free (_name.c);
+	if (!_banner_name_dup (name, len, &_name, &_name_len)) {
+		fprintf (stderr, "%s: failed to copy banner name\n", __func__);
 		return false;
 	}
 
 	if (b->name) {
 		free (b->name);
 	}
-	if (b->json_name) {
-		free (b->json_name);
-	}
 
 	b->name_len = _name_len;
-	b->json_name_len = _json_name_len;
-	b->name = _name.c;
-	b->json_name = _json_name.c;
+	b->name = _name;
 
 	return true;
 }

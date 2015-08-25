@@ -571,63 +571,6 @@ destroy_file:
 }
 
 __attribute__((always_inline))
-static inline size_t
-_trim_name_string (uint8_t *str)
-{
-	size_t dest = 0, src = 0;
-
-	// skip leading whitespace
-	for (;;) {
-		switch (str[src]) {
-		case 0x09: case 0x20:
-			++src;
-			continue;
-		}
-
-		break;
-	}
-
-	for (;;) {
-		switch (str[src]) {
-		case 0x09: case 0x20:
-			for (;;) {
-				switch (str[++src]) {
-				case 0x09: case 0x20:
-					continue;
-
-				case 0x00 ... 0x08:
-				case 0x0a ... 0x1f:
-				case 0x7f:
-				case 0xf8 ... 0xff:
-					goto _at_end;
-				}
-
-				break;
-			}
-
-			str[dest++] = 0x20;
-			break;
-
-		// C0 controls
-		case 0x00 ... 0x08:
-		case 0x0a ... 0x1f:
-		// delete
-		case 0x7f:
-		// continuation char in wrong place
-		//case 0x80 ... 0xbf:
-		// invalid UTF-8
-		case 0xf8 ... 0xff:
-		_at_end:
-			str[dest] = '\0';
-			return dest;
-
-		}
-
-		str[dest++] = str[src++];
-	}
-}
-
-__attribute__((always_inline))
 static inline void
 _cache_import_banner (struct cache  *cache,
                       char          *path,
@@ -644,7 +587,7 @@ _cache_import_banner (struct cache  *cache,
 	}
 
 	uint8_t buf[256];
-	size_t size;
+	size_t size, name_len = 0;
 	sha1_t hash = SHA1_INITIALIZER;
 	uint32_t w = 0, h = 0;
 	int32_t x = 0, y = 0;
@@ -709,8 +652,12 @@ _cache_import_banner (struct cache  *cache,
 				path[path_pos + 1] = '\0';
 				size = 0;
 				if (_textfile_read (path, buf, 256, &size)) {
-					(void) _trim_name_string (buf);
-					banner_name = strdup ((const char *) buf);
+					if (!_banner_name_dup ((const char *) buf,
+					                       size, &banner_name,
+					                       &name_len)) {
+						banner_name = NULL;
+						name_len = 0;
+					}
 				}
 				path[path_pos] = '\0';
 			}
@@ -769,6 +716,7 @@ _cache_import_banner (struct cache  *cache,
 	if (!b) {
 		if ((b = _banner_create ())) {
 			uuid_copy (b->uuid, uuid);
+			b->name_len = name_len;
 			b->name = banner_name;
 			b->offset.x = x;
 			b->offset.y = y;
