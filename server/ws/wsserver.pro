@@ -21,6 +21,7 @@ SOURCES += \
     read-file.c \
     watcher.c \
     display.c \
+    packet.c \
     banner.c \
     cache.c \
     hex.c \
@@ -41,6 +42,7 @@ HEADERS += \
     read-file.h \
     watcher.h \
     display.h \
+    packet.h \
     banner.h \
     img.h \
     cache.h \
