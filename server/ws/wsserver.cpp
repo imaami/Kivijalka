@@ -1,8 +1,14 @@
 #include "wsserver.h"
 #include "global.h"
+#include "display.h"
 #include "banner.h"
+#include "img.h"
+#include "packet.h"
 
 #include <cstring>
+#include <cstdint>
+#include <cstdlib>
+#include <climits>
 #include <QtWebSockets/QWebSocketServer>
 #include <QtWebSockets/QWebSocket>
 #include <QtCore/QDebug>
@@ -11,6 +17,7 @@
 QT_USE_NAMESPACE
 
 WSServer::WSServer(const QString &addr, quint16 port,
+                   quint16 captureWidth, quint16 captureHeight,
                    quint16 displayWidth, quint16 displayHeight,
                    quint16 thumbWidth, quint16 thumbHeight,
                    cache_t *cache,
@@ -23,6 +30,8 @@ WSServer::WSServer(const QString &addr, quint16 port,
 	thumbNail()
 {
 	this->serverPort = port;
+	this->captureWidth = captureWidth;
+	this->captureHeight = captureHeight;
 	this->displayWidth = displayWidth;
 	this->displayHeight = displayHeight;
 	this->thumbWidth = thumbWidth;
@@ -80,7 +89,7 @@ void WSServer::onNewConnection()
 {
 	QWebSocket *pSocket = m_pWebSocketServer->nextPendingConnection();
 	connect(pSocket, &QWebSocket::textMessageReceived, this, &WSServer::processTextMessage);
-	connect(pSocket, &QWebSocket::binaryMessageReceived, this, &WSServer::recvBanner);
+	connect(pSocket, &QWebSocket::binaryMessageReceived, this, &WSServer::recvBinary);
 	connect(pSocket, &QWebSocket::disconnected, this, &WSServer::socketDisconnected);
 	clients << pSocket;
 	qDebug() << "New client:" << pSocket->peerAddress().toString();
@@ -91,9 +100,13 @@ void WSServer::respondToHS(QWebSocket *dest)
 	dest->sendTextMessage(
 		"{\n\t\"type\": \"c9f82f30e6a00db0\",\n\t\"ts\": "
 		+ QString::number(QDateTime::currentDateTimeUtc().toMSecsSinceEpoch())
-		+ ",\n\t\"w\": "
+		+ ",\n\t\"cw\": "
+		+ QString::number(captureWidth)
+		+ ",\n\t\"ch\": "
+		+ QString::number(captureHeight)
+		+ ",\n\t\"dw\": "
 		+ QString::number(displayWidth)
-		+ ",\n\t\"h\": "
+		+ ",\n\t\"dh\": "
 		+ QString::number(displayHeight)
 		+ ",\n\t\"tw\": "
 		+ QString::number(thumbWidth)
@@ -110,6 +123,14 @@ void WSServer::processTextMessage(QString message)
 	if (pClient) {
 		if (message == "71bf2d31e9e4e15c") {
 			respondToHS(pClient);
+			uint8_t *info;
+			size_t size;
+			if (cache_info_packet (cache, &info, &size)) {
+				pushCacheInfo (pClient, info, size);
+				free (info);
+				info = NULL;
+				size = 0;
+			}
 			if (!thumbNail.isEmpty()) {
 				pushThumbnail (pClient);
 			}
@@ -117,26 +138,106 @@ void WSServer::processTextMessage(QString message)
 	}
 }
 
-void WSServer::recvBanner(QByteArray message)
+void WSServer::recvBinary(QByteArray msg)
 {
-	QWebSocket *pClient = qobject_cast<QWebSocket *>(sender());
-	if (!pClient || message.isEmpty()) {
+	QWebSocket *src = qobject_cast<QWebSocket *>(sender());
+
+	if (!src || msg.isEmpty()) {
 		return;
 	}
 
-	printf ("WSServer::%s: received banner from %s\n", __func__,
-	        pClient->peerAddress().toString().toUtf8().data());
+	std::printf ("WSServer::%s: received message from %s\n", __func__,
+	             src->peerAddress().toString().toUtf8().data());
 
-	banner_packet_t *packet = banner_packet_inspect (message.constData(),
-	                                                 message.size());
+	int size = msg.size();
+	const char *data = msg.constData();
+	std::uint32_t flags = packet_inspect (&data, &size);
 
-	if (!packet) {
-		std::fprintf (stderr, "%s: packet is malformed, rejecting it\n",
+	union {
+		banner_packet_t  *b;
+		banner_modpkt_t  *bm;
+		display_modpkt_t *dm;
+	} p;
+
+	union {
+		char       *c;
+		const char *cc;
+	} rep;
+	std::size_t rsiz;
+
+	switch (flags) {
+	case PACKET_ADD|PACKET_DISPLAY|PACKET_BANNER|PACKET_IMG|PACKET_DATA:
+		if (!(p.b = banner_packet_inspect (data, size))) {
+			goto _malformed_packet;
+		}
+
+		if (!cache_import_packet (cache, p.b)) {
+			std::fprintf (stderr, "%s: import error\n",
+			              __func__);
+		}
+
+		break;
+
+	case PACKET_MOD|PACKET_BANNER:
+		if (!(p.bm = banner_modpkt_inspect (data, size))) {
+			goto _malformed_packet;
+		}
+
+		if (!cache_apply_modpkt (cache, p.bm, &rep.c, &rsiz)) {
+			std::fprintf (stderr,
+			              "%s: cache_apply_modpkt failed\n",
+			              __func__);
+		} else {
+			if (rsiz <= INT_MAX) {
+				// broadcast banner modifications to clients
+				size = (int) rsiz;
+				QByteArray ba = QByteArray::fromRawData (rep.cc,
+				                                         size);
+
+				for (int i = 0; i < clients.size(); ++i) {
+					clients.at(i)->sendBinaryMessage (ba);
+				}
+
+				ba = QByteArray();
+			}
+
+			std::free (rep.c);
+		}
+
+		break;
+
+	case PACKET_MOD|PACKET_DISPLAY:
+		if (!(p.dm = display_modpkt_inspect (data, size))) {
+			goto _malformed_packet;
+		}
+
+		if (!cache_apply_display_modpkt (cache, p.dm, &rep.c, &rsiz)) {
+			std::fprintf (stderr,
+			              "%s: cache_apply_display_modpkt failed\n",
+			              __func__);
+		} else {
+			if (rsiz <= INT_MAX) {
+				// broadcast display modifications to clients
+				size = (int) rsiz;
+				QByteArray ba = QByteArray::fromRawData (rep.cc,
+				                                         size);
+
+				for (int i = 0; i < clients.size(); ++i) {
+					clients.at(i)->sendBinaryMessage (ba);
+				}
+
+				ba = QByteArray();
+			}
+
+			std::free (rep.c);
+		}
+
+		break;
+
+	default:
+	_malformed_packet:
+		std::fprintf (stderr, "%s: malformed packet\n",
 		              __func__);
-	}
-
-	if (!cache_import_packet (cache, packet)) {
-		std::fprintf (stderr, "%s: packet import error\n", __func__);
 	}
 }
 
@@ -156,13 +257,26 @@ bool WSServer::tryUpdateThumbnail(img_data_t **old)
 	if (imd) {
 		*old = thumbnail;
 		thumbnail = imd;
-		thumbNail = QByteArray::fromRawData ((const char *) imd->data,
-		                                     (int) imd->size);
+		thumbNail.resize (4 + (int) imd->size);
+		((uint32_t *) thumbNail.data())[0] = PACKET_ADD|PACKET_DISPLAY|PACKET_DATA;
+		memcpy ((void *) (thumbNail.data() + 4),
+		        (const void *) imd->data, imd->size);
 		imd = NULL;
 //		printf ("WSServer::%s: have new thumbnail\n", __func__);
 		return true;
 	}
 	return false;
+}
+
+void WSServer::pushCacheInfo(QWebSocket *dest,
+                             uint8_t    *info,
+                             size_t      size)
+{
+	QByteArray cacheInfo;
+	cacheInfo.resize (4 + size);
+	((uint32_t *) cacheInfo.data())[0] = PACKET_ADD|PACKET_DISPLAY|PACKET_BANNER|PACKET_IMG;
+	memcpy ((void *) (cacheInfo.data() + 4), (const void *) info, size);
+	dest->sendBinaryMessage (cacheInfo);
 }
 
 void WSServer::pushThumbnail(QWebSocket *dest)

@@ -11,7 +11,6 @@
 #include "imgworker.h"
 #include "diskwriter.h"
 #include "wsserver.h"
-#include "bannercache.h"
 #include "banner.h"
 #include "cache.h"
 #include "args.h"
@@ -24,8 +23,9 @@ int main(int argc, char *argv[])
 		return -9;
 	}
 
-	uint32_t dw = args_get_display_width(), dh = args_get_display_height();
-	uint32_t tw = (dw & 0xfffffffe) >> 1, th = (dh & 0xfffffffe) >> 1;
+	uint32_t cw = args_get_capture_width(), ch = args_get_capture_height(),
+	         dw = args_get_display_width(), dh = args_get_display_height(),
+	         tw, th;
 	const char *bp = args_get_cache_path();
 	const char *uu = args_get_cache_uuid();
 	const char *cp = args_get_capture_path();
@@ -56,6 +56,14 @@ int main(int argc, char *argv[])
 		return -8;
 	}
 
+	if (cw < 1 || ch < 1) {
+		cw = dw;
+		ch = dh;
+	}
+
+	tw = (cw & 0xfffffffe) >> 1;
+	th = (ch & 0xfffffffe) >> 1;
+
 	int _argc = 1;
 	char *_argv[] = {argv[0], NULL};
 	QCoreApplication a(_argc, _argv);
@@ -76,9 +84,10 @@ int main(int argc, char *argv[])
 		global_fini ();
 		return -7;
 	}
-	BannerCache cache(c);
 
-	if (uu) {
+	cache_import (c);
+
+	if (!cur_banner && uu) {
 		banner_t *b;
 		if ((b = cache_find_banner_by_uuid_str (c, uu))) {
 			if (!cache_activate_banner (c, b)) {
@@ -90,7 +99,7 @@ int main(int argc, char *argv[])
 	}
 
 	display_t *d;
-	if (!(d = display_create (dw, dh))) {
+	if (!(d = display_create (cw, ch, dw, dh))) {
 		cache_destroy (&c);
 		global_fini ();
 		return -6;
@@ -136,7 +145,7 @@ int main(int argc, char *argv[])
 	QObject::connect (&diskWriterThread, &QThread::started,
 	                  &diskWriter, &DiskWriter::process);
 
-	WSServer *server = new WSServer(sa, sp, dw, dh, tw, th, c);
+	WSServer *server = new WSServer(sa, sp, cw, ch, dw, dh, tw, th, c);
 	if (!server) {
 		watcher_destroy (w);
 		w = NULL;

@@ -55,6 +55,18 @@ args_get_capture_path (void)
 	return _args_get_capture_path (&args);
 }
 
+uint32_t
+args_get_capture_width (void)
+{
+	return _args_get_capture_width (&args);
+}
+
+uint32_t
+args_get_capture_height (void)
+{
+	return _args_get_capture_height (&args);
+}
+
 const char *
 args_get_output_path (void)
 {

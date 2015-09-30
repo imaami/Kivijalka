@@ -12,7 +12,6 @@ QMAKE_CXXFLAGS += -march=native -O3 -std=gnu++11
 
 SOURCES += \
     main.cpp \
-    bannercache.cpp \
     wsserver.cpp \
     diskreader.cpp \
     imgworker.cpp \
@@ -33,7 +32,6 @@ SOURCES += \
     img_data.c
 
 HEADERS += \
-    bannercache.h \
     wsserver.h \
     diskreader.h \
     imgworker.h \

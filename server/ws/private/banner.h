@@ -8,9 +8,9 @@
 #include "../banner.h"
 #include "../global.h"
 #include "../list.h"
-#include "../point.h"
 #include "../file.h"
 #include "../img_file.h"
+#include "point.h"
 #include "geo2d.h"
 #include "sha1.h"
 #include "json.h"
@@ -22,6 +22,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <errno.h>
+#include <inttypes.h>
 
 struct banner {
 	list_head_t   by_uuid;
@@ -36,7 +37,6 @@ struct banner {
 };
 
 struct banner_packet {
-	uint32_t     type;
 	uint64_t     time;
 	point_t      offs;
 	struct geo2d dims;
@@ -46,6 +46,71 @@ struct banner_packet {
 	uint64_t     size;   //! Image data size
 	uint8_t      data[]; //! Payload: banner name, filename, data
 } __attribute__((gcc_struct,packed));
+
+struct banner_modpkt {
+	uint64_t     time;   //! Timestamp
+	uuid_t       uuid;   //! UUID of banner to modify
+	point_t      offs;   //! Offset
+	struct geo2d dims;   //! Dimensions
+	sha1_t       hash;   //! Image hash
+	uint32_t     nsiz;   //! Banner name length; 0 means don't change name
+	uint8_t      name[]; //! Optional banner name
+} __attribute__((gcc_struct,packed));
+
+struct banner_modpkt_echo {
+	uint32_t             type;
+	struct banner_modpkt orig;
+} __attribute__((gcc_struct,packed));
+
+struct banner_info {
+	uuid_t        uuid;
+	point_t       offs;
+	struct geo2d  dims;
+	sha1_t        hash;
+	uint32_t      nsiz;
+} __attribute__((gcc_struct,packed));
+
+__attribute__((always_inline))
+static inline void
+_banner_info_init (struct banner_info *i,
+                   struct banner      *b)
+{
+	uuid_copy (i->uuid, b->uuid);
+	_point_cpy (&b->offset, &i->offs);
+	_geo2d_cpy (&b->dims, &i->dims);
+	_sha1_cpy (&b->hash, &i->hash);
+	i->nsiz = (b->name_len < UINT32_MAX) ? b->name_len : UINT32_MAX;
+}
+
+__attribute__((always_inline))
+static inline struct banner_modpkt_echo *
+_banner_modpkt_echo_create (struct banner *b)
+{
+	union {
+		struct banner_modpkt_echo *echo;
+		struct {
+			uint32_t           type;
+			uint64_t           time;
+			struct banner_info info;
+			uint8_t            name[];
+		} *_echo;
+	} mem;
+	size_t s, n;
+
+	s = offsetof (struct banner_modpkt_echo, orig.name) + b->name_len;
+
+	if (!(mem.echo = _mem_new (6, s, &n))) {
+		fprintf (stderr, "%s: failed to allocate memory\n", __func__);
+
+	} else {
+		_banner_info_init (&mem._echo->info, b);
+		for (uint8_t *ptr = (uint8_t *) mem.echo; s < n; ++s) {
+			ptr[s] = 0;
+		}
+	}
+
+	return mem.echo;
+}
 
 __attribute__((always_inline))
 static inline struct banner *
@@ -87,11 +152,11 @@ _banner_packet_inspect (const char *buf,
 
 	n = len;
 
-	if (n < 64) {
+	if (n < 60) {
 		goto _packet_too_short;
 	}
 
-	n -= 64;
+	n -= 60;
 	p = (struct banner_packet *) buf;
 	size = p->size;
 
@@ -131,6 +196,39 @@ _banner_packet_inspect (const char *buf,
 		return NULL;
 	}
 
+	return p;
+}
+
+__attribute__((always_inline))
+static inline struct banner_modpkt *
+_banner_modpkt_inspect (const char *buf,
+                        int         len)
+{
+	size_t n;
+	struct banner_modpkt *p;
+
+	n = len;
+
+	if (n < offsetof (struct banner_modpkt, name)) {
+		goto _packet_too_short;
+	}
+
+	n -= offsetof (struct banner_modpkt, name);
+	p = (struct banner_modpkt *) buf;
+
+	if (n < p->nsiz) {
+	_packet_too_short:
+		fprintf (stderr, "%s: packet too short\n", __func__);
+		return NULL;
+	}
+/*
+	if (p->dims.w < 1 || p->dims.h < 1) {
+		fprintf (stderr,
+		         "%s: packet defines invalid width and/or height\n",
+		         __func__);
+		return NULL;
+	}
+*/
 	return p;
 }
 
@@ -403,10 +501,15 @@ _banner_destroy (struct banner *b)
 
 __attribute__((always_inline))
 static inline void
-_banner_uuid_cpy (struct banner *b,
-                  uuid_t         dest)
+_banner_uuid_copy_to_u32 (struct banner *b,
+                          uint32_t      *dest)
 {
-	uuid_copy (dest, b->uuid);
+	uint32_t *src = (uint32_t *) (((char *) b)
+	                              + offsetof (struct banner, uuid));
+	dest[0] = src[0];
+	dest[1] = src[1];
+	dest[2] = src[2];
+	dest[3] = src[3];
 }
 
 __attribute__((always_inline))
@@ -435,6 +538,13 @@ _banner_set_name (struct banner *b,
 	b->name = _name;
 
 	return true;
+}
+
+__attribute__((always_inline))
+static inline size_t
+_banner_name_length (struct banner *b)
+{
+	return b->name_len;
 }
 
 __attribute__((always_inline))
@@ -729,6 +839,184 @@ _banner_export (struct banner *b,
 		fprintf (stderr, "%s: file_%s failed\n", __func__, ptr.cch);
 		r = false;
 		goto _destroy_file;
+	}
+
+	r = true;
+
+_destroy_file:
+	file_destroy (&f);
+
+_cleanup:
+	buf.u64[0] = 0;
+	buf.u64[1] = 0;
+	buf.u64[2] = 0;
+	buf.u64[3] = 0;
+	buf.u64[4] = 0;
+	buf.u64[5] = 0;
+	fpath = NULL;
+	ptr.chr = NULL;
+	len = 0;
+
+	path[path_len] = '\0';
+
+	return r;
+}
+
+__attribute__((always_inline))
+static inline bool
+_banner_export_modifications (sha1_t       *hash,
+                              struct geo2d *dims,
+                              point_t      *offs,
+                              char         *name,
+                              size_t        name_len,
+                              char         *path,
+                              size_t        path_len)
+{
+	bool r;
+	file_t *f;
+	union {
+		char     c[48];
+		uint64_t u64[6];
+	} buf = {.u64 = {0, 0, 0, 0, 0, 0}};
+	char *fpath;
+	union {
+		char          *chr;
+		const char    *cch;
+		const uint8_t *cu8;
+	} ptr;
+	size_t len;
+
+	path[path_len] = '_';
+	path[path_len + 1] = '\0';
+
+	if (!(f = file_create (path))) {
+		fprintf (stderr, "%s: file_create failed\n", __func__);
+		r = false;
+		goto _cleanup;
+	}
+
+	fpath = (char *) file_path (f);
+
+	if (hash) {
+		// image hash
+
+		ptr.chr = buf.c;
+		_sha1_str (hash, ptr.chr);
+
+		fpath[path_len] = 'i';
+		if (!file_open (f, "w")) {
+			goto _fail_open;
+		}
+
+		if (!file_write (f, 40, ptr.cu8)) {
+			goto _fail_write;
+		}
+
+		if (!file_close (f)) {
+			goto _fail_close;
+		}
+	}
+
+	if (dims) {
+		// width & height
+
+		len = _u32_to_str (dims->w, ptr.chr);
+
+		fpath[path_len] = 'w';
+		if (!file_open (f, "w")) {
+			goto _fail_open;
+		}
+
+		if (!file_write (f, len, ptr.cu8)) {
+			goto _fail_write;
+		}
+
+		if (!file_close (f)) {
+			goto _fail_close;
+		}
+
+		len = _u32_to_str (dims->h, ptr.chr);
+
+		fpath[path_len] = 'h';
+		if (!file_open (f, "w")) {
+			goto _fail_open;
+		}
+
+		if (!file_write (f, len, ptr.cu8)) {
+			goto _fail_write;
+		}
+
+		if (!file_close (f)) {
+			goto _fail_close;
+		}
+	}
+
+	if (offs) {
+		// x offset & y offset
+
+		len = _i32_to_str (offs->x, ptr.chr);
+
+		fpath[path_len] = 'x';
+		if (!file_open (f, "w")) {
+			goto _fail_open;
+		}
+
+		if (!file_write (f, len, ptr.cu8)) {
+			goto _fail_write;
+		}
+
+		if (!file_close (f)) {
+			goto _fail_close;
+		}
+
+		len = _i32_to_str (offs->y, ptr.chr);
+
+		fpath[path_len] = 'y';
+		if (!file_open (f, "w")) {
+			goto _fail_open;
+		}
+
+		if (!file_write (f, len, ptr.cu8)) {
+			goto _fail_write;
+		}
+
+		if (!file_close (f)) {
+			goto _fail_close;
+		}
+	}
+
+	if (name) {
+		// name
+
+		if (name_len > 0) {
+			ptr.chr = name;
+			len = name_len;
+		} else {
+			ptr.cch = "";
+			len = 0;
+		}
+
+		fpath[path_len] = 'n';
+		if (!file_open (f, "w")) {
+		_fail_open:
+			ptr.cch = "open";
+			goto _fail;
+		}
+
+		if (!file_write (f, len, ptr.cu8)) {
+		_fail_write:
+			ptr.cch = "write";
+			goto _fail;
+		}
+
+		if (!file_close (f)) {
+		_fail_close:
+			ptr.cch = "close";
+		_fail:
+			fprintf (stderr, "%s: file_%s failed\n", __func__, ptr.cch);
+			r = false;
+			goto _destroy_file;
+		}
 	}
 
 	r = true;

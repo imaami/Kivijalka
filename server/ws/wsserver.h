@@ -18,6 +18,7 @@ class WSServer : public QObject
 	Q_OBJECT
 public:
 	explicit WSServer(const QString &addr, quint16 port,
+	                  quint16 captureWidth, quint16 captureHeight,
 	                  quint16 displayWidth, quint16 displayHeight,
 	                  quint16 thumbWidth, quint16 thumbHeight,
 	                  cache_t *cache,
@@ -35,11 +36,15 @@ private slots:
 	void onNewConnection();
 	void processTextMessage(QString message);
 	void respondToHS(QWebSocket *dest);
-	void recvBanner(QByteArray message);
+	void recvBinary(QByteArray msg);
+
 	void socketDisconnected();
 
 private:
 	bool tryUpdateThumbnail(img_data_t **old);
+	void pushCacheInfo(QWebSocket *dest,
+	                   uint8_t    *info,
+	                   size_t      size);
 	void pushThumbnail(QWebSocket *dest);
 	void pushThumbnails();
 
@@ -47,6 +52,7 @@ private:
 	QList<QWebSocket *> clients;
 	QHostAddress serverAddr;
 	quint16 serverPort;
+	quint16 captureWidth, captureHeight;
 	quint16 displayWidth, displayHeight;
 	quint16 thumbWidth, thumbHeight;
 	QByteArray thumbNail;

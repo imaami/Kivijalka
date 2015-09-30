@@ -10,6 +10,8 @@
 extern "C" {
 #endif
 
+#include "packet.h"
+
 #ifdef __cplusplus
 }
 #endif

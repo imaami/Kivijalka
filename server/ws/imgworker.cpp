@@ -194,10 +194,17 @@ ImgWorker::update_display (QImage              &capture,
 		r = display_render_bg (display, c);
 	}
 	if (r) {
-		QImage img((const uchar *) display_pixbuf (display), dw, dh, fmt);
+		QImage pixels((const uchar *) display_pixbuf (display), dw, dh, fmt);
 		QByteArray bar;
 		QBuffer buf(&bar);
 		if (buf.open (QIODevice::WriteOnly)) {
+			int scaled_w = display_scaled_width (display);
+			int scaled_h = display_scaled_height (display);
+			QImage img = (scaled_w != dw || scaled_h != dh)
+			             ? pixels.scaled (scaled_w, scaled_h,
+			                              Qt::IgnoreAspectRatio,
+			                              Qt::SmoothTransformation)
+			             : pixels;
 			img_data_t *imd;
 			if (img.save (&buf, "PNG")) {
 				if ((imd = img_data_new_from_buffer ((size_t) bar.size(), bar.constData()))) {
@@ -205,9 +212,9 @@ ImgWorker::update_display (QImage              &capture,
 					(void) img_file_post (&output_file);
 				}
 			}
-			img = img.scaled (thumb_w, thumb_h,
-			                  Qt::KeepAspectRatio,
-			                  Qt::SmoothTransformation);
+			img = pixels.scaled (thumb_w, thumb_h,
+			                     Qt::KeepAspectRatio,
+			                     Qt::SmoothTransformation);
 			if (img.width() == (int) thumb_w
 			    && img.height() == (int) thumb_h) {
 				buf.seek (0);

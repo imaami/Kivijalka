@@ -9,6 +9,7 @@ extern "C" {
 #include <uuid/uuid.h>
 
 #include "banner.h"
+#include "display.h"
 
 typedef struct cache cache_t;
 
@@ -25,11 +26,27 @@ extern bool
 cache_import_packet (cache_t         *c,
                      banner_packet_t *p);
 
+extern bool
+cache_apply_modpkt (cache_t          *c,
+                    banner_modpkt_t  *p,
+                    char            **r,
+                    size_t           *s);
+extern bool
+cache_apply_display_modpkt (cache_t           *c,
+                            display_modpkt_t  *p,
+                            char             **r,
+                            size_t            *s);
+
 extern const char *
 cache_path (cache_t *c);
 
 extern banner_t *
 cache_most_recent (cache_t *c);
+
+extern bool
+cache_info_packet (cache_t  *c,
+                   uint8_t **data,
+                   size_t   *size);
 
 extern char *
 cache_json (cache_t *c);

@@ -29,6 +29,7 @@
 #include "json.h"
 #include "parse.h"
 #include "banner.h"
+#include "display.h"
 #include "../list.h"
 #include "../cache.h"
 #include "../global.h"
@@ -48,6 +49,14 @@ struct cache {
 	list_head_t         used[2];
 	size_t              path_len;
 	char                path[];
+} __attribute__((gcc_struct,packed));
+
+struct cache_packet {
+	uint64_t time;
+	uint32_t inum;
+	uint32_t bnum;
+	uint32_t uuid[4];
+	uint8_t  data[];
 } __attribute__((gcc_struct,packed));
 
 enum {
@@ -160,6 +169,62 @@ _cache_destroy (struct cache *c)
 }
 
 __attribute__((always_inline))
+static inline const char *
+_cache_path (struct cache *c)
+{
+	return (const char *) c->path;
+}
+
+__attribute__((always_inline))
+static inline size_t
+_cache_path_length (struct cache *c)
+{
+	return c->path_len;
+}
+
+__attribute__((always_inline))
+static inline bool
+_cache_banner_path (struct cache  *c,
+                    struct banner *b,
+                    char          **path,
+                    size_t         *len)
+{
+	size_t l, n, k;
+	char *p;
+	unsigned int i;
+
+	l = _cache_path_length (c);
+
+	if (!(p = _mem_new (3, l + 36, &n))) {
+		return false;
+	}
+
+	strncpy (p, _cache_path (c), l);
+
+	i = b->uuid[0];
+	p[l++] = _hex_char (i >> 4);
+	p[l++] = _hex_char (i & 0x0f);
+	p[l++] = '/';
+
+	for (k = 1; k < 16; ++k) {
+		i = b->uuid[k];
+		p[l++] = _hex_char (i >> 4);
+		p[l++] = _hex_char (i & 0x0f);
+	}
+
+	p[l++] = '/';
+
+	for (k = l; k < n; ++k) {
+		p[k] = '\0';
+	}
+
+	*path = p;
+	*len = l;
+
+	return true;
+}
+
+__attribute__((always_inline))
 static inline bool
 _cache_mkdir (char          *path,
               size_t         pos,
@@ -248,20 +313,6 @@ _cache_mkdir (char          *path,
 }
 
 __attribute__((always_inline))
-static inline const char *
-_cache_path (struct cache *c)
-{
-	return (const char *) c->path;
-}
-
-__attribute__((always_inline))
-static inline size_t
-_cache_path_length (struct cache *c)
-{
-	return c->path_len;
-}
-
-__attribute__((always_inline))
 static inline struct cache_bucket *
 _cache_bucket (struct cache *c,
                int           type,
@@ -302,6 +353,27 @@ _cache_find_banner_by_uuid (struct cache *c,
 {
 	struct cache_bucket *b = _cache_bucket_by_uuid (c, uuid);
 	return _banner_find_in_list_by_uuid (&b->list, uuid);
+}
+
+__attribute__((always_inline))
+static inline struct banner *
+_cache_find_banner_by_uuid_str (struct cache *c,
+                                const char   *uuid_str)
+{
+	struct banner *b;
+	uuid_t uuid;
+	size_t n;
+
+	if (_parse_uuid (uuid_str, uuid, &n)) {
+		b = _cache_find_banner_by_uuid (c, uuid);
+
+	} else {
+		fprintf (stderr, "%s: invalid UUID string: syntax error at "
+		         "offset %zu\n", __func__, n);
+		b = NULL;
+	}
+
+	return b;
 }
 
 __attribute__((always_inline))
@@ -368,7 +440,7 @@ _cache_find_or_add_img_from_packet (struct cache         *c,
 			}
 
 			size_t root_len = _cache_path_length (c);
-			fsiz = strlen (_img_name (im));
+			fsiz = _img_name_length (im);
 
 			if (!(ptr_to.fpath = _mem_new (3, root_len + 43 + fsiz,
 			                               &size))) {
@@ -385,8 +457,7 @@ _cache_find_or_add_img_from_packet (struct cache         *c,
 			                  ptr_to.hash)) {
 				ptr_to.fpath[root_len + 41] = '/';
 				ptr_to.fpath[root_len + 42] = '\0';
-				_img_export (im, ptr_to.fpath, root_len + 42,
-				             fsiz);
+				_img_export (im, ptr_to.fpath, root_len + 42);
 			}
 
 			_mem_del (&ptr_to.fpath);
@@ -404,8 +475,7 @@ __attribute__((always_inline))
 static inline bool
 _cache_add_banner (struct cache  *c,
                    struct banner *b,
-                   struct img    *im,
-                   const bool     write_to_disk)
+                   struct img    *im)
 {
 	uuid_t uuid;
 	struct cache_bucket *cb;
@@ -426,16 +496,21 @@ _cache_add_banner (struct cache  *c,
 		list_add (&cb->hook, &c->used[CACHE_UUID]);
 	}
 
-	if (write_to_disk) {
-		const char *root_path = (const char *) c->path;
-		size_t path_len = _cache_path_length (c), path_alloc;
-		char *path;
-		const uint8_t *id;
+	return true;
+}
 
-		if (!(path = _mem_new (6, path_len + 36, &path_alloc))) {
-			return false;
-		}
+__attribute__((always_inline))
+static inline bool
+_cache_export_banner (struct cache  *c,
+                      struct banner *b)
+{
+	const char *root_path = (const char *) c->path;
+	size_t path_len = _cache_path_length (c), path_alloc;
+	char *path;
+	const uint8_t *id;
+	bool r;
 
+	if ((path = _mem_new (6, path_len + 36, &path_alloc))) {
 		strncpy (path, root_path, path_len);
 		path[path_len] = '\0';
 
@@ -444,13 +519,23 @@ _cache_add_banner (struct cache  *c,
 		if (_cache_mkdir (path, path_len, 16, id)) {
 			path[path_len + 33] = '/';
 			path[path_len + 34] = '\0';
-			_banner_export (b, path, path_len + 34);
+			r = _banner_export (b, path, path_len + 34);
+
+		} else {
+			fprintf (stderr, "%s: failed to create export path\n",
+			         __func__);
+			r = false;
 		}
 
 		_mem_del (&path);
+
+	} else {
+		fprintf (stderr, "%s: failed to allocate path string\n",
+		         __func__);
+		r = false;
 	}
 
-	return true;
+	return r;
 }
 
 __attribute__((always_inline))
@@ -465,6 +550,7 @@ _cache_add_img_from_disk (struct cache *c,
 	sha1_t hash;
 	struct img *im;
 	struct cache_bucket *b;
+	char *name;
 
 	if (!_read_img_file (path, &data, &size)) {
 		fprintf (stderr, "%s: _read_img_file failed\n", __func__);
@@ -497,9 +583,11 @@ _cache_add_img_from_disk (struct cache *c,
 			/* this image was added previously without
 			 * image file payload, let's add it now
 			 */
-			_img_set_name (im, _img_name_from_path (path));
 			im->size = size;
 			im->data = data;
+			if ((name = _img_name_from_path (path, &size))) {
+				_img_set_name (im, name, size);
+			}
 			goto _succeed;
 		}
 	} else {
@@ -1136,6 +1224,28 @@ _cache_import_subdir (struct cache  *cache,
 
 __attribute__((always_inline))
 static inline bool
+_cache_activate_banner (struct cache  *c,
+                        struct banner *b)
+{
+	struct img *im;
+
+	if (!(im = _cache_find_img_by_hash (c, b->hash))) {
+		fprintf (stderr, "%s: image hash not in cache\n", __func__);
+		return false;
+	}
+
+	if (!_banner_activate (b, im)) {
+		fprintf (stderr, "%s: failed to activate banner\n", __func__);
+		return false;
+	}
+
+	printf ("%s: activated banner \"%s\"\n", __func__, b->name);
+
+	return true;
+}
+
+__attribute__((always_inline))
+static inline bool
 _cache_import (struct cache *cache)
 {
 	const char *root_path = (const char *) cache->path;
@@ -1152,6 +1262,8 @@ _cache_import (struct cache *cache)
 	errno = 0;
 	long name_max = pathconf (root_path, _PC_NAME_MAX);
 	size_t len;
+	uint8_t uuid_str[48];
+	bool have_banner_uuid = false;
 
 	if (-1 == name_max) {
 		if (errno) {
@@ -1231,6 +1343,33 @@ _cache_import (struct cache *cache)
 					default:
 						break;
 					}
+					break;
+
+				case DT_REG:
+					printf ("%s: DT_REG\n", __func__);
+					/* TODO: eventually support several
+					 * displays' current banners, but for
+					 * now we only ever have display "0"
+					 */
+
+					if (result->d_name[0] != '0'
+					    || result->d_name[1] != '\0') {
+						    break;
+					}
+
+					path[root_len] = '0';
+					path[root_len+1] = '\0';
+
+					printf ("%s: DT_REG: %s\n", __func__, path);
+
+					if (_textfile_read (path, uuid_str,
+					                    48, &len)) {
+						have_banner_uuid = true;
+					} else {
+						fprintf (stderr, "%s: failed to read current banner UUID string from file\n", __func__);
+					}
+
+					path[root_len] = '\0';
 
 				case DT_LNK: // TODO: handle symlinks
 				default:
@@ -1262,6 +1401,15 @@ _cache_import (struct cache *cache)
 	}
 
 	_mem_del (&path);
+
+	if (have_banner_uuid) {
+		struct banner *b;
+		if (!(b = _cache_find_banner_by_uuid_str (cache, (const char *) uuid_str))) {
+			fprintf (stderr, "%s: failed to find current banner from cache\n", __func__);
+		} else if (!_cache_activate_banner (cache, b)) {
+			fprintf (stderr, "%s: failed to activate requested banner\n", __func__);
+		}
+	}
 
 	return r;
 }
@@ -1346,23 +1494,143 @@ _cache_json (struct cache *c)
 }
 
 __attribute__((always_inline))
-static inline bool
-_cache_activate_banner (struct cache  *c,
-                        struct banner *b)
+static inline void
+_cache_info (struct cache *c,
+             size_t       *num_i,
+	     size_t       *i_size,
+             size_t       *num_b,
+	     size_t       *b_size)
 {
-	struct img *im;
+	list_head_t *h, *h2;
+	struct cache_bucket *b;
+	union {
+		struct img    *i;
+		struct banner *b;
+	} ptr;
+	size_t s;
 
-	if (!(im = _cache_find_img_by_hash (c, b->hash))) {
-		fprintf (stderr, "%s: image hash not in cache\n", __func__);
+	h = &c->used[CACHE_HASH];
+	*num_i = 0;
+	*i_size = 0;
+
+	list_for_each_entry (b, h, hook) {
+		h2 = &b->list;
+		list_for_each_entry (ptr.i, h2, hook) {
+			s = _img_name_length (ptr.i);
+			*i_size += (s < UINT32_MAX) ? s : UINT32_MAX;
+			(*num_i)++;
+		}
+	}
+	printf ("%s: images: %zu\n", __func__, *num_i);
+
+	*i_size += *num_i * sizeof (struct img_info);
+
+	h = &c->used[CACHE_UUID];
+	*num_b = 0;
+	*b_size = 0;
+
+	list_for_each_entry (b, h, hook) {
+		h2 = &b->list;
+		list_for_each_entry (ptr.b, h2, by_uuid) {
+			s = _banner_name_length (ptr.b);
+			*b_size += (s < UINT32_MAX) ? s : UINT32_MAX;
+			(*num_b)++;
+		}
+	}
+	printf ("%s: banners: %zu\n", __func__, *num_b);
+
+	*b_size += *num_b * sizeof (struct banner_info);
+}
+
+__attribute__((always_inline))
+static inline bool
+_cache_info_packet (struct cache  *c,
+                    uint8_t      **data,
+                    size_t        *size)
+{
+	size_t num_i, i_size, num_b, b_size, s, n;
+	struct cache_packet *p;
+	list_head_t *h, *h2;
+	struct cache_bucket *b;
+	union {
+		struct img    *i;
+		struct banner *b;
+	} ptr;
+	uint8_t *buf;
+
+	_cache_info (c, &num_i, &i_size, &num_b, &b_size);
+	s = offsetof (struct cache_packet, data) + i_size + b_size;
+
+	if (!(p = _mem_new (6, s, &n))) {
 		return false;
 	}
 
-	if (!_banner_activate (b, im)) {
-		fprintf (stderr, "%s: failed to activate banner\n", __func__);
-		return false;
+	p->time = 0;
+	p->inum = num_i;
+	p->bnum = num_b;
+
+	if (cur_banner) {
+		_banner_uuid_copy_to_u32 (cur_banner, p->uuid);
+	} else {
+		p->uuid[0] = 0;
+		p->uuid[1] = 0;
+		p->uuid[2] = 0;
+		p->uuid[3] = 0;
 	}
 
-	printf ("%s: activated banner \"%s\"\n", __func__, b->name);
+	*size = s;
+	*data = (uint8_t *) p;
+
+	h = &c->used[CACHE_HASH];
+	buf = *data + offsetof (struct cache_packet, data);
+
+	list_for_each_entry (b, h, hook) {
+		h2 = &b->list;
+		list_for_each_entry (ptr.i, h2, hook) {
+			struct img_info *ii = (struct img_info *) buf;
+			_img_info_init (ii, ptr.i);
+			buf += sizeof (struct img_info);
+		}
+	}
+
+	h = &c->used[CACHE_UUID];
+
+	list_for_each_entry (b, h, hook) {
+		h2 = &b->list;
+		list_for_each_entry (ptr.b, h2, by_uuid) {
+			struct banner_info *bi = (struct banner_info *) buf;
+			_banner_info_init (bi, ptr.b);
+			buf += sizeof (struct banner_info);
+		}
+	}
+
+	h = &c->used[CACHE_HASH];
+
+	list_for_each_entry (b, h, hook) {
+		h2 = &b->list;
+		list_for_each_entry (ptr.i, h2, hook) {
+			s = _img_name_length (ptr.i);
+			if (s >= UINT32_MAX) {
+				s = UINT32_MAX;
+			}
+			memcpy (buf, ptr.i->name, s);
+			buf += s;
+		}
+	}
+
+	h = &c->used[CACHE_UUID];
+
+	list_for_each_entry (b, h, hook) {
+		h2 = &b->list;
+		list_for_each_entry (ptr.b, h2, by_uuid) {
+			s = _banner_name_length (ptr.b);
+			if (s >= UINT32_MAX) {
+				s = UINT32_MAX;
+			}
+			memcpy (buf, ptr.b->name, s);
+			buf += s;
+		}
+	}
 
 	return true;
 }
@@ -1377,9 +1645,9 @@ _cache_import_packet (struct cache         *c,
 	struct banner *b;
 
 	_sha1_str (&p->hash, str);
-	printf ("type: %u\ntime: %lu\nxpos: %d\nypos: %d\nwidth: %d\n"
+	printf ("time: %lu\nxpos: %d\nypos: %d\nwidth: %d\n"
 	        "height: %d\nhash: %s\nsize: %lu\nname len: %u\nfilename len: %u\n",
-	        p->type, p->time, p->offs.x, p->offs.y,
+	        p->time, p->offs.x, p->offs.y,
 	        _geo2d_width (&p->dims), _geo2d_height (&p->dims), str, p->size,
 	        p->nsiz, p->fsiz);
 
@@ -1395,8 +1663,15 @@ _cache_import_packet (struct cache         *c,
 		return false;
 	}
 
-	if (!_cache_add_banner (c, b, im, true)) {
+	if (!_cache_add_banner (c, b, im)) {
 		fprintf (stderr, "%s: failed to add banner to cache\n",
+		         __func__);
+		_banner_destroy (b);
+		return false;
+	}
+
+	if (!_cache_export_banner (c, b)) {
+		fprintf (stderr, "%s: failed to export banner to disk\n",
 		         __func__);
 		_banner_destroy (b);
 		return false;
@@ -1407,7 +1682,279 @@ _cache_import_packet (struct cache         *c,
 		return false;
 	}
 
-	printf ("%s: success\n", __func__);
+	const char *root_path = (const char *) c->path;
+	size_t root_len = _cache_path_length (c), alloc_size;
+	char *path;
+
+	if (!(path = _mem_new (4, root_len + 2, &alloc_size))) {
+		fprintf (stderr, "%s: failed to allocate memory\n",
+		         __func__);
+	} else {
+		strncpy (path, root_path, root_len);
+		(void) memset (path + root_len, 0, alloc_size - root_len);
+
+		if (!display_banner_uuid_export (path, root_len)) {
+			fprintf (stderr,
+			         "%s: failed to export current banner UUID\n",
+			         __func__);
+		}
+
+		free (path);
+	}
+
+	return true;
+}
+
+__attribute__((always_inline))
+static inline bool
+_cache_apply_modpkt (struct cache          *c,
+                     struct banner_modpkt  *p,
+                     char                 **r,
+                     size_t                *s)
+{
+	struct banner *b;
+	struct img *im;
+	union {
+		struct banner *b;
+		uint8_t       *u8;
+		const char    *cc;
+		list_head_t   *h;
+	} ptr;
+	struct {
+		sha1_t       *hash;
+		struct geo2d *dims;
+		point_t      *offs;
+		char         *name;
+		size_t        name_len;
+	} modded;
+	char *path;
+	size_t path_len, reply_size, alloc_size;
+	struct banner_modpkt_echo *reply;
+
+	if (!(b = _cache_find_banner_by_uuid (c, p->uuid))) {
+		fprintf (stderr, "%s: packet refers to unknown banner\n",
+		         __func__);
+		return false;
+	}
+
+	if (!_sha1_cmp (&p->hash, &b->hash)) {
+		printf ("%s: banner image change request received\n", __func__);
+
+		if (!(im = _cache_find_img_by_hash (c, p->hash))) {
+			fprintf (stderr, "%s: packet refers to unknown image\n",
+			         __func__);
+			return false;
+		}
+
+		list_for_each_entry (ptr.b, &im->refs, by_hash) {
+			if (ptr.b == b || _sha1_cmp (&ptr.b->hash, &b->hash)) {
+				fprintf (stderr, "%s: image already references "
+				         "banner with the same UUID\n",
+				         __func__);
+				return false;
+			}
+		}
+
+		modded.hash = &p->hash;
+
+	} else {
+		// packet does not contain a request to change the banner image
+		modded.hash = NULL;
+	}
+
+	if (p->nsiz > 0) {
+		ptr.u8 = p->name;
+		if (!_banner_name_dup (ptr.cc, p->nsiz,
+		                       &modded.name, &modded.name_len)) {
+			fprintf (stderr, "%s: failed to copy banner name\n",
+			         __func__);
+			return false;
+		}
+
+		if (b->name && b->name_len == modded.name_len
+		    && strncmp (modded.name, b->name, modded.name_len) == 0) {
+			free (modded.name);
+			goto _name_not_changed;
+		}
+
+	} else {
+	_name_not_changed:
+		modded.name = NULL;
+		modded.name_len = 0;
+	}
+
+	reply_size = offsetof (struct banner_modpkt_echo, orig.name)
+	             + modded.name_len;
+
+	if (!(reply = _mem_new (6, reply_size, &alloc_size))) {
+		if (modded.name) {
+			free (modded.name);
+		}
+		fprintf (stderr, "%s: failed to allocate reply packet\n",
+		         __func__);
+		return false;
+	}
+
+	if (modded.hash) {
+		ptr.h = &b->by_hash;
+
+		if (ptr.h->prev != ptr.h
+		    && ptr.h->next != ptr.h
+		    && ptr.h->prev && ptr.h->next) {
+			__list_del_entry (ptr.h);
+		}
+
+		_sha1_cpy (modded.hash, &b->hash);
+		list_add (ptr.h, &im->refs);
+	} else {
+		im = _cache_find_img_by_hash (c, b->hash);
+	}
+
+	if (modded.name) {
+		if (b->name) {
+			free (b->name);
+		}
+
+		b->name = modded.name;
+		b->name_len = modded.name_len;
+	}
+
+	if (p->offs.u64 != b->offset.u64) {
+		b->offset.u64 = p->offs.u64;
+		modded.offs = &b->offset;
+	} else {
+		modded.offs = NULL;
+	}
+
+	if (p->dims.u64 != b->dims.u64 && p->dims.w > 0 && p->dims.h > 0) {
+		b->dims.u64 = p->dims.u64;
+		modded.dims = &b->dims;
+	} else {
+		modded.dims = NULL;
+	}
+
+	if (modded.hash || modded.dims || modded.offs || modded.name) {
+		printf ("%s: modified:", __func__);
+		if (modded.hash) {
+			fputs (" hash", stdout);
+		}
+		if (modded.dims) {
+			fputs (" dims", stdout);
+		}
+		if (modded.offs) {
+			fputs (" offs", stdout);
+		}
+		if (modded.name) {
+			fputs (" name", stdout);
+		}
+		puts("");
+
+		if (_cache_banner_path (c, b, &path, &path_len)) {
+			_banner_export_modifications (modded.hash, modded.dims,
+			                              modded.offs, modded.name,
+			                              modded.name_len, path,
+			                              path_len);
+			free (path);
+			path = NULL;
+			path_len = 0;
+		}
+		if (cur_banner == b && im) {
+			if (!_banner_activate (b, im)) {
+				fprintf (stderr,
+				         "%s: failed to activate banner\n",
+				         __func__);
+			}
+		}
+	}
+
+	reply->type = PACKET_MOD|PACKET_BANNER;
+	reply->orig.time = p->time;
+	uuid_copy (reply->orig.uuid, b->uuid);
+	reply->orig.offs.u64 = b->offset.u64;
+	reply->orig.dims.u64 = b->dims.u64;
+	_sha1_cpy (&b->hash, &reply->orig.hash);
+	reply->orig.nsiz = modded.name_len;
+	if (modded.name_len > 0 && modded.name) {
+		(void) memcpy (reply->orig.name, modded.name, modded.name_len);
+	}
+	if (reply_size < alloc_size) {
+		(void) memset (((char *) reply) + reply_size, 0,
+		               alloc_size - reply_size);
+	}
+
+	*r = (char *) reply;
+	*s = reply_size;
+
+	return true;
+}
+
+__attribute__((always_inline))
+static inline bool
+_cache_apply_display_modpkt (struct cache           *c,
+                             struct display_modpkt  *p,
+                             char                  **r,
+                             size_t                 *s)
+{
+	struct banner *b;
+	const char *root_path;
+	size_t root_len, path_len, reply_size, alloc_size;
+	char *path;
+	struct display_modpkt_echo *reply;
+
+	if (!(b = _cache_find_banner_by_uuid (c, p->uuid))) {
+		fprintf (stderr, "%s: packet refers to unknown banner\n",
+		         __func__);
+		return false;
+	}
+
+	printf ("%s: target banner is \"%s\"\n", __func__, b->name);
+
+	if (cur_banner == b) {
+		fprintf (stderr, "%s: requested banner is already active\n",
+		         __func__);
+		return false;
+	}
+
+	if (!_cache_activate_banner (c, b)) {
+		fprintf (stderr, "%s: failed to activate requested banner\n",
+		         __func__);
+		return false;
+	}
+
+	root_path = (const char *) c->path;
+	root_len = _cache_path_length (c);
+	path_len = root_len + 2;
+	reply_size = offsetof (struct display_modpkt_echo, orig.name);
+
+	if (!(path = _mem_new (4,
+	                       (path_len > reply_size) ? path_len : reply_size,
+	                       &alloc_size))) {
+		fprintf (stderr, "%s: failed to allocate memory\n",
+		         __func__);
+		return false;
+	}
+
+	strncpy (path, root_path, root_len);
+	(void) memset (path + root_len, 0, alloc_size - root_len);
+
+	if (!display_banner_uuid_export (path, root_len)) {
+		fprintf (stderr, "%s: failed to export current banner UUID\n",
+		         __func__);
+	}
+
+	(void) memset (path, 0, root_len);
+
+	reply = (struct display_modpkt_echo *) path;
+	reply->type = PACKET_MOD|PACKET_DISPLAY;
+	reply->orig.time = p->time;
+	reply->orig.id = 0;
+	uuid_copy (reply->orig.uuid, b->uuid);
+	reply->orig.dims.u64 = 0; // TODO
+	reply->orig.offs.u64 = 0;
+	reply->orig.nsiz = 0; // TODO
+
+	*r = (char *) reply;
+	*s = reply_size;
 
 	return true;
 }

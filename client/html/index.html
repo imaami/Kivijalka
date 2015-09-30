@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8" />
-  <title>le WebCocquettes</title>
+  <title>Kivijalka</title>
   <script type="text/javascript" src="rusha.js"></script>
 </head>
 
@@ -18,6 +18,18 @@
 html, body {
 	width: 100%;
 	height: 100%;
+}
+
+legend {
+	font-family: "Monospace";
+	font-size: 80%;
+	font-weight: bold;
+}
+
+.attr {
+	font-family: "Monospace";
+	font-size: 80%;
+	font-weight: normal;
 }
 
 #thumbSection {
@@ -57,6 +69,7 @@ html, body {
 	top: 0px;
 	border:0px solid #000000;
 }
+
 </style>
 
   <section id="thumbSection">
@@ -66,10 +79,91 @@ html, body {
       <canvas id="cvs2"></canvas>
     </div>
     <div id="bannerQueue">
-      <form id="bannerUpload" style="display:none" accept-charset="UTF-8"
-            action="javascript:(function(){return false;})();">
+
+      <form id="currentBannerInfo" style="display:none" accept-charset="UTF-8">
         <fieldset>
-          <legend>Upload banner:</legend>
+          <legend>&nbsp;Current banner&nbsp;</legend>
+
+          <p>
+            <label class="attr">Name:&nbsp;</label>
+            <label id="currentBannerName"></label>
+          </p>
+
+          <p>
+            <label class="attr">Pos.:&nbsp;</label>
+            <label id="currentBannerOff"></label>
+          </p>
+
+          <p>
+            <label class="attr">Size:&nbsp;</label>
+            <label id="currentBannerDim"></label>
+          </p>
+
+          <p>
+            <input id="currentBannerEdit" type="button" value="Edit">
+            &nbsp;&nbsp;
+            <input id="currentBannerChange" type="button" value="Change">
+          </p>
+        </fieldset>
+      </form>
+
+      <form id="bannerEdit" style="display:none" accept-charset="UTF-8">
+        <fieldset>
+          <legend>&nbsp;Edit banner&nbsp;</legend>
+
+          <p>
+            <label class="attr">Image:&nbsp;&nbsp;</label>
+            <select id="imageSelect"></select>
+          </p>
+
+          <p>
+            <label class="attr">Name:&nbsp;&nbsp;&nbsp;</label>
+            <input id="bannerEditName" type="text" required>
+          </p>
+
+          <p>
+            <label class="attr">X-pos.:&nbsp;</label>
+            <input id="bannerEditX" type="number" step="1" required>
+          </p>
+
+          <p>
+            <label class="attr">Y-pos.:&nbsp;</label>
+            <input id="bannerEditY" type="number" step="1" required>
+          </p>
+
+          <p style="display:none">
+            <label class="attr">Width:&nbsp;&nbsp;</label>
+            <input id="bannerEditW" type="number" step="1" required>
+          </p>
+
+          <p style="display:none">
+            <label class="attr">Height:&nbsp;</label>
+            <input id="bannerEditH" type="number" step="1" required>
+          </p>
+
+          <p>
+            <input id="bannerEditOK" type="button" value="OK">
+            &nbsp;&nbsp;
+            <input id="bannerEditCancel" type="button" value="Cancel">
+          </p>
+        </fieldset>
+      </form>
+
+      <form id="bannerChange" style="display:none" accept-charset="UTF-8">
+        <fieldset>
+          <legend>&nbsp;Change active banner&nbsp;</legend>
+          <select id="bannerSelect"></select>
+          <p>
+            <input id="bannerChangeOK" type="button" value="OK">
+            &nbsp;&nbsp;
+            <input id="bannerChangeCancel" type="button" value="Cancel">
+          </p>
+        </fieldset>
+      </form>
+
+      <form id="bannerUpload" style="display:none" accept-charset="UTF-8">
+        <fieldset>
+          <legend>&nbsp;Upload banner&nbsp;</legend>
           <input id="bannerFile" type="hidden" value=""><br>
           Name: <input id="bannerName" type="text" required><br>
           X: <input id="bannerX" type="number" step="1" required><br>
@@ -79,11 +173,167 @@ html, body {
           &nbsp;&nbsp;<input id="bannerCancel" type="button" value="Cancel">
         </fieldset>
       </form>
+
+      <p id="debugbox"></p>
     </div>
   </section>
 
 <script>
+
+const PACKET_REQ     = 0x01,
+      PACKET_ADD     = 0x02,
+      PACKET_MOD     = 0x04,
+      PACKET_DEL     = 0x08,
+      PACKET_DISPLAY = 0x10,
+      PACKET_BANNER  = 0x20,
+      PACKET_IMG     = 0x40,
+      PACKET_DATA    = 0x80;
+
+var refresh_current_banner = function(b) {
+	document.getElementById('bannerSelect').selectedIndex = b.option.index;
+
+	var e = document.getElementById('currentBannerName');
+	var text = document.createTextNode(b.name);
+	e.innerHTML = "";
+	e.appendChild(text);
+	text = null;
+
+	e = document.getElementById('currentBannerOff');
+	e.innerHTML = b.off.x + ", " + b.off.y;
+
+	e = document.getElementById('currentBannerDim');
+	e.innerHTML = b.dim.w + " x " + b.dim.h;
+
+	e = document.getElementById('currentBannerInfo');
+	e.style.display = 'block';
+};
+
+var banner_change_exit = function() {
+	document.getElementById('bannerChange').style.display = 'none';
+	document.getElementById('currentBannerInfo').style.display = 'block';
+
+	if (server !== undefined
+	    && server !== null
+	    && server.displays[0] !== undefined
+	    && server.displays[0] !== null
+	    && server.displays[0].banner !== undefined
+	    && server.displays[0].banner !== null
+	    && server.displays[0].banner.option !== undefined
+	    && server.displays[0].banner.option !== null) {
+		document.getElementById('bannerSelect').selectedIndex =
+			server.displays[0].banner.option.index;
+	}
+};
+
+var banner_change_send = function() {
+	document.getElementById('bannerChange').style.display = 'none';
+	document.getElementById('currentBannerInfo').style.display = 'block';
+
+	var e = document.getElementById('bannerSelect');
+	var o = e.options[e.selectedIndex];
+
+	if (o === undefined || o === null) {
+		return;
+	}
+
+	var bn = server.cache.find_by_id_string(o.id);
+
+	if (bn === undefined || bn === null) {
+		return;
+	}
+
+	var packet = display_modify_packet(0, bn.uuid.view,
+	                                   bn.dim.w, bn.dim.h,
+	                                   bn.off.x, bn.off.y);
+	server.socket.send(packet);
+};
+
+var banner_edit_begin = function() {
+	var b, n, i, x, y, w, h;
+
+	b = server.display_get_banner(0);
+	if (b === null) {
+		return;
+	}
+
+	n = b.name;
+	i = b.image;
+	x = b.off.x;
+	y = b.off.y;
+//	w = b.dim.w;
+//	h = b.dim.h;
+	w = 0;
+	h = 0;
+
+	document.getElementById('bannerEditName').value = n;
+	document.getElementById('imageSelect').selectedIndex =
+		(i !== null && i.option !== null) ? i.option.index : -1;
+	document.getElementById('bannerEditX').value = x;
+	document.getElementById('bannerEditY').value = y;
+	document.getElementById('bannerEditW').value = w;
+	document.getElementById('bannerEditH').value = h;
+
+	document.getElementById('currentBannerInfo').style.display = 'none';
+	document.getElementById('bannerEdit').style.display = 'block';
+};
+
+var banner_edit_send = function() {
+	var b, e, o, i, n, x, y, w, h;
+
+	b = server.display_get_banner(0);
+	if (b === null) {
+		console.log("banner_edit_send: banner is null");
+		return;
+	}
+
+	e = document.getElementById('imageSelect');
+	o = e.options[e.selectedIndex];
+
+	if (o !== undefined && o !== null) {
+		i = server.cache.find_by_id_string(o.id);
+		if (i === undefined || i === null) {
+			i = b.image;
+		}
+	} else {
+		i = b.image;
+	}
+
+	if (i === null) {
+		console.log("banner_edit_send: image is null");
+		return;
+	}
+
+	n = document.getElementById('bannerEditName').value;
+	x = document.getElementById('bannerEditX').value;
+	y = document.getElementById('bannerEditY').value;
+	w = document.getElementById('bannerEditW').value;
+	h = document.getElementById('bannerEditH').value;
+
+	var packet = banner_modify_packet(b.uuid.view,
+	                                  x, y, w, h,
+	                                  i.hash.view, n);
+	server.socket.send(packet);
+
+	document.getElementById('bannerEdit').style.display = 'none';
+	document.getElementById('currentBannerInfo').style.display = 'block';
+};
+
 var my_body_is_ready = function() {
+	document.getElementById('bannerUpload').onsubmit = drag_img_onsubmit;
+	document.getElementById('currentBannerEdit').onclick = banner_edit_begin;
+	document.getElementById('bannerEditOK').onclick = banner_edit_send;
+	document.getElementById('bannerEditCancel').onclick = function() {
+		document.getElementById('bannerEdit').style.display = 'none';
+		document.getElementById('currentBannerInfo').style.display = 'block';
+	};
+
+	document.getElementById('currentBannerChange').onclick = function() {
+		document.getElementById('currentBannerInfo').style.display = 'none';
+		document.getElementById('bannerChange').style.display = 'block';
+	};
+	document.getElementById('bannerChangeOK').onclick = banner_change_send;
+	document.getElementById('bannerChangeCancel').onclick = banner_change_exit;
+
 	window.addEventListener("dragover", function(e) { e.preventDefault(); });
 	window.addEventListener("drop", function(e) { e.preventDefault(); });
 };
@@ -101,6 +351,341 @@ var cvs0 = document.getElementById('cvs0'),
 var ctx0 = cvs0.getContext("2d"),
     ctx1 = cvs1.getContext("2d"),
     ctx2 = cvs2.getContext("2d");
+
+var hex = function(i) {
+	return ;
+};
+
+// Id
+
+function KJ_Id(bytes) {
+	this.data = new ArrayBuffer(bytes);
+	this.view = new DataView(this.data);
+}
+
+KJ_Id.prototype.set_uuid = function(src) {
+	this.view.setUint32(0, src.getUint32(0, true), true);
+	this.view.setUint32(4, src.getUint32(4, true), true);
+	this.view.setUint32(8, src.getUint32(8, true), true);
+	this.view.setUint32(12, src.getUint32(12, true), true);
+};
+
+KJ_Id.prototype.set_hash = function(src) {
+	this.set_uuid(src);
+	this.view.setUint32(16, src.getUint32(16, true), true);
+};
+
+var hex_string_from_dataview = function(dv) {
+	var utf8 = new Uint8Array((dv.byteLength << 1) | 1);
+	var i = 0, c = 0;
+	for (; i < dv.byteLength; ++i) {
+		var u8 = dv.getUint8(i);
+		var n = u8 >>> 4;
+		n += (n < 10) ? 48 : 87;
+		utf8[c++] = n;
+		n = u8 & 0xf;
+		n += (n < 10) ? 48 : 87;
+		utf8[c++] = n;
+	}
+	utf8[c] = '\0';
+	return (new TextDecoder('utf-8')).decode(utf8);
+};
+
+KJ_Id.prototype.string = function() {
+	return hex_string_from_dataview(this.view);
+};
+
+// Dimensions
+
+function KJ_Dim(w, h) {
+	this.w = w;
+	this.h = h;
+}
+
+// Offset
+
+function KJ_Off(x, y) {
+	this.x = x;
+	this.y = y;
+}
+
+// Image
+
+function KJ_Image() {
+	this.hash = new KJ_Id(20);
+	this.hash_string = "";
+	this.option = null;
+	this.utf8_name = null;
+	this.name = "";
+	this.file_size = 0;
+	this.dim = new KJ_Dim(0, 0);
+	this.used_by = [];
+}
+
+KJ_Image.prototype.set_hash = function(src) {
+	this.hash.set_hash(src);
+};
+
+KJ_Image.prototype.set_name = function(src) {
+	var len = src.byteLength;
+	this.utf8_name = new Uint8Array(len);
+	for (var i = 0; i < len; i++) {
+		this.utf8_name[i] = src.getUint8(i);
+	}
+	this.name = (new TextDecoder('utf-8')).decode(this.utf8_name);
+};
+
+KJ_Image.prototype.set_dim = function(w, h) {
+	this.dim.w = w;
+	this.dim.h = h;
+};
+
+KJ_Image.prototype.add_user = function(banner) {
+	if (this.used_by.indexOf(banner) == -1) {
+		this.used_by.push(banner);
+	}
+};
+
+KJ_Image.prototype.del_user = function(banner) {
+	var i = this.used_by.indexOf(banner);
+	if (i != -1) {
+		this.used_by[i] = null;
+		var e = this.used_by.splice(i, 1);
+		e = null;
+	}
+};
+
+var hash_cmp = function(a, b) {
+	return (a.getUint32(0) == b.getUint32(0) &&
+	        a.getUint32(1) == b.getUint32(1) &&
+	        a.getUint32(2) == b.getUint32(2) &&
+	        a.getUint32(3) == b.getUint32(3) &&
+	        a.getUint32(4) == b.getUint32(4));
+};
+
+KJ_Image.prototype.hash_cmp = function(hash_view) {
+	return hash_cmp(this.hash.view, hash_view);
+};
+
+// Banner
+
+function KJ_Banner() {
+	this.uuid = new KJ_Id(16);
+	this.uuid_string = "";
+	this.image = null;
+	this.option = null;
+	this.utf8_name = null;
+	this.name = "";
+	this.dim = new KJ_Dim(0, 0);
+	this.off = new KJ_Off(0, 0);
+}
+
+KJ_Banner.prototype.set_uuid = function(src) {
+	this.uuid.set_uuid(src);
+};
+
+KJ_Banner.prototype.set_name = function(src) {
+	var len = src.byteLength;
+	this.utf8_name = new Uint8Array(len);
+	for (var i = 0; i < len; i++) {
+		this.utf8_name[i] = src.getUint8(i);
+	}
+	this.name = (new TextDecoder('utf-8')).decode(this.utf8_name);
+};
+
+KJ_Banner.prototype.set_dim = function(w, h) {
+	this.dim.w = w;
+	this.dim.h = h;
+};
+
+KJ_Banner.prototype.set_off = function(x, y) {
+	this.off.x = x;
+	this.off.y = y;
+};
+
+// Display
+
+function KJ_Display(w, h) {
+	this.size = new KJ_Dim(w, h);
+	this.banner = null;
+}
+
+KJ_Display.prototype.set_banner = function(b) {
+	this.banner = b;
+	refresh_current_banner(b);
+	console.log("set current banner to \"" + b.name + "\"");
+};
+
+KJ_Display.prototype.get_banner = function() {
+	return (this.banner !== undefined) ? this.banner : null;
+};
+
+// Cache
+
+function KJ_Cache() {
+}
+
+KJ_Cache.prototype.find_by_id_string = function(id) {
+	return this[id.toString()];
+};
+
+KJ_Cache.prototype.add_image = function(hash_view, fsiz_lo, fsiz_hi, w, h,
+                                        name_view) {
+	var hash_str = hex_string_from_dataview(hash_view);
+	var im = this.find_by_id_string(hash_str);
+
+	if (im === undefined || im === null) {
+		im = new KJ_Image();
+		im.set_hash(hash_view);
+		im.hash_string = hash_str;
+		im.set_name(name_view);
+
+		var o = document.getElementById(hash_str);
+		if (o === null) {
+			o = document.createElement("option");
+			o.id = hash_str;
+			document.getElementById('imageSelect').add(o);
+		}
+		o.text = im.name;
+		im.option = o;
+
+		im.file_size = fsiz_lo;
+		if (fsiz_hi > 0) {
+			im.file_size += (1 << 30) * 4 * fsiz_hi;
+		}
+
+		im.set_dim(w, h);
+
+		this[hash_str.toString()] = im;
+
+		console.log("Added image \"" + im.name + "\": " + im.dim.w
+		            + "x" + im.dim.h + ", " + im.file_size + " B");
+	}
+};
+
+KJ_Cache.prototype.get_image = function(hash_view) {
+	var hash_str = hex_string_from_dataview(hash_view);
+	var im = this.find_by_id_string(hash_str);
+	return (im === undefined) ? null : im;
+};
+
+KJ_Cache.prototype.add_banner = function(uuid_view, x, y, w, h, hash_view,
+                                         name_view) {
+	var uuid_str = hex_string_from_dataview(uuid_view);
+	var bn = this.find_by_id_string(uuid_str);
+
+	if (bn === undefined || bn === null) {
+		bn = new KJ_Banner();
+		bn.set_uuid(uuid_view);
+		bn.uuid_string = uuid_str;
+		bn.set_name(name_view);
+
+		var hash_str = hex_string_from_dataview(hash_view);
+		var im = this.find_by_id_string(hash_str);
+		if (im !== undefined && im !== null) {
+			bn.image = im;
+			im.add_user(bn);
+		}
+
+		var o = document.getElementById(uuid_str);
+		if (o === null) {
+			o = document.createElement("option");
+			o.id = uuid_str;
+			document.getElementById('bannerSelect').add(o);
+		}
+		o.text = bn.name;
+		bn.option = o;
+
+		bn.set_off(x, y);
+		bn.set_dim(w, h);
+
+		this[uuid_str.toString()] = bn;
+
+		console.log("Added banner \"" + bn.name + "\": "
+		            + bn.dim.w + "x" + bn.dim.h 
+		            + ((bn.off.x < 0) ? "" : "+") + bn.off.x
+		            + ((bn.off.y < 0) ? "" : "+") + bn.off.y
+		            + ", image: " + hash_str);
+	}
+
+	return bn;
+};
+
+KJ_Cache.prototype.mod_banner = function(bn, x, y, w, h, hash_view, name_view) {
+	bn.set_off(x, y);
+	bn.set_dim(w, h);
+
+	if (hash_view !== null) {
+		var hash_str = hex_string_from_dataview(hash_view);
+		var im = this.find_by_id_string(hash_str);
+		if (im !== undefined && im !== null) {
+			if (bn.image) {
+				if (!bn.image.hash_cmp(hash_view)) {
+					bn.image.del_user(bn);
+					bn.image = im;
+					im.add_user(bn);
+				}
+			} else {
+				bn.image = im;
+				im.add_user(bn);
+			}
+		}
+	}
+
+	if (name_view !== null) {
+		bn.set_name(name_view);
+		bn.option.text = bn.name;
+	}
+};
+
+KJ_Cache.prototype.get_banner = function(uuid_view) {
+	var uuid_str = hex_string_from_dataview(uuid_view);
+	var bn = this.find_by_id_string(uuid_str);
+	return (bn === undefined) ? null : bn;
+};
+
+// Server
+
+function KJ_Server(addr) {
+	this.address = addr;
+	this.socket = null;
+	this.displays = [];
+	this.cache = new KJ_Cache();
+}
+
+KJ_Server.prototype.add_display = function(w, h) {
+	this.displays.push(new KJ_Display(w, h));
+};
+
+KJ_Server.prototype.get_display = function(id) {
+	var di = this.displays[id];
+	return (di !== undefined) ? di : null;
+};
+
+KJ_Server.prototype.display_set_banner = function(d, b) {
+	if (this.displays[d] !== undefined && this.displays[d] !== null) {
+		this.displays[d].set_banner(b);
+	} else {
+		console.log("server.display_set_banner: invalid display id " + d);
+	}
+};
+
+KJ_Server.prototype.display_get_banner = function(d) {
+	var b;
+	if (this.displays[d] !== undefined && this.displays[d] !== null) {
+		b = this.displays[d].banner;
+		if (b === null) {
+			console.log("server.display_get_banner: null banner");
+		}
+	} else {
+		n = null;
+		console.log("server.display_get_banner: invalid display id " + d);
+	}
+	return b;
+};
+
+var server = new KJ_Server("ws://127.0.0.1:8001/");
+server.add_display(0, 0);
 
 /* infoscreen dimensions */
 var screen_width = 0;
@@ -136,13 +721,10 @@ var drag_img_is_drawable = false;
 var drag_img_ants = false;
 var drag_img_ants_timeout = null;
 var drag_img_file = null;
-var drag_img_form = document.getElementById('bannerUpload');
 var drag_img_filename = document.getElementById('bannerFile');
 var drag_img_name = document.getElementById('bannerName');
 var drag_img_x_input = document.getElementById('bannerX');
 var drag_img_y_input = document.getElementById('bannerY');
-var drag_img_apply = document.getElementById('bannerApply');
-var drag_img_submit = document.getElementById('bannerSubmit');
 var drag_img_cancel = document.getElementById('bannerCancel');
 
 var drag_img_ants_draw = function (t, o, l, d) {
@@ -234,8 +816,9 @@ var drag_img_destroy = function () {
 	drag_img_file = null;
 };
 
-var drag_img_onsubmit = function() {
-	if (socket.readyState == 1) {
+var drag_img_onsubmit = function(e) {
+	e.preventDefault();
+	if (server.socket.readyState == 1) {
 		drag_img_upload();
 	} else {
 		console.log('Socket not open');
@@ -263,21 +846,19 @@ var drag_img_show_form = function() {
 		drag_img_redraw_y(this.value);
 	};
 
-	drag_img_apply.checked = true;
+	document.getElementById('bannerApply').checked = true;
 
 	drag_img_cancel.onclick = drag_img_destroy;
 
-	drag_img_form.onsubmit = drag_img_onsubmit;
-	drag_img_form.style.display = 'block';
+	document.getElementById('bannerUpload').style.display = 'block';
 };
 
 var drag_img_hide_form = function () {
-	drag_img_form.style.display = 'none';
-	drag_img_form.onsubmit = function() {return false;};
+	document.getElementById('bannerUpload').style.display = 'none';
 
 	drag_img_cancel.onclick = function() {return false;};
 
-	drag_img_apply.checked = false;
+	document.getElementById('bannerApply').checked = false;
 
 	drag_img_y_input.onchange = function() {return false;};
 	drag_img_y_input.max = 0;
@@ -432,11 +1013,8 @@ var socket_recv_thumb = function(data) {
 	img.src = urlCreator.createObjectURL(blob);
 };
 
-var socket_addr = 'ws://127.0.0.1:8001/';
-var socket = null;
-
 var socket_init_handshake = function() {
-	socket.send("71bf2d31e9e4e15c");
+	server.socket.send("71bf2d31e9e4e15c");
 };
 
 var socket_opened = function() {
@@ -445,11 +1023,11 @@ var socket_opened = function() {
 };
 
 var socket_reconnect = function(t) {
-	if (socket.readyState == 3) {
+	if (server.socket.readyState == 3) {
 		// CLOSED
 		new_socket();
-	} else if (socket.readyState == 0
-	           || socket.readyState == 2) {
+	} else if (server.socket.readyState == 0
+	           || server.socket.readyState == 2) {
 		// CONNECTING or CLOSING
 		setTimeout(socket_reconnect, t, t);
 	} else {
@@ -471,12 +1049,396 @@ var socket_recv_meta = function(msg) {
 	console.log('socket_recv_meta');
 };
 
+var uuid_cmp = function(a, b) {
+	return (a.getUint32(0) == b.getUint32(0) &&
+	        a.getUint32(1) == b.getUint32(1) &&
+	        a.getUint32(2) == b.getUint32(2) &&
+	        a.getUint32(3) == b.getUint32(3));
+}
+
 var socket_recv_msg = function(e) {
 	if (typeof e.data === "string") {
 		socket_recv_meta(JSON.parse(e.data));
-	} else if (e.data instanceof ArrayBuffer
-	           || e.data instanceof Blob) {
-		socket_recv_thumb(e.data);
+
+	} else if (e.data instanceof ArrayBuffer) {
+		var pkt_len = e.data.byteLength;
+		if (pkt_len < 4) {
+			console.log("socket_recv_msg: packet too short");
+			return;
+		}
+
+		var dv = new DataView(e.data);
+		var flags = dv.getUint32(0, true);
+		var ts_lo = 0, ts_hi = 0, x = 0, y = 0, w = 0, h = 0, nsiz = 0,
+		    display_id = 0;
+		var hash_view = null, uuid_view = null, name_view = null,
+		    di = null, bn = null, im = null;
+
+		switch (flags) {
+		case PACKET_ADD|PACKET_DISPLAY|PACKET_DATA:
+			socket_recv_thumb(e.data.slice(4));
+			break;
+
+		case PACKET_ADD|PACKET_DISPLAY|PACKET_BANNER|PACKET_IMG:
+			/* Cache info packet:
+			 *  0 ...  3 |  4 | flags
+			 *  4 ... 11 |  8 | time
+			 * 12 ... 15 |  4 | image count
+			 * 16 ... 19 |  4 | banner count
+			 * 20 ... 35 | 16 | current banner uuid
+			 */
+
+			if (pkt_len < 36) {
+				console.log("socket_recv_msg: packet too short");
+				return;
+			}
+			pkt_len -= 36;
+
+			var i_num = dv.getUint32(12, true);
+			var b_num = dv.getUint32(16, true);
+			if (pkt_len < (i_num * 40) + (b_num * 56)) {
+				console.log("socket_recv_msg: packet too short");
+				return;
+			}
+			pkt_len -= (i_num * 40) + (b_num * 56);
+
+			ts_lo = dv.getUint32(4, true); // timestamp low 32
+			ts_hi = dv.getUint32(8, true); // timestamp high 32
+			var cur_uuid = new DataView(e.data, 20, 16);
+			var cur_banner = null;
+			var ptr = 36;
+			var n = ptr + (i_num * 40) + (b_num * 56);
+
+			for (var i = 0; i < i_num; i++) {
+				// sha1_t       hash;       20   0
+				// uint32_t     name_size;   4  20
+				// uint64_t     file_size;   8  24
+				// struct geo2d dims;        8  32
+
+				nsiz = dv.getUint32(ptr + 20, true);
+				if (pkt_len < nsiz) {
+					console.log("socket_recv_msg: packet too short");
+					return;
+				}
+				pkt_len -= nsiz;
+
+				hash_view = new DataView(e.data, ptr, 20);
+				name_view = new DataView(e.data, n, nsiz);
+				var fsiz_lo = dv.getUint32(ptr + 24, true);
+				var fsiz_hi = dv.getUint32(ptr + 28, true);
+				w = dv.getUint32(ptr + 32, true);
+				h = dv.getUint32(ptr + 36, true);
+				server.cache.add_image(hash_view, fsiz_lo,
+				                       fsiz_hi, w, h, name_view);
+				n += nsiz;
+				ptr += 40;
+			}
+
+			for (var i = 0; i < b_num; i++) {
+				// uuid_t        uuid;     16    0   0
+				// point_t       offs;      8   16   4
+				// struct geo2d  dims;      8   24   6
+				// sha1_t        hash;     20   32   8
+				// uint32_t      nsiz;      4   52  13
+
+				nsiz = dv.getUint32(ptr + 52, true);
+				if (pkt_len < nsiz) {
+					console.log("socket_recv_msg: packet too short");
+					return;
+				}
+				pkt_len -= nsiz;
+
+				uuid_view = new DataView(e.data, ptr, 16);
+				x = dv.getInt32(ptr + 16, true);
+				y = dv.getInt32(ptr + 20, true);
+				w = dv.getUint32(ptr + 24, true);
+				h = dv.getUint32(ptr + 28, true);
+				hash_view = new DataView(e.data, ptr + 32, 20);
+				name_view = new DataView(e.data, n, nsiz);
+				bn = server.cache.add_banner(uuid_view,
+				                             x, y, w, h,
+				                             hash_view,
+				                             name_view);
+				if (uuid_cmp (cur_uuid, uuid_view)) {
+					cur_banner = bn;
+				}
+				n += nsiz;
+				ptr += 56;
+			}
+
+			if (cur_banner !== null) {
+				server.display_set_banner(0, cur_banner);
+			}
+/*
+			for (var prop in server.cache) {
+				if (server.cache.hasOwnProperty(prop)) {
+					var obj = server.cache[prop];
+					if (obj.used_by !== undefined) {
+						console.log("image name=\"" + obj.name +
+						            "\", w=" + obj.dim.w +
+						            ", h=" + obj.dim.h +
+						            ", size=" + obj.file_size +
+						            ", used_by=" + obj.used_by.length);
+						var dbg = document.getElementById('debugbox');
+						dbg.innerHTML += "image name=\"" + obj.name +
+						                 "\", w=" + obj.dim.w +
+						                 ", h=" + obj.dim.h +
+						                 ", size=" + obj.file_size +
+						                 ", used_by=" + obj.used_by.length +
+						                 "<br>";
+					}
+				}
+			}
+*/
+			break;
+
+		case PACKET_MOD|PACKET_BANNER:
+			/* Banner modified
+			 *  0 ...  3 |  4 | flags
+			 *  4 ... 11 |  8 | time
+			 * 12 ... 27 | 16 | modified banner uuid
+			 * 28 ... 31 |  4 | x offset
+			 * 32 ... 35 |  4 | y offset
+			 * 36 ... 39 |  4 | width
+			 * 40 ... 43 |  4 | height
+			 * 44 ... 63 | 20 | image hash
+			 * 64 ... 67 |  4 | name length
+			 * 68 ...    |  ? | name string (UTF-8)
+			 */
+
+			if (pkt_len < 68) {
+				console.log("socket_recv_msg: packet too short");
+				return;
+			}
+			pkt_len -= 68;
+
+			nsiz = dv.getUint32(64, true);
+			if (nsiz > 0) {
+				if (pkt_len < nsiz) {
+					console.log("socket_recv_msg: packet too short");
+					return;
+				}
+				pkt_len -= nsiz;
+				name_view = new DataView(e.data, 68, nsiz);
+			} else {
+				name_view = null;
+			}
+
+			uuid_view = new DataView(e.data, 12, 16);
+			bn = server.cache.get_banner(uuid_view);
+			if (!bn) {
+				console.log("socket_recv_msg: banner not found");
+				break;
+			}
+
+			ts_lo = dv.getUint32(4, true); // timestamp low 32
+			ts_hi = dv.getUint32(8, true); // timestamp high 32
+			x = dv.getInt32(28, true);
+			y = dv.getInt32(32, true);
+			w = dv.getUint32(36, true);
+			h = dv.getUint32(40, true);
+			hash_view = new DataView(e.data, 44, 20);
+
+			server.cache.mod_banner(bn, x, y, w, h,
+			                        hash_view, name_view);
+
+			if (bn === server.display_get_banner(0)) {
+				refresh_current_banner(bn);
+			}
+
+			break;
+
+		case PACKET_MOD|PACKET_DISPLAY:
+			/* Display modified
+			 *  0 ...  3 |  4 | flags
+			 *  4 ... 11 |  8 | time
+			 * 12 ... 15 |  4 | modified display id
+			 * 16 ... 31 | 16 | banner uuid
+			 * 32 ... 35 |  4 | width
+			 * 36 ... 39 |  4 | height
+			 * 40 ... 43 |  4 | x offset
+			 * 44 ... 47 |  4 | y offset
+			 * 48 ... 51 |  4 | name length
+			 * 52 ...    |  ? | name string (UTF-8)
+			 */
+
+			if (pkt_len < 52) {
+				console.log("socket_recv_msg: packet too short");
+				return;
+			}
+			pkt_len -= 52;
+
+			nsiz = dv.getUint32(48, true);
+			if (nsiz > 0) {
+				if (pkt_len < nsiz) {
+					console.log("socket_recv_msg: packet too short");
+					return;
+				}
+				pkt_len -= nsiz;
+				name_view = new DataView(e.data, 52, nsiz);
+			}
+
+			display_id = dv.getUint32(12, true);
+			di = server.get_display(display_id);
+			if (!di) {
+				console.log("socket_recv_msg: display not found");
+				break;
+			}
+
+			uuid_view = new DataView(e.data, 16, 16);
+			bn = server.cache.get_banner(uuid_view);
+			if (!bn) {
+				console.log("socket_recv_msg: banner not found");
+				break;
+			}
+
+			ts_lo = dv.getUint32(4, true); // timestamp low 32
+			ts_hi = dv.getUint32(8, true); // timestamp high 32
+			w = dv.getUint32(32, true);
+			h = dv.getUint32(36, true);
+			x = dv.getInt32(40, true);
+			y = dv.getInt32(44, true);
+
+			if (w > 1 && h > 1) {
+				console.log("socket_recv_msg: TODO: server "
+				            + "informed us that display "
+				            + display_id + " was resized to "
+				            + w + "x" + h);
+			}
+
+			if (bn !== di.get_banner()) {
+				di.set_banner(bn);
+			}
+
+			break;
+
+		case PACKET_DEL|PACKET_BANNER:
+			/* Banner deleted
+			 *  0 ...  3 |  4 | flags
+			 *  4 ... 11 |  8 | time
+			 * 12 ... 27 | 16 | deleted banner uuid
+			 */
+			if (pkt_len < 28) {
+				console.log("socket_recv_msg: packet too short");
+				return;
+			}
+			pkt_len -= 28;
+
+			ts_lo = dv.getUint32(4, true); // timestamp low 32
+			ts_hi = dv.getUint32(8, true); // timestamp high 32
+			uuid_view = new DataView(e.data, 12, 16);
+
+			bn = server.cache.get_banner(uuid_view);
+			if (!bn) {
+				console.log("socket_recv_msg: banner not found");
+				break;
+			}
+
+			console.log("server deleted banner \"" + bn.name + "\"");
+			break;
+
+		case PACKET_DEL|PACKET_IMG:
+			/* Image deleted
+			 *  0 ...  3 |  4 | flags
+			 *  4 ... 11 |  8 | time
+			 * 12 ... 31 | 20 | deleted image hash
+			 */
+			if (pkt_len < 32) {
+				console.log("socket_recv_msg: packet too short");
+				return;
+			}
+			pkt_len -= 32;
+
+			ts_lo = dv.getUint32(4, true); // timestamp low 32
+			ts_hi = dv.getUint32(8, true); // timestamp high 32
+			hash_view = new DataView(e.data, 12, 20);
+
+			im = server.cache.get_image(hash_view);
+			if (!im) {
+				console.log("socket_recv_msg: image not found");
+				break;
+			}
+
+			console.log("server deleted image \"" + im.name + "\"");
+
+			break;
+
+		case PACKET_DEL|PACKET_DISPLAY:
+			/* Display deleted
+			 *  0 ...  3 |  4 | flags
+			 *  4 ... 11 |  8 | time
+			 * 12 ... 15 |  4 | deleted display id
+			 */
+			if (pkt_len < 16) {
+				console.log("socket_recv_msg: packet too short");
+				return;
+			}
+			pkt_len -= 16;
+
+			ts_lo = dv.getUint32(4, true); // timestamp low 32
+			ts_hi = dv.getUint32(8, true); // timestamp high 32
+
+			display_id = dv.getUint32(12, true);
+			di = server.get_display(display_id);
+			if (!di) {
+				console.log("socket_recv_msg: display not found");
+				break;
+			}
+
+			console.log("server deleted display " + display_id);
+			break;
+
+		case PACKET_ADD|PACKET_IMG|PACKET_DATA:
+			/* Data delivery
+			 *  0 ...  3 |  4 | flags
+			 *  4 ... 11 |  8 | time
+			 * 12 ... 15 |  4 | item count
+			 * 16 ...  ? |  ? | size + hash of each item
+			 * ?  ...  ? |  ? | item data
+			 */
+			if (pkt_len < 16) {
+				console.log("socket_recv_msg: packet too short");
+				return;
+			}
+			pkt_len -= 16;
+
+			ts_lo = dv.getUint32(4, true); // timestamp low 32
+			ts_hi = dv.getUint32(8, true); // timestamp high 32
+
+			var items = dv.getUint32(12, true);
+			if (pkt_len < (items * 24)) {
+				console.log("socket_recv_msg: packet too short");
+				return;
+			}
+			pkt_len -= (items * 24);
+
+			var info_pos = 16;
+			var item_pos = info_pos + (items * 24);
+
+			for (var i = 0; i < items; ++i) {
+				var size = dv.getUint32(info_pos, true);
+				if (pkt_len < size) {
+					console.log("socket_recv_msg: packet too short");
+					return;
+				}
+				pkt_len -= size;
+
+				info_pos += 4;
+				hash_view = new DataView(e.data, info_pos, 20);
+				info_pos += 20;
+
+				var iv = new DataView(e.data, item_pos, size);
+				item_pos += size;
+
+				im = server.cache.get_image(hash_view);
+				if (im !== null) {
+					console.log("received data for image \"" + im.name + "\"");
+					// TODO: check hash, import data
+				}
+			}
+
+			break;
+		}
 	}
 };
 
@@ -486,25 +1448,25 @@ var socket_recv_handshake = function(e) {
 		console.log(e.data);
 		var msg = JSON.parse(e.data);
 		if (msg.type === "c9f82f30e6a00db0") {
-			socket.onmessage = socket_recv_msg;
+			server.socket.onmessage = socket_recv_msg;
 			console.log('Handshake response at ' + msg.ts);
-			screen_width = msg.w;
-			screen_height = msg.h;
+			screen_width = msg.cw;
+			screen_height = msg.ch;
 			thumb_resize(msg.tw, msg.th);
 			return;
 		}
 	}
 	console.log('Wrong handshake');
-	socket.close();
+	server.socket.close();
 };
 
 var new_socket = function() {
-	socket = new WebSocket(socket_addr);
-	socket.binaryType = "arraybuffer";
-	socket.onopen = socket_opened;
-	socket.onclose = socket_closed;
-	socket.onerror = socket_error;
-	socket.onmessage = socket_recv_handshake;
+	server.socket = new WebSocket(server.address);
+	server.socket.binaryType = "arraybuffer";
+	server.socket.onopen = socket_opened;
+	server.socket.onclose = socket_closed;
+	server.socket.onerror = socket_error;
+	server.socket.onmessage = socket_recv_handshake;
 };
 
 /**
@@ -543,17 +1505,19 @@ var drag_file = function(file) {
 
 		console.log('drag_file');
 
-		if (file.type === 'image/png') {
+		if (file.type.match(/^image\/(pn|jpe?)g$/) !== null) {
 			drag_img_file = file;
 			var reader = new FileReader();
 
-			reader.onload = function (e) {
-				dragArray = new Uint8Array(e.target.result);
-				console.log('drag_file.reader.onload: SHA1: '
-				            + sha1_hash(dragArray));
-				var blob = new Blob([dragArray], {type: "image/png"});
-				drag_img.src = urlCreator.createObjectURL(blob);
-			};
+			reader.onload = (function (f) {
+				return function (e) {
+					dragArray = new Uint8Array(e.target.result);
+					console.log('drag_file.reader.onload: SHA1: '
+					             + sha1_hash(dragArray));
+					var blob = new Blob([dragArray], {type: f.type});
+					drag_img.src = urlCreator.createObjectURL(blob);
+				};
+			})(file);
 
 			reader.readAsArrayBuffer(file);
 		}
@@ -576,8 +1540,8 @@ var banner_upload_packet = function(data) {
 	var payload = new Uint8Array(data);
 	var packet = new Uint8Array(buffer);
 
-	// packet type (4)
-	header.setUint32(0, 1, true);
+	// packet flags (4)
+	header.setUint32(0, PACKET_ADD|PACKET_DISPLAY|PACKET_BANNER|PACKET_IMG|PACKET_DATA, true);
 
 	// timestamp (8)
 	var lo = time % TWOPOW32;
@@ -633,18 +1597,189 @@ var banner_upload_packet = function(data) {
 	return buffer;
 };
 
+var banner_modify_packet = function(uuid_view, x, y, w, h, hash_view, name) {
+	/* Banner modified
+	 *  0 ...  3 |  4 | flags
+	 *  4 ... 11 |  8 | time
+	 * 12 ... 27 | 16 | modified banner uuid
+	 * 28 ... 31 |  4 | x offset
+	 * 32 ... 35 |  4 | y offset
+	 * 36 ... 39 |  4 | width
+	 * 40 ... 43 |  4 | height
+	 * 44 ... 63 | 20 | image hash
+	 * 64 ... 67 |  4 | name length
+	 * 68 ...    |  ? | name string (UTF-8)
+	 */
+
+	const header_size = 68;
+	var TWOPOW32 = Math.pow(2, 32);
+	var time = Date.now();
+	var utf8_name, name_size;
+	if (name === undefined || name === null || name === "") {
+		utf8_name = null;
+		name_size = 0;
+	} else {
+		utf8_name = (new TextEncoder('utf-8')).encode(name);
+		name_size = utf8_name.byteLength;
+	}
+	var buffer = new ArrayBuffer(header_size + name_size);
+	var dv = new DataView(buffer, 0, header_size);
+	var packet = new Uint8Array(buffer);
+
+	// packet type (4)
+	dv.setUint32(0, PACKET_MOD|PACKET_BANNER, true);
+
+	// timestamp (8)
+	var lo = time % TWOPOW32;
+	var hi = (time - lo) / TWOPOW32;
+	dv.setUint32(4, lo, true);
+	dv.setUint32(8, hi, true);
+
+	// banner uuid (16)
+	dv.setUint32(12, uuid_view.getUint32(0, true), true);
+	dv.setUint32(16, uuid_view.getUint32(4, true), true);
+	dv.setUint32(20, uuid_view.getUint32(8, true), true);
+	dv.setUint32(24, uuid_view.getUint32(12, true), true);
+
+	// banner coordinates (8)
+	dv.setInt32(28, x, true);
+	dv.setInt32(32, y, true);
+
+	// banner forced scaling (8)
+	dv.setUint32(36, w, true);
+	dv.setUint32(40, h, true);
+
+	// image hash (20)
+	dv.setUint32(44, hash_view.getUint32(0, true), true);
+	dv.setUint32(48, hash_view.getUint32(4, true), true);
+	dv.setUint32(52, hash_view.getUint32(8, true), true);
+	dv.setUint32(56, hash_view.getUint32(12, true), true);
+	dv.setUint32(60, hash_view.getUint32(16, true), true);
+
+	// name size (4)
+	dv.setUint32(64, name_size, true);
+
+	// UTF-8-encoded name, if included
+	if (name_size > 0) {
+		packet.set(utf8_name, header_size);
+	}
+
+	return buffer;
+};
+
+var display_modify_packet = function(id, uuid_view, w, h, x, y) {
+	/* Display modified
+	 *  0 ...  3 |  4 | flags
+	 *  4 ... 11 |  8 | time
+	 * 12 ... 15 |  4 | modified display id
+	 * 16 ... 31 | 16 | banner uuid
+	 * 32 ... 35 |  4 | width
+	 * 36 ... 39 |  4 | height
+	 * 40 ... 43 |  4 | x offset
+	 * 44 ... 47 |  4 | y offset
+	 * 48 ... 51 |  4 | name length
+	 * 52 ...    |  ? | name string (UTF-8)
+	 */
+	console.log('display_modify_packet');
+
+	const pkt_size = 52;
+	var TWOPOW32 = Math.pow(2, 32);
+	var time = Date.now();
+	var buffer = new ArrayBuffer(pkt_size);
+	var dv = new DataView(buffer);
+
+	// packet type (4)
+	dv.setUint32(0, PACKET_MOD|PACKET_DISPLAY, true);
+
+	// timestamp (8)
+	var lo = time % TWOPOW32;
+	var hi = (time - lo) / TWOPOW32;
+	dv.setUint32(4, lo, true);
+	dv.setUint32(8, hi, true);
+
+	// display id (4)
+	dv.setUint32(12, id, true);
+
+	// banner uuid (16)
+	dv.setUint32(16, uuid_view.getUint32(0, true), true);
+	dv.setUint32(20, uuid_view.getUint32(4, true), true);
+	dv.setUint32(24, uuid_view.getUint32(8, true), true);
+	dv.setUint32(28, uuid_view.getUint32(12, true), true);
+
+	// display dimensions (8)
+	dv.setUint32(32, w, true);
+	dv.setUint32(36, h, true);
+
+	// display offset (8)
+	dv.setInt32(40, x, true);
+	dv.setInt32(44, y, true);
+
+	// name size (4)
+	dv.setUint32(48, 0, true);
+
+	return buffer;
+};
+
+var data_request_packet = function(hash_array) {
+	/* Data request
+	 *  0 ...  3 |  4 | flags
+	 *  4 ... 11 |  8 | time
+	 * 12 ... 15 |  4 | requested data count
+	 * 16 ...    |  ? | array of hashes of requested data
+	 */
+	if (!Array.isArray(hash_array)) {
+		return null;
+	}
+
+	var hash_count = hash_array.length;
+	if (hash_array.length < 1) {
+		return null;
+	}
+
+	console.log('data_request_packet');
+
+	var n = 16;
+	var TWOPOW32 = Math.pow(2, 32);
+	var time = Date.now();
+	var buffer = new ArrayBuffer(n + (hash_count * 20));
+	var dv = new DataView(buffer);
+
+	// packet type (4)
+	dv.setUint32(0, PACKET_REQ|PACKET_IMG|PACKET_DATA, true);
+
+	// timestamp (8)
+	var lo = time % TWOPOW32;
+	var hi = (time - lo) / TWOPOW32;
+	dv.setUint32(4, lo, true);
+	dv.setUint32(8, hi, true);
+
+	// data count (4)
+	dv.setUint32(12, hash_count, true);
+
+	// hashes of requested data (20 <= hash_count*20)
+	for (var i = 0; i < hash_count; ++i) {
+		var hash_view = hash_array[i].view;
+		for (var j = 0; j < 20; j += 4) {
+			dv.setUint32(n, hash_view.getUint32(j, true), true);
+			n += 4;
+		}
+	}
+
+	return buffer;
+};
+
 var drag_img_upload = function() {
 	console.log('drag_img_upload');
 
 	if (drag_img_file !== undefined
 	    && drag_img_file !== null
-	    && drag_img_file.type === 'image/png') {
+	    && drag_img_file.type.match(/^image\/(pn|jpe?)g$/) !== null) {
 		var reader = new FileReader();
 
 		reader.onload = function (e) {
 			console.log('drag_img_upload.reader.onload');
 			packet = banner_upload_packet(e.target.result);
-			socket.send(packet);
+			server.socket.send(packet);
 			drag_img_name.value = '';
 		};
 

@@ -8,9 +8,11 @@
 #include "../img.h"
 #include "../list.h"
 #include "../file.h"
+#include "geo2d.h"
 #include "sha1.h"
 #include "json.h"
 #include "mem.h"
+#include "point.h"
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -22,6 +24,7 @@
 struct img {
 	list_head_t  hook;   //! List hook
 	sha1_t       hash;   //! Hash of this image
+	size_t       nsiz;   //! Size of source file name
 	char        *name;   //! Name of this image's source file
 	list_head_t  refs;   //! List of all banners using this image
 	size_t       size;   //! Size of image file in bytes
@@ -30,6 +33,46 @@ struct img {
 	size_t       height; //! Height of this image in pixels
 	uint8_t     *pxdata; //! Pointer to memory buffer containing pixel data
 } __attribute__((gcc_struct,packed));
+
+struct img_info {
+	sha1_t       hash;
+	uint32_t     name_size;
+	uint64_t     file_size;
+	struct geo2d dims;
+} __attribute__((gcc_struct,packed));
+
+__attribute__((always_inline))
+static inline void
+_img_info_init (struct img_info *ii,
+                struct img      *im)
+{
+	_sha1_cpy (&im->hash, &ii->hash);
+	ii->name_size = (im->nsiz < UINT32_MAX) ? im->nsiz : UINT32_MAX;
+	ii->file_size = im->size;
+	_geo2d_set_width (&ii->dims,
+	                  (im->width < UINT32_MAX) ? im->width : UINT32_MAX);
+	_geo2d_set_height (&ii->dims,
+	                   (im->height < UINT32_MAX) ? im->height : UINT32_MAX);
+}
+
+__attribute__((always_inline))
+static inline struct img_info *
+_img_info_create (struct img *im)
+{
+	struct img_info *ii;
+	char *p;
+	size_t n;
+	if ((p = _mem_new (6, sizeof (struct img_info), &n))) {
+		ii = (struct img_info *) p;
+		_img_info_init (ii, im);
+		for (size_t k = sizeof (struct img_info); k < n; ++k) {
+			p[k] = 0;
+		}
+	} else {
+		ii = NULL;
+	}
+	return ii;
+}
 
 __attribute__((always_inline))
 static inline struct img *
@@ -53,6 +96,7 @@ static inline void
 _img_init (struct img  *im,
            list_head_t *list,
            sha1_t      *hash,
+           size_t       nsiz,
            char        *name,
            size_t       size,
            uint8_t     *data,
@@ -69,6 +113,7 @@ _img_init (struct img  *im,
 
 	list_init (&im->refs);
 
+	im->nsiz = nsiz;
 	im->name = name;
 
 	if (hash) {
@@ -86,7 +131,8 @@ _img_init (struct img  *im,
 
 __attribute__((always_inline))
 static inline char *
-_img_name_from_path (const char *path)
+_img_name_from_path (const char *path,
+                     size_t     *result_len)
 {
 	union {
 		const char *cc;
@@ -113,6 +159,7 @@ _path_at_end:
 
 	(void) memcpy (ptr.c, begin, size);
 	(void) memset (ptr.c + size, 0, alloc_size - size);
+	*result_len = size;
 
 	alloc_size = 0;
 	size = 0;
@@ -124,7 +171,8 @@ _path_at_end:
 __attribute__((always_inline))
 static inline char *
 _img_name_from_buf (uint8_t *buf,
-                    size_t   len)
+                    size_t   len,
+                    size_t  *result_len)
 {
 	union {
 		uint8_t    *u8;
@@ -150,6 +198,7 @@ _img_name_from_buf (uint8_t *buf,
 
 	(void) memcpy (ptr.c, begin, size);
 	(void) memset (ptr.c + size, 0, i - size);
+	*result_len = size;
 
 	i = 0;
 	size = 0;
@@ -161,8 +210,10 @@ _img_name_from_buf (uint8_t *buf,
 __attribute__((always_inline))
 static inline void
 _img_set_name (struct img *im,
-               char       *name)
+               char       *name,
+               size_t      size)
 {
+	im->nsiz = size;
 	if (im->name) {
 		_mem_del (&im->name);
 	}
@@ -174,11 +225,13 @@ static inline bool
 _img_dup_name_from_path (struct img *im,
                          const char *path)
 {
+	size_t size;
 	char *name;
-	if (!(name = _img_name_from_path (path))) {
+	if (!(name = _img_name_from_path (path, &size))) {
 		return false;
 	}
-	_img_set_name (im, name);
+	_img_set_name (im, name, size);
+	size = 0;
 	name = NULL;
 	return true;
 }
@@ -195,6 +248,7 @@ _img_create (list_head_t *list,
              uint8_t     *pxdata)
 {
 	struct img *im;
+	size_t name_size;
 	char *name;
 
 	if (!(im = _img_alloc())) {
@@ -203,17 +257,18 @@ _img_create (list_head_t *list,
 	}
 
 	if (path) {
-		if (!(name = _img_name_from_path (path))) {
+		if (!(name = _img_name_from_path (path, &name_size))) {
 			fprintf (stderr, "%s: _img_name_from_path failed\n",
 			         __func__);
 			_mem_del ((void **)&im);
 			return NULL;
 		}
 	} else {
+		name_size = 0;
 		name = NULL;
 	}
 
-	_img_init (im, list, hash, name, size,
+	_img_init (im, list, hash, name_size, name, size,
 	           data, width, height, pxdata);
 
 	return im;
@@ -236,6 +291,7 @@ _img_destroy (struct img *im)
 	im->refs.next = NULL;
 	im->refs.prev = NULL;
 
+	im->nsiz = 0;
 	if (im->name) {
 		free (im->name);
 		im->name = NULL;
@@ -264,6 +320,13 @@ static inline const char *
 _img_name (struct img *im)
 {
 	return (const char *) im->name;
+}
+
+__attribute__((always_inline))
+static inline size_t
+_img_name_length (struct img *im)
+{
+	return im->nsiz;
 }
 
 __attribute__((always_inline))
@@ -319,7 +382,7 @@ _img_create_from_packet (list_head_t *list,
                          uint8_t     *im_ptr)
 {
 	uint8_t *data;
-	size_t alloc_size;
+	size_t alloc_size, n;
 	char *name;
 	struct img *im;
 
@@ -332,7 +395,7 @@ _img_create_from_packet (list_head_t *list,
 	(void) memcpy (data, im_ptr, im_size);
 	(void) memset (data + im_size, 0, alloc_size - im_size);
 
-	if (!(name = _img_name_from_buf (name_ptr, name_size))) {
+	if (!(name = _img_name_from_buf (name_ptr, name_size, &n))) {
 		fprintf (stderr, "%s: failed to copy filename from packet\n",
 		         __func__);
 		goto _fail_free_data;
@@ -346,7 +409,7 @@ _img_create_from_packet (list_head_t *list,
 		return NULL;
 	}
 
-	_img_init (im, list, hash, name, im_size, data, 0, 0, NULL);
+	_img_init (im, list, hash, n, name, im_size, data, 0, 0, NULL);
 
 	return im;
 }
@@ -425,14 +488,14 @@ _img_import_file (struct img *im,
                   const char *path)
 {
 	bool r;
-	size_t size;
+	size_t size, name_size;
 	uint8_t *data;
 	char *name;
 
 	if (_read_img_file (path, &data, &size)) {
-		if ((name = _img_name_from_path (path))) {
+		if ((name = _img_name_from_path (path, &name_size))) {
 			_img_set_data (im, data, size);
-			_img_set_name (im, name);
+			_img_set_name (im, name, name_size);
 			data = NULL;
 			name = NULL;
 			r = true;
@@ -527,14 +590,13 @@ __attribute__((always_inline))
 static inline bool
 _img_export (struct img *im,
              char       *path,
-             size_t      pos,
-             size_t      fname_len)
+             size_t      pos)
 {
 	bool r;
 	file_t *f;
 
-	(void) strncpy (path + pos, _img_name (im), fname_len);
-	path[pos + fname_len] = '\0';
+	(void) strncpy (path + pos, _img_name (im), _img_name_length (im));
+	path[pos + _img_name_length (im)] = '\0';
 
 	if (!(f = file_create (path))) {
 		fprintf (stderr, "%s: file_create failed\n", __func__);

@@ -10,10 +10,14 @@
 extern "C" {
 #endif
 
+#include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "packet.h"
+
 typedef struct display display_t;
+typedef struct display_modpkt display_modpkt_t;
 
 /**
  * @brief Create display object.
@@ -23,7 +27,9 @@ typedef struct display display_t;
  */
 extern display_t *
 display_create (const uint32_t width,
-                const uint32_t height);
+                const uint32_t height,
+                const uint32_t scaled_w,
+                const uint32_t scaled_h);
 
 /**
  * @brief Destroy display object.
@@ -47,6 +53,22 @@ display_width (display_t *d);
  */
 extern uint32_t
 display_height (display_t *d);
+
+/**
+ * @brief Get display's scaled output width.
+ * @param d Pointer to display object.
+ * @return Display's scaled output width (number of horizontal pixels).
+ */
+extern uint32_t
+display_scaled_width (display_t *d);
+
+/**
+ * @brief Get display's scaled output height.
+ * @param d Pointer to display object.
+ * @return Display's scaled output height (number of vertical pixels).
+ */
+extern uint32_t
+display_scaled_height (display_t *d);
 
 /**
  * @brief Get display's pixel buffer.
@@ -85,6 +107,14 @@ display_render (display_t *d,
 extern bool
 display_render_bg (display_t *d,
                    uint32_t  *bg_data);
+
+extern display_modpkt_t *
+display_modpkt_inspect (const char *buf,
+                        int         len);
+
+extern bool
+display_banner_uuid_export (char   *path,
+                            size_t  path_len);
 
 #ifdef __cplusplus
 }

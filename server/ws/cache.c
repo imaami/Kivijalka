@@ -24,7 +24,7 @@ void
 cache_import (struct cache *c)
 {
 	if (c) {
-		_cache_import (c);
+		(void) _cache_import (c);
 	}
 }
 
@@ -33,6 +33,26 @@ cache_import_packet (struct cache         *c,
                      struct banner_packet *p)
 {
 	return (c && p) ? _cache_import_packet (c, p) : false;
+}
+
+bool
+cache_apply_modpkt (struct cache          *c,
+                    struct banner_modpkt  *p,
+                    char                 **r,
+                    size_t                *s)
+{
+	return (c && p && r && s) ? _cache_apply_modpkt (c, p, r, s) : false;
+}
+
+bool
+cache_apply_display_modpkt (struct cache           *c,
+                            struct display_modpkt  *p,
+                            char                  **r,
+                            size_t                 *s)
+{
+	return (c && p && r && s)
+	       ? _cache_apply_display_modpkt (c, p, r, s)
+	       : false;
 }
 
 const char *
@@ -51,6 +71,14 @@ char *
 cache_json (struct cache *c)
 {
 	return (c) ? _cache_json (c) : NULL;
+}
+
+bool
+cache_info_packet (struct cache  *c,
+                   uint8_t      **data,
+                   size_t        *size)
+{
+	return (c && data && size) ? _cache_info_packet (c, data, size) : false;
 }
 
 char *
@@ -95,15 +123,10 @@ struct banner *
 cache_find_banner_by_uuid_str (struct cache *c,
                                const char   *uuid_str)
 {
-	if (c && uuid_str) {
-		uuid_t uuid;
-		size_t n;
-		if (_parse_uuid (uuid_str, uuid, &n)) {
-			return _cache_find_banner_by_uuid (c, uuid);
-		} else {
-			fprintf (stderr, "%s: invalid UUID string: syntax error"
-			         " at offset %zu\n", __func__, n);
-		}
+	if (!c || !uuid_str) {
+		fprintf (stderr, "%s: null argument(s)\n", __func__);
+		return NULL;
 	}
-	return NULL;
+
+	return _cache_find_banner_by_uuid_str (c, uuid_str);
 }

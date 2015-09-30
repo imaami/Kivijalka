@@ -27,15 +27,11 @@ banner_packet_inspect (const char *buf,
 	return (buf) ? _banner_packet_inspect (buf, len) : NULL;
 }
 
-bool
-banner_uuid_cpy (struct banner *b,
-                 uuid_t         dest)
+struct banner_modpkt *
+banner_modpkt_inspect (const char *buf,
+                       int         len)
 {
-	if (b) {
-		_banner_uuid_cpy (b, dest);
-		return true;
-	}
-	return false;
+	return (buf) ? _banner_modpkt_inspect (buf, len) : NULL;
 }
 
 bool

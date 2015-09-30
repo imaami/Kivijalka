@@ -3,8 +3,9 @@
 CFGFILE="/etc/kivijalka.conf"
 
 unset KIVIJALKA_ADDR KIVIJALKA_PORT KIVIJALKA_RUNPATH KIVIJALKA_CACHEPATH \
-      KIVIJALKA_DISPLAY_WIDTH KIVIJALKA_DISPLAY_HEIGHT KIVIJALKA_STOP \
-      KIVIJALKA_FONT_SIZE KIVIJALKA_ROW_HEIGHT
+      KIVIJALKA_DISPLAY_WIDTH KIVIJALKA_DISPLAY_HEIGHT KIVIJALKA_CAPTURE_WIDTH \
+      KIVIJALKA_CAPTURE_HEIGHT KIVIJALKA_STOP KIVIJALKA_FONT_SIZE \
+      KIVIJALKA_ROW_HEIGHT
 
 if [[ -f "$CFGFILE" ]]
 then
@@ -39,20 +40,28 @@ else
   CACHEPATH='/var/cache/kivijalka'
 fi
 
-if [[ -n $KIVIJALKA_DISPLAY_WIDTH ]] &&
-   (( KIVIJALKA_DISPLAY_WIDTH > 0 ))
-then
-  PX_W="$KIVIJALKA_DISPLAY_WIDTH"
-else
-  PX_W=''
-fi
-
-if [[ -n $KIVIJALKA_DISPLAY_HEIGHT ]] &&
+if [[ -n $KIVIJALKA_DISPLAY_WIDTH ]]  &&
+   [[ -n $KIVIJALKA_DISPLAY_HEIGHT ]] &&
+   (( KIVIJALKA_DISPLAY_WIDTH > 0 ))  &&
    (( KIVIJALKA_DISPLAY_HEIGHT > 0 ))
 then
-  PX_H="$KIVIJALKA_DISPLAY_HEIGHT"
+  DIS_W="$KIVIJALKA_DISPLAY_WIDTH"
+  DIS_H="$KIVIJALKA_DISPLAY_HEIGHT"
 else
-  PX_H=''
+  DIS_W='1280'
+  DIS_H='1024'
+fi
+
+if [[ -n $KIVIJALKA_CAPTURE_WIDTH ]]  &&
+   [[ -n $KIVIJALKA_CAPTURE_HEIGHT ]] &&
+   (( KIVIJALKA_CAPTURE_WIDTH > 0 ))  &&
+   (( KIVIJALKA_CAPTURE_HEIGHT > 0 ))
+then
+  CAP_W="$KIVIJALKA_CAPTURE_WIDTH"
+  CAP_H="$KIVIJALKA_CAPTURE_HEIGHT"
+else
+  CAP_W="$DIS_W"
+  CAP_H="$DIS_H"
 fi
 
 if [[ -n $KIVIJALKA_STOP ]]
@@ -101,8 +110,6 @@ fi
 
 (( FONT_SIZE >= 30 && FONT_SIZE <= 50 )) || FONT_SIZE=''
 (( ROW_HEIGHT >= 20 && ROW_HEIGHT <= 80 )) || ROW_HEIGHT=''
-(( PX_W > 0 )) || PX_W=1280
-(( PX_H > 0 )) || PX_H=1024
 
 # stop number
 if [[ -f "$RUNPATH/stop" ]]
@@ -122,15 +129,15 @@ then
   (( TMP2 == ROW_HEIGHT || TMP2 < 20 || TMP2 > 80 )) || (( ROW_HEIGHT=TMP2 ))
 fi
 
-# display geometry
-if [[ -f "$RUNPATH/disp" ]]
+# capture geometry
+if [[ -f "$RUNPATH/capt" ]]
 then
-  TMP="$(< "$RUNPATH/disp")"
+  TMP="$(< "$RUNPATH/capt")"
   TMP2="$(grep -o 'x[0-9]*' <<< "$TMP")"
   TMP2="${TMP2##*x}"
   TMP="${TMP%%x*}"
-  (( TMP == PX_W || TMP < 1 )) || (( PX_W=TMP ))
-  (( TMP2 == PX_H || TMP2 < 1 )) || (( PX_H=TMP2 ))
+  (( TMP == CAP_W || TMP < 1 )) || (( CAP_W=TMP ))
+  (( TMP2 == CAP_H || TMP2 < 1 )) || (( CAP_H=TMP2 ))
 fi
 
 URL="$BASE$STOP${FONT_SIZE:+&font_size=$FONT_SIZE}${ROW_HEIGHT:+&row_height=$ROW_HEIGHT}"
@@ -141,8 +148,8 @@ cutycapt --url="$URL" \
   --java=off \
   --plugins=off \
   --auto-load-images=on \
-  --min-width=$PX_W \
-  --min-height=$PX_H \
+  --min-width=$CAP_W \
+  --min-height=$CAP_H \
   --out="$CAPFILE"
 
 if [[ -f "$CAPFILE" ]]; then
@@ -170,14 +177,14 @@ fi
       (( TMP2 == ROW_HEIGHT || TMP2 < 20 || TMP2 > 80 )) || (( ROW_HEIGHT=TMP2 ))
     fi
 
-    if [[ -f "$RUNPATH/disp" ]]
+    if [[ -f "$RUNPATH/capt" ]]
     then
-      TMP="$(< "$RUNPATH/disp")"
+      TMP="$(< "$RUNPATH/capt")"
       TMP2="$(grep -o 'x[0-9]*' <<< "$TMP")"
       TMP2="${TMP2##*x}"
       TMP="${TMP%%x*}"
-      (( TMP == PX_W || TMP < 1 )) || (( PX_W=TMP ))
-      (( TMP2 == PX_H || TMP2 < 1 )) || (( PX_H=TMP2 ))
+      (( TMP == CAP_W || TMP < 1 )) || (( CAP_W=TMP ))
+      (( TMP2 == CAP_H || TMP2 < 1 )) || (( CAP_H=TMP2 ))
     fi
 
     (( FONT_SIZE >= 30 && FONT_SIZE <= 50 )) || FONT_SIZE=''
@@ -191,8 +198,8 @@ fi
          --java=off \
          --plugins=off \
          --auto-load-images=on \
-         --min-width=$PX_W \
-         --min-height=$PX_H \
+         --min-width=$CAP_W \
+         --min-height=$CAP_H \
          --out="$CAPFILE"
     then
       sleep 5
@@ -202,8 +209,9 @@ fi
 
 (
   wsserver -c "$CAPFILE" -o "$OUTFILE" -b "$CACHEPATH" \
-           -g "${PX_W}x${PX_H}" -a "$ADDR" -p "$PORT" "${UUID:+-U$UUID}"
-) &>/dev/null &
+           -G "${CAP_W}x${CAP_H}" -g "${DIS_W}x${DIS_H}" \
+           -a "$ADDR" -p "$PORT" "${UUID:+-U$UUID}"
+) &
 
 xset -dpms
 xset s off

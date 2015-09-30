@@ -27,6 +27,12 @@ args_get_cache_uuid (void);
 extern const char *
 args_get_capture_path (void);
 
+extern uint32_t
+args_get_capture_width (void);
+
+extern uint32_t
+args_get_capture_height (void);
+
 extern const char *
 args_get_output_path (void);
 

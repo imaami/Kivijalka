@@ -3,34 +3,73 @@
  * Packet handling.
  */
 
+#include <stdio.h>
 #include <stdint.h>
 #include <inttypes.h>
 
-#include "private/banner.h"
+#include "packet.h"
 
 uint32_t
-packet_inspect (const char *buf,
-                int         len)
+packet_inspect (const char **buf,
+                int         *len)
 {
-	uint32_t type;
+	uint32_t flags;
 
-	if (!buf) {
-		fprintf (stderr, "%s: null buffer pointer\n", __func__);
-		type = 0;
-	} else if (len < 4) {
+	if (!buf || !*buf || !len) {
+		fprintf (stderr, "%s: invalid parameters\n", __func__);
+		flags = 0;
+
+	} else if (*len < 4) {
 		fprintf (stderr, "%s: illegal packet length\n", __func__);
-		type = 0;
+		flags = 0;
+
 	} else {
-		type = *(uint32_t *) buf;
-		switch (type) {
-		case 1: // banner + image upload packet
+		flags = *(uint32_t *) *buf;
+
+		switch (flags) {
+		case PACKET_REQ|PACKET_IMG|PACKET_DATA:
+			// request image data
 			break;
+
+		case PACKET_ADD|PACKET_BANNER|PACKET_IMG|PACKET_DATA:
+			// upload new banner
+			break;
+
+		case PACKET_ADD|PACKET_DISPLAY|PACKET_BANNER|PACKET_IMG|PACKET_DATA:
+			// upload new banner and activate
+			break;
+
+		case PACKET_MOD|PACKET_DISPLAY:
+			// change active banner
+			break;
+
+		case PACKET_MOD|PACKET_BANNER:
+			// modify banner
+			break;
+
+		case PACKET_DEL|PACKET_DISPLAY:
+			// delete display
+			break;
+
+		case PACKET_DEL|PACKET_BANNER:
+			// delete banner
+			break;
+
+		case PACKET_DEL|PACKET_IMG:
+			// delete image
+			break;
+
 		default:
-			fprintf (stderr, "%s: illegal packet type %"PRIu32"\n",
-			         __func__, type);
-			type = 0;
+			fprintf (stderr, "%s: invalid packet flags %"PRIu32"\n",
+			         __func__, flags);
+			flags = 0;
+			goto _end;
 		}
+
+		*buf += 4;
+		*len -= 4;
 	}
 
-	return type;
+_end:
+	return flags;
 }

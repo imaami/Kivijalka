@@ -3,10 +3,18 @@
  * Graphical display.
  */
 
-#include "private/display.h"
 
+#include "file.h"
+#include "global.h"
+
+#include "private/display.h"
+#include "private/banner.h"
+#include "private/hex.h"
+
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -14,7 +22,9 @@ __attribute__((always_inline))
 static inline bool
 _display_init (struct display *d,
                const uint32_t  width,
-               const uint32_t  height)
+               const uint32_t  height,
+               const uint32_t  scaled_w,
+               const uint32_t  scaled_h)
 {
 	size_t buf_bytes = (width * height) << 2;
 
@@ -25,6 +35,13 @@ _display_init (struct display *d,
 
 	d->width = width;
 	d->height = height;
+	if (scaled_w > 0 && scaled_h > 0) {
+		d->scaled_w = scaled_w;
+		d->scaled_h = scaled_h;
+	} else {
+		d->scaled_w = width;
+		d->scaled_h = height;
+	}
 
 	(void) memset ((void *) d->pixbuf, 0, buf_bytes);
 
@@ -47,7 +64,9 @@ _display_fini (struct display *d)
 
 struct display *
 display_create (const uint32_t width,
-                const uint32_t height)
+                const uint32_t height,
+                const uint32_t scaled_w,
+                const uint32_t scaled_h)
 {
 	if (width < 1 || height < 1 || (SIZE_MAX / 4) / width < height) {
 		fprintf (stderr, "%s: invalid arguments\n", __func__);
@@ -61,13 +80,14 @@ display_create (const uint32_t width,
 		return NULL;
 	}
 
-	if (!_display_init (d, width, height)) {
+	if (!_display_init (d, width, height, scaled_w, scaled_h)) {
 		fprintf (stderr, "%s: _display_init failed\n", __func__);
 		free (d);
 		d = NULL;
 	} else {
-		printf ("%s: display width=%u, height=%u\n",
-		        __func__, d->width, d->height);
+		printf ("%s: display width=%" PRIu32 ", height=%" PRIu32 ", "
+		        "scaled_w=%" PRIu32 ", scaled_h=%" PRIu32 "\n",
+		        __func__, d->width, d->height, d->scaled_w, d->scaled_h);
 	}
 
 	return d;
@@ -93,6 +113,18 @@ uint32_t
 display_height (struct display *d)
 {
 	return (d) ? d->height : 0;
+}
+
+uint32_t
+display_scaled_width (struct display *d)
+{
+	return (d) ? d->scaled_w : 0;
+}
+
+uint32_t
+display_scaled_height (struct display *d)
+{
+	return (d) ? d->scaled_h : 0;
 }
 
 uint32_t *
@@ -271,4 +303,114 @@ display_render (struct display *d,
 	}
 	fprintf (stderr, "%s: invalid arguments\n", __func__);
 	return false;
+}
+
+struct display_modpkt *
+display_modpkt_inspect (const char *buf,
+                        int         len)
+{
+	size_t n;
+	struct display_modpkt *p;
+
+	n = len;
+
+	if (n < offsetof (struct display_modpkt, name)) {
+		goto _packet_too_short;
+	}
+
+	n -= offsetof (struct display_modpkt, name);
+	p = (struct display_modpkt *) buf;
+
+	if (n < p->nsiz) {
+	_packet_too_short:
+		fprintf (stderr, "%s: packet too short\n", __func__);
+		return NULL;
+	}
+
+	if (p->dims.w < 1 || p->dims.h < 1) {
+		fprintf (stderr,
+		         "%s: packet defines invalid width and/or height\n",
+		         __func__);
+		return NULL;
+	}
+
+	return p;
+
+}
+
+bool
+display_banner_uuid_export (char   *path,
+                            size_t  path_len)
+{
+	struct banner *b;
+	bool r;
+	file_t *f;
+	unsigned int k, l, i;
+	union {
+		char     c[40];
+		uint64_t u64[5];
+	} buf = {.u64 = {0, 0, 0, 0, 0}};
+	union {
+		char          *chr;
+		const char    *cch;
+		const uint8_t *cu8;
+	} ptr;
+
+	if (!(b = cur_banner)) {
+		return false;
+	}
+
+	path[path_len] = '0';
+	path[path_len + 1] = '\0';
+
+	if (!(f = file_create (path))) {
+		fprintf (stderr, "%s: file_create failed\n", __func__);
+		r = false;
+		goto _end;
+	}
+
+	for (k = 0, l = 0; k < 16; ++k) {
+		i = b->uuid[k];
+		buf.c[l++] = _hex_char (i >> 4);
+		buf.c[l++] = _hex_char (i & 0x0f);
+	}
+	buf.c[l] = '\0';
+
+	if (!file_open (f, "w")) {
+		ptr.cch = "open";
+		goto _fail;
+	}
+
+	ptr.chr = buf.c;
+
+	if (!file_write (f, 32, ptr.cu8)) {
+		(void) file_close (f);
+		ptr.cch = "write";
+		goto _fail;
+	}
+
+	if (!file_close (f)) {
+		ptr.cch = "close";
+	_fail:
+		fprintf (stderr, "%s: file_%s failed\n", __func__, ptr.cch);
+		r = false;
+		goto _destroy_file;
+	}
+
+	r = true;
+
+_destroy_file:
+	file_destroy (&f);
+
+	buf.u64[0] = 0;
+	buf.u64[1] = 0;
+	buf.u64[2] = 0;
+	buf.u64[3] = 0;
+	buf.u64[4] = 0;
+	ptr.chr = NULL;
+
+_end:
+	path[path_len] = '\0';
+
+	return r;
 }

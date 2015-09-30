@@ -12,9 +12,11 @@ extern "C" {
 #include "point.h"
 #include "sha1.h"
 #include "img_data.h"
+#include "packet.h"
 
 typedef struct banner banner_t;
 typedef struct banner_packet banner_packet_t;
+typedef struct banner_modpkt banner_modpkt_t;
 
 extern banner_t *
 banner_create (void);
@@ -26,9 +28,9 @@ extern banner_packet_t *
 banner_packet_inspect (const char *buf,
                        int         len);
 
-extern bool
-banner_uuid_cpy (banner_t *b,
-                 uuid_t    dest);
+extern banner_modpkt_t *
+banner_modpkt_inspect (const char *buf,
+                       int         len);
 
 extern bool
 banner_set_name (banner_t   *b,

@@ -21,7 +21,9 @@ struct args {
 		char *uuid;
 	} cache;
 	struct __attribute__((gcc_struct,packed)) {
-		char *path;
+		char     *path;
+		uint32_t  width;
+		uint32_t  height;
 	} capture;
 	struct __attribute__((gcc_struct,packed)) {
 		char *path;
@@ -42,7 +44,9 @@ struct args {
 		.uuid = NULL\
 	},\
 	.capture = {\
-		.path = NULL\
+		.path = NULL,\
+		.width = 0,\
+		.height = 0\
 	},\
 	.output = {\
 		.path = NULL\
@@ -75,7 +79,7 @@ _geo2d_arg (char     *str,
 		}
 	}
 
-	fprintf (stderr, "%s: invalid display geometry\n", __func__);
+	fprintf (stderr, "%s: invalid geometry\n", __func__);
 
 	return false;
 }
@@ -92,6 +96,19 @@ _args_parse (struct args  *a,
 		switch (*(p = argv[i])) {
 			case '-':
 				switch (*++p) {
+				case 'G':
+					if (*++p == '\0') {
+						if (++i == argc) {
+							return false;
+						}
+						p = argv[i];
+					}
+					if (!_geo2d_arg (p, &a->capture.width,
+					                 &a->capture.height)) {
+						return false;
+					}
+					break;
+
 				case 'U':
 					if (*++p == '\0') {
 						if (++i == argc) {
@@ -217,6 +234,20 @@ static inline const char *
 _args_get_capture_path (struct args *a)
 {
 	return (const char *) a->capture.path;
+}
+
+__attribute__((always_inline))
+static inline uint32_t
+_args_get_capture_width (struct args *a)
+{
+	return a->capture.width;
+}
+
+__attribute__((always_inline))
+static inline uint32_t
+_args_get_capture_height (struct args *a)
+{
+	return a->capture.height;
 }
 
 __attribute__((always_inline))
